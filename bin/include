@@ -1538,6 +1538,8 @@ get_sms_policy() {
 }
 
 # Get plugin notify analysization
+# Note:		args {notify_policy_config} must have been valid checked to avoid error occurs.
+# 		you shoule pass {notify_policy_config} through function get_sms/mail_policy()
 # Usage: 	get_policy_analysize {notify_plicy_config} {part}
 # Note:	 	{part}		~ range | rtime
 # Example:	get_policy_analysize  "0-09,07-11,13-20,10-19  5"  range
@@ -2201,13 +2203,23 @@ hit_policy_range_ornot() {
 }
 
 # Check nower heaped up rc-number hit plugin's notify policy maxnum or not ?
-# Usage:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
-# Example:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
+# Usage:	hit_policy_heapuprc_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
+# Example:	hit_policy_heapuprc_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
 #
 hit_policy_heapuprc_ornot() {
   local plugin_name=$1	plugin_rc=$2  notify_policy=$3
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin name";
+        return 1
+  }
+
+  [ -z "${plugin_rc}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin rc";
+        return 1
+  }
+
+  [ -z "${notify_policy}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing notify policy";
         return 1
   }
 
@@ -3862,3 +3874,4 @@ process_plugin_misform() {
 #add_heapuprc_count sysload crit
 #get_heapuprc_count sysload succ
 #get_heapuprc_count sysload crit
+#hit_policy_heapuprc_ornot sysload crit $(get_mail_policy sysload); echo $?
