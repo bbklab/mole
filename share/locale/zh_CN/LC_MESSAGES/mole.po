@@ -418,7 +418,10 @@ msgid "Plugin Output Misform, Nothing to do"
 msgstr "插件输出不合规范, 无自动处理"
 
 msgid "banned by mail notify time-range"
-msgstr "邮件通知被插件的时间段策略禁止"
+msgstr "邮件通知被插件的时间范围策略禁止"
+
+msgid "banned by mail notify nower heapuprc number"
+msgstr "邮件通知被插件的重复通知策略禁止"
 
 
 ### bin/checkconf
