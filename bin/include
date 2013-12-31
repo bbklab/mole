@@ -1577,58 +1577,6 @@ get_policy_analysize() {
   echo "${result}"
 }
 
-# Check now hit plugin's notify policy range or not ?
-# Usage:        hit_policy_range_ornot {notify_plicy_config}
-# Example:      hit_policy_range_ornot "0-09,07-11,13-20,10-19  5"  
-#
-hit_policy_range_ornot() {
-  local notify_policy=$1
-  [ -z "${notify_policy//[ ]}" ] && {
-	write_log -f "${MOLE_LOG}" "E0000000 hit_policy_range_ornot error: missing notify policy to be analysized.";
-	return 1
-  }
-
-  local nower_H=$(/bin/date +%H 2>&-)
-  local range_H=$( get_policy_analysize "${notify_policy}" "range" )
-
-  if is_sub "$((10#${nower_H}))" "${range_H}" ; then
-	return 0
-  else
-	return 1
-  fi
-}
-
-# Check nower heaped up rc-number hit plugin's notify policy maxnum or not ?
-# Usage:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
-# Example:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
-#
-hit_policy_heapuprc_ornot() {
-  local plugin_name=$1	plugin_rc=$2  notify_policy=$3
-  [ -z "${plugin_name}" ] && {
-        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin name";
-        return 1
-  }
-
-  local nower_heapupnum=$(get_heapuprc_count "${plugin_name}" "${plugin_rc}")
-  local policy_rtimenum=$(get_policy_analysize "${notify_policy}" "rtime")
-  
-  if [ "${policy_rtimenum}" == "-1" ]; then
-	return 1	# disabled, never notify on -1
-  elif [ "${policy_rtimenum}" == "0" ]; then
-	return 0	# unlimited, always notify on 0
-  elif [ -z "${nower_heapupnum}" -o ! -z "${nower_heapupnum//[0-9]}" ]; then
-	return 1	# disabled on nower heapupnum not numberic
-  elif [ -z "${policy_rtimenum}" -o ! -z "${policy_rtimenum//[0-9]}" ]; then
-	return 1	# disabled on policy rtimenum not numberic
-  else
-	if [ ${nower_heapupnum} -le ${policy_rtimenum} ]; then
-		return 0	# enabled on nower heapupnum lower/equal than policy rtimenum
-	else
-		return 1	# disabled on nower heapupnum larger than policy rtimenum
-	fi
-  fi
-}
-
 # Get plugin's xxxx_action_type value.		
 # allowed action_type ==> [ take_snapshot | mail_notify | sms_notify | post_notify | auto_handle ]
 # Usage:      get_action_type  plugin-name  xxxx_action_type
@@ -2229,6 +2177,58 @@ add_heapuprc_count() {
   fi
 
   return "${rc}"
+}
+
+# Check now hit plugin's notify policy range or not ?
+# Usage:        hit_policy_range_ornot {notify_plicy_config}
+# Example:      hit_policy_range_ornot "0-09,07-11,13-20,10-19  5"  
+#
+hit_policy_range_ornot() {
+  local notify_policy=$1
+  [ -z "${notify_policy//[ ]}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 hit_policy_range_ornot error: missing notify policy to be analysized.";
+	return 1
+  }
+
+  local nower_H=$(/bin/date +%H 2>&-)
+  local range_H=$( get_policy_analysize "${notify_policy}" "range" )
+
+  if is_sub "$((10#${nower_H}))" "${range_H}" ; then
+	return 0
+  else
+	return 1
+  fi
+}
+
+# Check nower heaped up rc-number hit plugin's notify policy maxnum or not ?
+# Usage:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
+# Example:	hit_policy_heapuprc_ornot {plugin_name} {plugin_rc} {notify_policy}
+#
+hit_policy_heapuprc_ornot() {
+  local plugin_name=$1	plugin_rc=$2  notify_policy=$3
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin name";
+        return 1
+  }
+
+  local nower_heapupnum=$(get_heapuprc_count "${plugin_name}" "${plugin_rc}")
+  local policy_rtimenum=$(get_policy_analysize "${notify_policy}" "rtime")
+  
+  if [ "${policy_rtimenum}" == "-1" ]; then
+	return 1	# disabled, never notify on -1
+  elif [ "${policy_rtimenum}" == "0" ]; then
+	return 0	# unlimited, always notify on 0
+  elif [ -z "${nower_heapupnum}" -o ! -z "${nower_heapupnum//[0-9]}" ]; then
+	return 1	# disabled on nower heapupnum not numberic
+  elif [ -z "${policy_rtimenum}" -o ! -z "${policy_rtimenum//[0-9]}" ]; then
+	return 1	# disabled on policy rtimenum not numberic
+  else
+	if [ ${nower_heapupnum} -le ${policy_rtimenum} ]; then
+		return 0	# enabled on nower heapupnum lower/equal than policy rtimenum
+	else
+		return 1	# disabled on nower heapupnum larger than policy rtimenum
+	fi
+  fi
 }
 
 
