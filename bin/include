@@ -3822,6 +3822,9 @@ process_plugin_misform() {
 #get_policy_analysize " 0-24,1-1,1-100,3-108,10000-10007,abc-def,,  12  "  "range"
 #get_policy_analysize  "0-9,07-08,13-18,15-17  5"  range
 #hit_policy_range_ornot "0-9,07-08,13-16  5";echo $?
+#add_heapuprc_count sysload crit
+#add_heapuprc_count sysload crit
+#add_heapuprc_count sysload crit
 #add_heapuprc_count sysload succ
 #add_heapuprc_count sysload crit
 #add_heapuprc_count sysload crit
