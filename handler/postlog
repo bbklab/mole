@@ -1,4 +1,46 @@
 #!/usr/bin/env perl
+
+our $basedir = '/usr/local/esop/agent/mole';
+our $mole = "$basedir/mole";
+
+BEGIN {
+
+  my $basedir = '/usr/local/esop/agent/mole';
+  my $mole = "$basedir/mole";
+
+  unless (-f $mole && -x $mole) {
+  	printf "$mole not prepared.\n";
+  	exit 1;
+  } 
+
+  my $pllib_dir = "$basedir/opt/plmods";
+  open my $fh, "$mole printdef PLLIB_DIR 2>&- |";
+  if($fh){
+  	while(<$fh>){
+        	chomp; $pllib_dir = $_;
+        	last;
+  	}
+  }
+
+  my @incs = (    # set additional path
+  	# rhel5 32bit
+  	$pllib_dir.'/lib/perl5/',
+  	$pllib_dir.'/lib/perl5/5.8.8/',
+  	$pllib_dir.'/lib/perl5/site_perl/',
+  	$pllib_dir.'/lib/perl5/site_perl/5.8.8/',
+  	# rhel5 64bit
+  	$pllib_dir.'/lib64/perl5/',
+  	$pllib_dir.'/lib64/perl5/5.8.8/',
+  	$pllib_dir.'/lib64/perl5/site_perl/',
+  	$pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
+  	# rhel6 32bit
+  	$pllib_dir.'/lib/perl5/',
+  	# rhel6 64bit
+  	$pllib_dir.'/lib64/perl5/',
+  );
+
+  push @INC, @incs;
+};
 use strict;
 use warnings;
 use utf8;
@@ -7,6 +49,8 @@ use Getopt::Std;
 use IO::Socket;
 use IO::Socket::INET;
 use Benchmark ':hireswallclock';
+use JSON;
+use Time::HiRes;
 # use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
@@ -17,52 +61,13 @@ $| = 1;
 
 # declar global vars
 our $filename = (split /\//, __FILE__)[-1];
-our $basedir = '/usr/local/esop/agent/mole';
-our $mole = "$basedir/mole";
 our %opts = ();
 our ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = ();
 our $logfrom;
 our (%json_data,$json_result) = ('','');
 
-
-# check mole 
-unless (-f $mole && -x $mole) {
-  printf "$mole not prepared.\n";
-  exit 1;
-} 
-
-# read PLLIB_DIR
-our $pllib_dir = "$basedir/opt/plmods";
-open my $fh, "$mole printdef PLLIB_DIR 2>&- |";
-if($fh){
-  while(<$fh>){
-        chomp; $pllib_dir = $_;
-        last;
-  }
-}
-my @incs = (    # set additional path
-  # rhel5 32bit
-  $pllib_dir.'/lib/perl5/',
-  $pllib_dir.'/lib/perl5/5.8.8/',
-  $pllib_dir.'/lib/perl5/site_perl/',
-  $pllib_dir.'/lib/perl5/site_perl/5.8.8/',
-  # rhel5 64bit
-  $pllib_dir.'/lib64/perl5/',
-  $pllib_dir.'/lib64/perl5/5.8.8/',
-  $pllib_dir.'/lib64/perl5/site_perl/',
-  $pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
-  # rhel6 32bit
-  $pllib_dir.'/lib/perl5/',
-  # rhel6 64bit
-  $pllib_dir.'/lib64/perl5/',
-);
-
-push @INC, @incs;
-use JSON;
-use Time::HiRes;
-
 our $postlog = "$basedir/log/postlog.log";
-open $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
+open my $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
 if($fh){
   while(<$fh>){
 	chomp; $postlog = $_;
