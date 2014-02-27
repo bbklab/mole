@@ -4,24 +4,8 @@ our $basedir = '/usr/local/esop/agent/mole';
 our $mole = "$basedir/mole";
 
 BEGIN {
-
   my $basedir = '/usr/local/esop/agent/mole';
-  my $mole = "$basedir/mole";
-
-  unless (-f $mole && -x $mole) {
-  	printf "$mole not prepared.\n";
-  	exit 1;
-  } 
-
   my $pllib_dir = "$basedir/opt/plmods";
-  open my $fh, "$mole printdef PLLIB_DIR 2>&- |";
-  if($fh){
-  	while(<$fh>){
-        	chomp; $pllib_dir = $_;
-        	last;
-  	}
-  }
-
   my @incs = (    # set additional path
   	# rhel5 32bit
   	$pllib_dir.'/lib/perl5/',
@@ -41,6 +25,7 @@ BEGIN {
 
   push @INC, @incs;
 };
+
 use strict;
 use warnings;
 use utf8;
@@ -58,6 +43,11 @@ binmode(STDOUT, ":encoding(utf8)");
 
 $| = 1;
 
+# check mole
+unless (-f $mole && -x $mole) {
+  printf "$mole not prepared.\n";
+  exit 1;
+} 
 
 # declar global vars
 our $filename = (split /\//, __FILE__)[-1];
