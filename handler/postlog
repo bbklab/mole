@@ -2,12 +2,10 @@
 use strict;
 use warnings;
 use utf8;
-use JSON;
 use Encode;
 use Getopt::Std;
 use IO::Socket;
 use IO::Socket::INET;
-use Time::HiRes;
 use Benchmark ':hireswallclock';
 # use Smart::Comments;
 
@@ -19,7 +17,8 @@ $| = 1;
 
 # declar global vars
 our $filename = (split /\//, __FILE__)[-1];
-our $mole = '/usr/local/mole/mole';
+our $basedir = '/usr/local/esop/agent/mole';
+our $mole = "$basedir/mole";
 our %opts = ();
 our ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = ();
 our $logfrom;
@@ -32,8 +31,38 @@ unless (-f $mole && -x $mole) {
   exit 1;
 } 
 
-our $postlog = '/usr/local/mole/log/postlog.log';
-open my $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
+# read PLLIB_DIR
+our $pllib_dir = "$basedir/opt/plmods";
+open my $fh, "$mole printdef PLLIB_DIR 2>&- |";
+if($fh){
+  while(<$fh>){
+        chomp; $pllib_dir = $_;
+        last;
+  }
+}
+my @incs = (    # set additional path
+  # rhel5 32bit
+  $pllib_dir.'/lib/perl5/',
+  $pllib_dir.'/lib/perl5/5.8.8/',
+  $pllib_dir.'/lib/perl5/site_perl/',
+  $pllib_dir.'/lib/perl5/site_perl/5.8.8/',
+  # rhel5 64bit
+  $pllib_dir.'/lib64/perl5/',
+  $pllib_dir.'/lib64/perl5/5.8.8/',
+  $pllib_dir.'/lib64/perl5/site_perl/',
+  $pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
+  # rhel6 32bit
+  $pllib_dir.'/lib/perl5/',
+  # rhel6 64bit
+  $pllib_dir.'/lib64/perl5/',
+);
+
+push @INC, @incs;
+use JSON;
+use Time::HiRes;
+
+our $postlog = "$basedir/log/postlog.log";
+open $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
 if($fh){
   while(<$fh>){
 	chomp; $postlog = $_;
@@ -41,7 +70,7 @@ if($fh){
   }
 }
 
-our $statfile = '/usr/local/mole/tmp/.posthost.status';
+our $statfile = "$basedir/tmp/.posthost.status";
 open $fh, "$mole printdef POSTHOST_STATUS 2>&- | ";
 if($fh){
   while(<$fh>){
@@ -77,6 +106,7 @@ if($fh){
   }
 }
 close $fh if ($fh);
+
 
 
 
