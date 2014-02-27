@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-#
-# 
-#
-#
 
 # Global Def
 PATH_ESOP="/usr/local/esop/agent"

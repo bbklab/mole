@@ -15,14 +15,11 @@
 # Check that networking is up.
 [ "$NETWORKING" = "no" ] && exit 0
 
-
 esop="/usr/local/esop/agent/app/sbin/esop"
 prog="$(basename ${esop})"
 
-
 start() {
     [ -x $esop ] || exit 5
-    # daemon $esop start
     $esop start
     retval=$?
     return $retval
@@ -48,12 +45,11 @@ status() {
 }
 
 case "$1" in
-    (start|stop|restart|reload|status|list)
+    (start|stop|restart|status)
         $1
         ;;
     *)
-        echo $"Usage: $0 {start|stop|status|restart|reload|list}"
+        echo $"Usage: $0 {start|stop|restart|status}"
         exit 2
 esac
-
 #END Of esop.init
