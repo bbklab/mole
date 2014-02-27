@@ -4,12 +4,6 @@
 # This Script Responsible for Sending Mails.
 # 
 #
-# Usage:     ./sendmail -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
-#
-# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{warn}:{file}{ /etc/inittab /tmp/1M /tmp/4M }" -h ""
-# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load Average: [19.3] >= UpLimit: [15] }"  -h "auto handler result here"
-#
-
 
 # BASE_DIR DEF
 [ -z ${BASE_DIR} ] && { 

@@ -5,12 +5,6 @@
 # 
 # Output: path of snapshot tarball.
 #
-# Usage:     ./takesnap -f {plugin_name} -s {jobid}
-#
-# Example:   ./takesnap -f check_sysload -s AlFt5885
-# Example:   ./takesnap -f check_sysload -s tmout
-#
-
 
 # BASE_DIR DEF
 [ -z ${BASE_DIR} ] && { 
