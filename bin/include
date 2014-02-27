@@ -74,7 +74,7 @@ CONFIG_FILE="${CONF_DIR}/.mole.ini"
 INCLUDE_FILE="${BIN_DIR}/include"
 
 # PID DEF
-PID_FILE="${RUN_DIR}/mole.pid"
+PID_FILE="${RUN_DIR}/esop_mole.pid"
 
 # TMP FILE DEF
 TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"

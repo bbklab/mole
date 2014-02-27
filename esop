@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+#
+# 
+#
+#
+
+# Global Def
+PATH_ESOP="/usr/local/esop/agent"
+PATH_APP="$PATH_ESOP/app"
+PATH_BIN="$PATH_APP/bin"
+PATH_RUN="$PATH_ESOP/run"
+PATH_OPT="$PATH_ESOP/opt"
+PATH_OPT_SBIN="$PATH_OPT/sbin"
+
+PIDF_GMOND="$PATH_RUN/esop_gmond.pid"
+PIDF_PHPTD="$PATH_RUN/esop_phptd.pid"
+PIDF_MOLE="$PATH_RUN/esop_mole.pid"
+
+ARRAY_COMPONENT=(
+    gmond 	"esop_gmond"
+    phptd 	"esop_phptd"
+    mole  	"esop_mole"
+)
+
+EXEC_USER="eyou"
+EXEC_GROUP="eyou"
+CMD_SUDO_EYOU="sudo -u $EXEC_USER"
+
+
+#
+### Func Def
+#
+
+sub_str() {  
+  [ "${1#*$2*}" == "$1" ] && echo no || echo yes  
+}
+
+# get pid from pidfile
+# usage:	get_pid {pid_file}
+# return:	0 | 1 | 2
+#
+get_pid(){
+  local fpid=$1
+  local pid=
+
+  if [ -f "${fpid}" -a -r "${fpid}" ]; then
+	pid=$(awk '{print $1;exit;}' "${fpid}" 2>&-)
+	[ -z "${pid}" -o ! -z "${pid//[0-9]}" ] && {
+		return 2	# pid invalid
+	} 
+  else
+	return 1		# pidfile not exist
+  fi
+
+  echo "${pid}"			# pid normal
+  return 0
+}
+
+# get pid running status
+# usage:	is_ruuning  {pid_file} {pname}
+# return:	0 running,  1 dead,  2 fake?,  3 pidfie not exist,  4 dead with pidfile left
+#
+is_running(){
+  local fpid=$1 pname=$2
+  local pid= rc=
+  
+  pid=$(get_pid "${fpid}")
+  rc=$?
+  if [ "$rc" == "0" ]; then
+  	if [ -d "/proc/${pid}/" ]; then
+		local cmdline=$(cat "/proc/${pid}/cmdline" 2>&-)
+		if [ "$(sub_str "${cmdline}" "${pname}")" == "yes" ]; then
+			return 0	# running
+		else
+			return 2	# fake?
+		fi
+  	else
+ 		return 4		# dead with pidfile left
+  	fi
+  elif [ "$rc" == "1" ]; then
+	return 3
+  elif [ "$rc" == "2" ]; then
+
+  fi
+}
+
+start_gmond(){
+  $CMD_SUDO_EYOU $PATH_OPT_SBIN/gmond -p $PIDF_GMOND
+}
+
+start_phptd ()
+{
+    $CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD
+}
+
+stop_phptd ()
+{
+    kill `head -n 1 $PIDF_PHPTD`
+}
+
+stop_gmond ()
+{
+    kill `head -n 1 $PIDF_GMOND`
+}
+
+
+#
+### Main Body Begin
+#
+
+# check root privileges fist
+if [ "$(id -u)" != "0" ]; then
+    echo "root privilege required!"
+    exit 1
+fi
