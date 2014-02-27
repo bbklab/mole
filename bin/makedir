@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# ================================================
+#  This Script Create Basic Directories of MOLE 
+# ================================================
+#
+# option: -c to check directories and files
+#
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+### Directories DEF
+array_directories=( 
+	${BIN_DIR} 
+	${CONF_DIR} 
+	${HANDLER_DIR} 
+	${OPT_DIR} 
+	${PLUGIN_DIR} 
+	${INNER_DIR} 
+	${TMP_DIR} 
+	${RUN_DIR} 
+	${LOG_DIR} 
+	${BACK_DIR} 
+	${SNAPSHOT_DIR} 
+	${SHARE_DIR}
+	${LOCALE_DIR}
+)
+### SHs DEF
+array_shs=(
+	${INCLUDE_FILE}
+	${PLUTIL}
+	${PRECHECK_SH}
+	# ${UPDATE_SH}
+	${REPORT_SH}
+	${CHECKCONF_SH}
+	${POSTLOG_SH}
+	${TAKESNAP_SH}
+	${SENDMAIL}
+	${SENDEMAIL}
+	${MAKEDIR_SH}
+	${SETINIT_SH}
+)
+
+MODE=0
+[ "$1" == "-c" ] && MODE=1
+
+mkrc=0
+ckrc=0
+
+
+OK="$(echo_green "[$(gettext "OK")]")"
+CRIT="$(echo_red "[$(gettext "CRIT")]")"
+
+### Create Directory
+for ((i=0;i<${#array_directories[@]};i++)) 
+do
+	if [ "${MODE}" == "1" ]; then
+		[ -d "${array_directories[i]}" -a -w "${array_directories[i]}" ] && {
+			echo -e "${OK} : ${array_directories[i]} $(gettext "prepared")"
+		} || {
+			echo -e "${CRIT} : ${array_directories[i]} $(gettext "not prepared")"
+			((ckrc++))
+		}
+	else
+		/bin/mkdir -v -p -m 755 "${array_directories[i]}"
+		if [ "$?" != "0" ]; then
+			((mkrc++))
+		fi
+	fi
+done
+### +x SH
+for ((i=0;i<${#array_shs[@]};i++))
+do
+	if [ "${MODE}" == "1" ]; then
+		[ -f "${array_shs[i]}" -a -x "${array_shs[i]}" ] && {
+			echo -e "${OK} : [${array_shs[i]}] $(gettext "prepared")"
+		} || {
+			echo -e "${CRIT} : [${array_shs[i]}] $(gettext "not prepared")"
+			((ckrc++))
+		}
+	else
+		/bin/chmod +x "${array_shs[i]}"
+		if [ "$?" != "0" ]; then
+			((mkrc++))
+		fi
+	fi
+
+done
+[ "${MODE}" == "1" ] && exit ${ckrc} || exit ${mkrc}

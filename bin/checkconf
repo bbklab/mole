@@ -1,0 +1,570 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Check Config File: conf/.mole.ini
+# 
+# Usage:     ./checkconf
+#
+# Example:   ./checkconf
+#
+# Return Code:  0|1|2|3   ==>  (OK|WARN|CRIT|UNKN)
+#
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+# Set Return Codes
+STATE_OK=0
+STATE_WARN=1
+STATE_CRIT=2
+STATE_UNKN=3
+
+# Set VERBOSE
+VERBOSE=0
+[ "$1" == "-v" -o "$1" == "verbose" ] && VERBOSE=1
+
+# Show Help
+[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && {
+cat << EOF
+	./${0##*/}
+	./${0##*/} -v | verbose
+	./${0##*/} -h | help
+EOF
+exit 0
+}
+
+# Check Rules Definations:
+#
+# Rule Format: 
+# 	str:default strings if null
+# 	emls:default emls if null
+# 	int:min:max
+# 	set:[value1|value2|value3]
+# 	cbset:[value1|value2|value3]
+# 	file:search dirname under basedir mole/
+# 	time
+#
+ARRAY_CONFIG_RULES=(
+	# global
+	#"global=>id"				"int:100000000:9999999999"
+	#"global=>name" 			"str:mole__ops.eyou.net"
+	#"global=>parter_id"			"int:0:9999999999"
+	"global=>scan_interval"  		"int:5:999"
+	"global=>attach_ini_mail"		"set:[yes|no]"
+	"global=>sysload_uplimit"		"int:0:999"
+	"global=>max_kidsnum"			"int:0:99"
+	"global=>plugin_maxlen"			"int:1:65536"
+	"global=>handler_maxlen"		"int:1:32768"
+	"global=>notify_onmisform"		"set:[yes|no]"
+	"global=>locale"			"set:[zh|en|zh_CN|en_US|zh_CN.UTF-8|en_US.UTF-8]"
+
+	# default
+	"default=>enable"		"set:[yes|no]"
+	"default=>comment"		"str:Mole Plugin"
+	"default=>frequency"		"time"
+	"default=>exec_tmout"		"time"
+	"default=>maxerr_times"		"int:1:999"
+	"default=>take_snapshot"	"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>mail_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>sms_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>post_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	#"default=>mail_receviers"	"file or emls:root_bbk@126.com"
+	#"default=>sms_receviers"	"file or int:10000000000:99999999999"
+	"default=>attsnap_mail"		"set:[yes|no]"
+	"default=>auto_handle"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>auto_handler"		"file:handler"
+	"default=>locale"		"set:[zh|en|zh_CN|en_US|zh_CN.UTF-8|en_US.UTF-8]"
+	"default=>debug"		"set:[yes|no]"
+
+	# inner plugins
+	"mole_clear_overdue=>frequency"	      "time"
+	"mole_clear_overdue=>tmpfile_reserve_time"  "int:1:999"
+	"mole_clear_overdue=>logfile_reserve_time"  "int:1:999"
+	"mole_clear_overdue=>snapfile_reserve_time" "int:1:999"
+	"mole_clear_overdue=>snapdir_maxsize"	      "int:1:10240"
+	"mole_log_rotate=>frequency"		      "time"
+	"mole_log_rotate=>force_size_uplimit"	      "int:1:2047"
+	"mole_self_check=>frequency"		      "time"
+	"mole_iam_alive=>frequency"		      "time"
+	"mole_check_remote=>frequency"	      "time"
+	"mole_check_remote=>exec_tmout"	      "time"
+
+	# handler
+	"sendmail=>smtp_server_port"		"int:1:65535"
+	"sendmail=>timeout"			"int:1:300"
+	"sendmail=>charset"			"cbset:[utf8|gbk|gb2312|big5]"
+	"sendmail=>auth_user"			"emls"
+	"postlog=>post_server_port"		"int:1:65535"
+	"postlog=>post_port_type"		"set:[tcp|udp]"
+	"postlog=>post_timeout"			"int:1:300"
+	"postlog=>post_max_length"		"int:1:50001"
+	"postlog=>post_debug"			"set:[yes|no]"
+)
+
+
+#
+# Function Definations
+#
+
+# check type {str}
+# Example:	check_type_str "str:Mole Plugin" "  "; echo $?
+#
+check_type_str(){
+  local rule="$1"; shift 1; local input="$*"
+  local default=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}')
+  local result=  rc=
+  [ -z "${input//[ ]}" ] && {
+	result="$(gettext "NULL, set default") ${default}"
+	rc=${STATE_WARN}
+  } || {
+	rc=${STATE_OK}
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check type {emls}
+# Example:	check_type_emls emls "zhangguangzheng@eyou.net" "hello@@@1" "abcdej@kkk.1"; echo $?
+#
+check_type_emls(){
+  local rule=$1; shift 1; local input="$*"
+  local default=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}')
+  local result=  rc=
+  [ -z "${input//[ ]}" ] && {
+        result="$(gettext "NULL, set default") [${default}]"
+        rc=${STATE_WARN}
+  } || {
+	local oknum=0 errnum=0 total=0
+	for eml in `echo -e "${input}"`
+	do
+		if [ "${eml}" == "$(echo -e "${eml}" | grep -E -o "\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*")" ]; then
+			((oknum++))
+		else
+			result="${result} $(eval_gettext "[\${eml}] invalid");"
+			((errnum++))
+		fi
+		((total++))
+	done
+	[ "${errnum}" != "0" ] && {
+		result="$(eval_gettext "\${errnum}/\${total} invalid email address.") ${result}"
+		rc=${STATE_CRIT}
+	} || {
+		rc=${STATE_OK}
+	}
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+
+# check type {int}
+# Example:	check_type_int "int:3:9" "10"; echo $?
+#
+check_type_int(){
+  local rule="$1"; shift 1; local input="$*"
+  local min=$(echo -e "${rule}"|awk -F":" '{print $2}'|tr -d ' ')
+  local max=$(echo -e "${rule}"|awk -F":" '{print $3}'|tr -d ' ')
+  local result=  rc=
+
+  [ -z "${min}" -o ! -z "${min//[0-9]}" -o -z "${max}" -o ! -z "${max//[0-9]}" ] && {
+	echo "$(eval_gettext "rule=[\${rule}], min=[\${min}] or max=[\${max}] is not interger")"
+	return ${STATE_CRIT}
+  }
+
+  [ -z "${input//[ ]}" ] && {
+	result="$(gettext "NULL")"
+	rc=${STATE_CRIT}
+  } || {
+	[ ! -z "${input//[0-9]}" ] && {
+		result="$(gettext "must be interger")"
+		rc=${STATE_CRIT}
+	} || {
+		[ "$(echo "${input}>=${min}" | bc 2>&-)" == "1" -a "$(echo "${input}<=${max}" | bc 2>&1)" == "1" ] && {
+			rc=${STATE_OK}
+		} || {
+			result="$(eval_gettext "must between \${min}-\${max}")"
+			rc=${STATE_CRIT}
+		}
+	}
+  }
+
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check type {set}
+# Example:	check_type_set "set:[ok|no]"  "yes"; echo $?
+# 
+check_type_set(){
+  local rule="$1"; shift 1; local input="$*"
+  local sets=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}'  | tr '|' ' ' | tr -d '[]')
+  local result=  flag= rc=
+  [ -z "${input//[ ]}" ] && {
+        result="$(gettext "NULL")"
+        rc=${STATE_CRIT}
+  } || {
+  	for s in `echo -e "${sets}"`
+  	do
+		[ "${s}" == "${input}" ] && {
+			rc=${STATE_OK}
+			flag=1
+			break
+		}
+  	done
+	[ -z "${flag}" ] && {
+		result="[${input}] $(gettext "not belongs in") [${sets}]"
+		rc=${STATE_CRIT}
+	}
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check type {cbset}
+# Example:	check_type_cbset "cbset:[crit|warn|unkn|succ|tmout|all|none|default]" "none default fuck name"; echo $?
+# 
+check_type_cbset(){
+  local rule="$1"; shift 1; local input="$*"
+  local sets=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}'  | tr '|' ' ' | tr -d '[]')
+  local result=  rc=
+  [ -z "${input//[ ]}" ] && {
+        result="$(gettext "NULL")"
+        rc=${STATE_CRIT}
+  } || {
+	local errnum=0  oknum=0  total=0
+	for i in `echo -e "${input}"`
+	do
+		local tag=0
+		for s in `echo -e "${sets}"`
+		do
+			[ "${s}" == "${i}" ] && {
+				tag=1
+				break
+			}
+		done
+		[ "${tag}" == "0" ] && {
+			((errnum++))
+			result="${result} $(eval_gettext "[\${i}] invalid");"
+		} || {
+			((oknum++))
+		}
+		((total++))
+	done
+	[ "${errnum}" != "0" ] && {
+		result="$(eval_gettext "\${errnum}/\${total} invalid, allowed"): [${sets}], ${result}"
+		rc=${STATE_CRIT}
+	} || {
+		rc=${STATE_OK}
+	}
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check type file {file}
+# Example:	check_type_file "file:log/"  " abc file:b file:c d e /etc/inittab mole.log"; echo $?
+# 
+check_type_file(){
+  local rule="$1"; shift 1; local input="$*"
+  local sdir="$(echo -e "${rule}"|awk -F":" '{print $2;exit;}')"
+  local filelst="$(echo -e "${input}" | sed -e 's/file://g;')"
+  local result=  rc=
+  [ -z "${input//[ ]}" ] && {
+        result="$(gettext "NULL")"
+        rc=${STATE_CRIT}
+  } || {
+	local errnum=0 oknum=0 total=0
+	for file in `echo -e "${filelst}"`
+	do
+		if [ -f "/${file}" -a -s "/${file}" ]; then
+			((oknum++))
+		elif [ -f "${BASE_DIR}/${file}" -a -s "${BASE_DIR}/${file}" ]; then
+			((oknum++))
+		elif [ -f "${BASE_DIR}/${sdir}/${file}" -a -s "${BASE_DIR}/${sdir}/${file}" ]; then
+			((oknum++))
+		else
+			((errnum++))
+			result="${result} $(eval_gettext "file [\${file}] not exists or empty");"
+		fi
+		((total++))
+	done
+	[ "${errnum}" != "0" ] && {
+                result="$(eval_gettext "\${errnum}/\${total} file check failed"), ${result}"
+                rc=${STATE_CRIT}
+        } || {
+                rc=${STATE_OK}
+        }
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check type {time}
+# Example:	check_type_time time "10year10min"; echo $?
+#
+check_type_time(){
+  local rule=$1; shift 1; local input="$*"
+  local result=  rc=
+  [ -z "${input//[ ]}" ] && {
+        result="$(gettext "NULL")"
+        rc=${STATE_CRIT}
+  } || {
+	local seconds=$( conv_time2sec "${input}" )
+	[ "${seconds}" == "invalid" ] && {
+		result="$(gettext "time format invalid")"
+		rc=${STATE_CRIT}
+	} || {
+		rc=${STATE_OK}
+	}
+  }
+  echo -e "${result}"
+  return "${rc}"
+}
+
+# check multi type [rules include keyword "or"]
+# Example:	check_ortypes file str:root_bbk@126.com  ""; echo $?
+# 
+check_ortypes(){
+  local rule1="$1" rule2="$2"; shift 2; local input="$*"
+  local result=  rc=
+  local type1="$(echo -e "${rule1}"|awk -F":" '{print $1}')"
+  local type2="$(echo -e "${rule2}"|awk -F":" '{print $1}')"
+  local retr1= retr2= rc1= rc2=
+  retr1=$( eval "check_type_${type1}  \"${rule1}\" \"${input}\" " 2>&1 )
+  rc1=$?
+  retr2=$( eval "check_type_${type2} \"${rule2}\" \"${input}\" " 2>&1 )
+  rc2=$?
+  if [ "${rc1}" == "0" -o "${rc2}" == "0" ]; then
+	rc=${STATE_OK}
+  else
+	result="eval_gettext "\${type1} return \${rc1}; \${type2} return \${rc2}")" 
+	rc=${STATE_WARN}
+  fi
+  echo -e "${result}"
+  return "${rc}"
+}
+
+
+
+
+
+#
+# Mail Body Begin ...
+# 
+
+# 0. set initial number
+oknum=0 warnnum=0 critnum=0 totalnum=0
+
+OK="$(echo_green "[$(gettext "OK")]")"
+WARN="$(echo_yellow "[$(gettext "WARN")]")"
+CRIT="$(echo_red "[$(gettext "CRIT")]")"
+
+
+# 1. check config file by ARRAY_CONFIG_RULES
+for((i=0;i<${#ARRAY_CONFIG_RULES[@]};i+=2))
+do
+	i2=$((${i}+1))
+	cname="${ARRAY_CONFIG_RULES[$i]}"
+	rule="${ARRAY_CONFIG_RULES[$i2]}"
+	# rule="${rule/|/\|}" ; rule="${rule/$/\$}"
+	# echo "pari: 1=[${cname}]  2=[${rule}]"; continue 1
+
+	section=$(echo -e "${cname}" | awk -F"=>" '{print $1}')
+	key=$(echo -e "${cname}" | awk -F"=>" '{print $2}')
+	value=$(read_mole_config "${section}" "${key}")
+
+	ornum=$(echo -e "${rule}" | awk -F" or " '{print NF}')
+	if [ "${ornum}" == "1" ]; then
+		type=$(echo -e "${rule}" | awk -F":" '{print $1}')
+		result=$( eval "check_type_${type} \"${rule}\" \"${value}\" " 2>&1 )
+		rc=$?
+	elif [ "${ornum}" == "2" ]; then
+		rule_1=$(echo -e "${rule}" | awk -F" or " '{print $1}')
+		rule_2=$(echo -e "${rule}" | awk -F" or " '{print $2}')
+		result=$( check_ortypes "${rule_1}" "${rule_2}" "${value}" 2>&1 )
+		rc=$?
+	fi
+	case "${rc}" in
+	"0") [ "${VERBOSE}" == "1" ] && echo -e "${OK} : ${section}->${key} = ${value}"
+	     ((oknum++))
+	     ;;
+	"1") echo -e "${WARN} : ${section}->${key} = ${value}  | ${result}"
+	     ((warnnum++))
+  	     ;;
+	"2") echo -e "${CRIT} : ${section}->${key} = ${value}  | ${result}"
+	     ((critnum++))
+	     ;;
+	esac
+	((totalnum++))
+done
+
+# 2. check section name is blank or not ?
+blankline=$( cat ${CONFIG_FILE} |\
+		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
+		tr -d ' \t' | sed -e '/\[\]/!d;' |\
+		tr -d '[]' | tr '\n' ' ' )
+if [ -z "${blankline//[ ]}" ]; then
+	((oknum++))
+	((totalnum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : [${CONFIG_FILE##*/}] $(gettext "NOT contains blank section")"
+else
+	((critnum++))
+	((totalnum++))
+	echo -e "${CRIT} : [${CONFIG_FILE##*/}] $(gettext "contains blank section in") ${blankline}"
+fi
+
+# 3. check config file contains duplicated section name or not ?
+duplsection=$( cat ${CONFIG_FILE} |\
+		tr -d ' \t' |\
+		awk '($0~/^[ \t]*\[[ \t]*.*[ \t]*\][ \t]*$/){print NR,$0}' |\
+		awk '{a[$2]++;} END{for(i in a){if(a[i]>1){print a[i],i}}}' )
+if [ -z "${duplsection//[ ]}" ]; then
+	((oknum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : [${CONFIG_FILE##*/}] $(gettext "NOT contains duplicated section")"
+else
+	((critnum++))
+	duplsection=$(echo -e "${duplsection}" | awk '{printf "%s %s, ",$1,$2}')
+	echo -e "${CRIT} : [${CONFIG_FILE##*/}] $(gettext "contains duplicated section:") ${duplsection}"
+fi
+((totalnum++))
+
+# 4. check if exists duplicated key name under one same section or not ?
+for section in `list_all_section`
+do
+	duplkey=$( list_section_keys  "${section}" | awk '{a[$1]++} END{for(i in a){if(a[i]>1){print a[i],i}}}' )
+	if [ -z "${duplkey//[ ]}" ]; then
+		((oknum++))
+		[ "${VERBOSE}" == "1" ] && echo -e "${OK} : [${section}] $(gettext "NOT contains duplicated key")"
+	else
+		((critnum++))
+		duplkey=$(echo -e "${duplkey}" | awk '{printf "%s %s, ",$1,$2}')
+		echo -e "${CRIT} : [${section}] $(gettext "contains duplicated key:") ${duplkey}"
+	fi
+	((totalnum++))
+done
+
+# 5. check if files under CONF_DIR is plugin configfile or not ?
+for configfile in `ls "${CONF_DIR}"`
+do
+	filepath="${CONF_DIR}/${configfile}"
+	[ "${filepath##*/}" == ".mole.ini" ] && continue
+	pluginname=$(is_plugin_configfile "${filepath}")
+	[ "${pluginname}" == "no" ] && {
+		((warnnum++))
+		echo -e "${WARN} : [${configfile}] $(gettext "is not mole config file.")"
+	} || {
+		((oknum++))
+		[ "${VERBOSE}" == "1" ] && echo -e "${OK} : [${configfile}] $(gettext "is mole config file.")"
+	}
+	((totalnum++))
+done
+
+# 6. check mole_id  parter_id mole_name  default_mail_receviers
+mole_id=$(get_mole_id)
+if [ "${mole_id}" == "0000000000" ]; then
+	((critnum++))
+	echo -e "${CRIT} : $(gettext "[mole_id] is empty. try") ${SETINIT_SH} rpminit"
+else
+	((oknum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[mole_id] =") [${mole_id}]."
+fi
+((totalnum++))
+
+parter_id=$(get_parter_id)
+if [ "${parter_id}" == "0000000000" ]; then
+	((critnum++))
+	echo -e "${CRIT} : $(gettext "[parter_id] is empty. try") ${SETINIT_SH}"
+else
+	((oknum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[parter_id] =") [${parter_id}]."
+fi
+((totalnum++))
+
+mole_name=$(get_global_name)
+if [ "${mle_name}" == "mole__ops.eyou.net" ]; then
+	((warnnum++))
+	echo -e "${WARN} : $(gettext "[mole_name] is empty. try") ${SETINIT_SH}"
+else
+	((oknum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[mole_name] =") [${mole_name}]."
+fi
+((totalnum++))
+
+default_receviers=$(get_mail_receviers default)
+if [ "${default_receviers}" == "root_bbk@126.com" ]; then
+	((warnnum++))
+	echo -e "${WARN} : $(gettext "[default_receviers] is empty. try") ${SETINIT_SH}"
+else
+	((oknum++))
+	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[default_receviers] =") [${default_receviers}]."
+fi
+((totalnum++))
+
+
+# print result
+echo "$(eval_gettext "Result: [total=\${totalnum} succ=\${oknum} warn=\${warnnum} crit=\${critnum}]")"
+
+
+# exit
+if [ "${critnum}" != "0" ]; then
+	exit ${STATE_CRIT}
+elif [ "${warnnum}" != "0" ]; then
+	exit ${STATE_WARN}
+elif [ "${oknum}" == "${totalnum}" ]; then
+	exit ${STATE_OK}
+else
+	exit ${STATE_UNKN}
+fi

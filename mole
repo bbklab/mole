@@ -1,0 +1,896 @@
+#!/bin/bash
+#
+#
+# Description	: mole for esop
+# Config	: conf/.mole.ini
+# Pidfile	: run/mole.pid
+#
+# Creation Date : 2014-02-27
+#
+# Author	: <zhangguangzheng@eyou.net> <zhang.elinks@gmail.com>
+#
+# Usage		: --help
+#
+#
+
+
+# === SET ${PATH}
+#
+export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin"
+
+# === SET ${BASE_DIR}   Defination is very important here, or this script won't
+#                       get config file, function file and other related files.
+#                       Now you would like to exec this scripts anywhere.
+#
+BASE_DIR="/usr/local/esop/agent/mole"
+
+# === Turn Off Job Control
+#
+set +m
+
+# === LOAD INCLUDE FILE
+#
+if [ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ]; then
+  	source ${BASE_DIR}/bin/include 2>&1
+	rc=$?
+	[ "$rc" != "0" ] && {
+		echo "load include file failed with status $rc"
+		exit 1
+	}
+else
+  	echo "include file [${BASE_DIR}/bin/include] not exists or empty. exit" 
+	exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+	source "/usr/bin/gettext.sh" 2>&1
+	rc=$?
+	[ "$rc" != "0" ] && {
+		echo "load [/usr/bin/gettext.sh] failed with status $rc"
+		exit 1
+	}
+else
+	echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+	exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+	export TEXTDOMAINDIR="${LOCALE_DIR}"
+	export TEXTDOMAIN="mole"
+else
+	echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+	exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+	export LANG="zh_CN.UTF-8"		## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+	export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+	export LANG="en_US.UTF-8"
+else
+	export LANG="zh_CN.UTF-8"
+fi
+
+
+### Help
+##
+show_help() {
+cat << EOF
+
+  $(echo_green "$(gettext "Options:")")
+	help					$(gettext "stuff you are reading")
+  	version					$(gettext "print version")
+	basedir					$(gettext "print basedir")
+	status					$(gettext "print mole status")
+	start   				$(gettext "start mole daemon")
+	stop    				$(gettext "stop mole daemon")
+	restart					$(gettext "restart mole daemon")
+	precheck				$(gettext "check system environment on start")
+	checkconf    	[-v]			$(gettext "check config file validity on start")
+	reload					$(gettext "reload include file (not config file) on fly")
+	makedir		[-c]			$(gettext "create basic directories")
+	takesnap				$(gettext "create system snapshot once")
+	list         	[plugin]		$(gettext "list plugin's schedule stat, (default list all)")
+	init	     	plugin			$(gettext "reset plugin's schedul stat, [all] for every plugin")
+	report       	plugin			$(gettext "report plugin's last result, [all] for every plugin")
+	enable       	plugin			$(gettext "enable plugin (change plugin config enable=yes)")
+	disable      	plugin			$(gettext "disable plugin (change plugin config enable=no)")
+	run		plugin			$(gettext "run plugin once and format output on terminal")
+	view		plugin [key]		$(gettext "print config->value, [all] for every plugin")
+	udef		plugin			$(gettext "print config->value for plugin user-defined config")
+	printdef	{VAR}			$(gettext "print the value of variable name")
+	config					$(gettext "help stuff about mole config-*")
+	config-help				$(gettext "help stuff about mole config-* (same as above)")
+	?					$(gettext "help stuff about short args")
+EOF
+}
+
+show_confhelp() {
+cat << EOF
+
+  $(echo_green "$(gettext "Options:")")
+	config-help				$(gettext "help stuff about config you are reading")
+	config-view  	plugin 			$(gettext "print all of config value on single plugin, [all] for every plugin")
+	config-view  	plugin key		$(gettext "print single config value on single plugin")
+  	config-add   	plugin key value  	$(gettext "add config and set value for plugin")
+	config-del   	plugin key		$(gettext "delete config for plugin")
+	config-update 	plugin key value	$(gettext "update config value for plugin")
+EOF
+}
+
+### Example
+##
+show_example() {
+cat << EOF
+
+  $(echo_green "$(gettext "Example:")")
+	mole help
+	mole version
+	mole basedir
+	mole precheck
+	mole checkconf [-v]
+	mole makedir  [-c]
+	mole  takesnap
+	mole  reload
+	mole  start | stop | status | restart | list
+        mole  list     	pop_svr
+	mole  init     	sysload
+	mole  report   	sysload
+	mole  enable   	sysload
+	mole  disable  	sysload
+	mole  run		sysload
+	mole  view		sysload
+	mole  view		sysload enable
+	mole  udef		sysload
+	mole  printdef	CONF_DIR
+	mole  config
+	mole  config-help
+
+EOF
+}
+
+show_confexample() {
+cat << EOF
+
+  $(echo_green "$(gettext "Example:")")
+	mole  config
+	mole  config-help
+	mole  config-view     pop_svr
+	mole  config-view     pop_svr comment
+	mole  config-add	pop_svr time_out 5
+	mole  config-update	pop_svr time_out 10
+	mole  config-del	pop_svr time_out 
+
+EOF
+}
+
+### Tips
+##
+show_shorttips() {
+cat << EOF
+
+  $(echo_green "$(gettext "ShortTips:")")
+	help		=> h
+	version		=> v
+	basedir		=> b
+	precheck        => p 
+	checkconf	=> c
+	makedir		=> m
+	takesnap	=> t
+	status          => s 
+	list            => l	( ln le lr li )
+	init            => i 
+	report		=> R	( Re Rr Ri )
+	run		=> r
+	enable		=> e
+	disable		=> d
+	config-view 	=> v 
+	config-add	=> a
+	config-update	=> u
+
+  $(echo_green "$(gettext "ShortTips Example:")")
+        mole  h
+        mole  v
+	mole  b
+        mole  p 
+        mole  c 
+	mole  m
+	mole  t
+        mole  s 
+        mole  l  [ln|le|lr|li]
+        mole  i  pop_svr | all | a
+        mole  R  pop_svr | all | a  [Re|Rr|Ri]
+        mole  r  pop_svr
+        mole  e  pop_svr
+        mole  d  pop_svr
+        mole  v  pop_svr | all | a
+	mole  v  pop_svr enable
+	mole  a  pop_svr enable yes
+	mole  u  pop_svr enable no
+
+EOF
+}
+
+### Show mole status
+# Return Code:  0 1 2 3	   running | dead | dead with pid left | fake?
+show_status() {
+  if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
+	read pid < "${PID_FILE}"
+	if [ -z "${pid//[0-9]}" -a -d "/proc/${pid}" ]; then    ###  numberic => running
+		local cmdline=$(cat /proc/${pid}/cmdline 2>&-)
+		[ "$(sub_str "${cmdline}" "mole")" == "yes" ] && {    ### cmdline contains "mole" ==> mole running
+			echo_green "$(eval_gettext "mole (pid: \${pid}) running ...")" ; echo
+			return 0
+		} || {
+			### fake?
+			echo_yellow "$(eval_gettext "mole (pid: \${pid}) running ... but seems fake?")  [CMD: "${cmdline}"]" ;
+			echo  
+			return 3
+ 		}
+	else
+		### not numberic ==> dead and pidfile left
+		echo_yellow "$(eval_gettext "mole dead, but pid file: \${PID_FILE} left dead.")" ;
+		echo  
+		return 2
+	fi
+  else
+  	echo_yellow "$(gettext "mole dead.")" ; echo  ### PID_FILE not exists ==> dead
+	return 1
+  fi
+}
+
+### Start mole 
+##
+start_core_cron() {
+
+local result=  rc=
+if [ -e "${PID_FILE}" ]; then   ## exit while pid file exist
+	echo_yellow "$(eval_gettext "pid file: \${PID_FILE} already exist.")" && echo && show_status
+	return 1
+else
+
+	# === PRE CHECK ON Start
+	gettext "1. prechecking envrioment      ... "
+	result=$( eval ${PRECHECK_SH} 2>&1 )
+	rc=$?
+	if [ "$rc" != "0" ]; then
+  		echo -e "\n$(gettext "PreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run MOLE") \n" 
+  		echo -e "${result}"
+  		exit 1
+	else
+		echo -e "[$(echo_green "$(gettext "succeed!")")]"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script precheck return succeed[rc=${rc}]. continue..."
+	fi
+
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE starting ..."
+
+	# === CHECK id/parter_id/name/receviers
+	gettext "2. verifying id/name/receviers ... "
+	mole_id=$(get_mole_id)
+	if [ "${mole_id}" == "0000000000" ]; then
+        	. ${SETINIT_SH} rpminit
+	fi
+	mole_name=$(get_global_name)
+	if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
+        	. ${SETINIT_SH}
+	fi
+	parter_id=$(get_parter_id)
+	if [ "${parter_id}" == "0000000000" ]; then
+		. ${SETINIT_SH}
+	fi
+	default_receviers=$(get_mail_receviers default)
+	if [ "${default_receviers}" == "root_bbk@126.com" ]; then
+        	. ${SETINIT_SH}
+	fi
+  	echo -e "[$(echo_green "$(gettext "succeed!")")]"
+
+	# === CHECK CONFIG FILE ON Start
+	gettext "3. checking config file        ... "
+	result=$( eval ${CHECKCONF_SH} 2>&1 )
+	rc=$?
+	if [ "$rc" == "2" ]; then	# crit => exit
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return failed[rc=${rc}]. exit"
+  		echo -e "\n$(gettext "Check Config Result: Sorry, Config File Contains Some Mistakes") \n"
+  		echo -e "${result}"
+  		exit 1
+	elif [ "$rc" == "1" ]; then	# warn => print warnnings, continue
+		echo -e "[$(echo_yellow "warnning!")]"
+		echo -e "${result}"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
+	elif [ "$rc" == "0" ]; then	# succ => continue
+		echo -e "[$(echo_green "$(gettext "succeed!")")]"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
+	fi
+
+	# === MAKEDIR ON Start
+	gettext "4. creating directories        ... "
+	result=$( eval ${MAKEDIR_SH} 2>&1 )
+	rc=$?
+	if [ "$rc" != "0" ]; then
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir return failed[rc=${rc}]. exit"
+		echo -e "\n$(gettext "Create Directory Result: Sorry, Some Mistakes Occured.") \n"
+		echo -e "${result}"
+		exit 1
+	else
+		echo -e "[$(echo_green "$(gettext "succeed!")")]"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir return succeed[rc=${rc}]. continue..."
+	fi
+
+	# === DIRECTORY CHECK ON Start
+	gettext "5. checking directories        ... "
+	result=$( eval "${MAKEDIR_SH} -c" 2>&1 )
+	rc=$?
+	if [ "$rc" != "0" ]; then
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir -c return failed[rc=${rc}]. exit"
+  		echo -e "\n$(gettext "DirCheck Result: Sorry, Directories not prepared") \n"
+  		echo -e "${result}\n"
+  		echo -e "$(gettext "Try to Run: \${MAKEDIR_SH}")\n"
+  		exit 1
+	else
+		echo -e "[$(echo_green "$(gettext "succeed!")")]"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir -c return succeed[rc=${rc}]. continue..."
+	fi
+
+	# === Execute Inner Plugins ON Start
+	gettext "6. running inner plugins       ... "
+	for plugin_name in mole_clear_overdue mole_log_rotate
+	do
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE executing inner plugins [${plugin_name}] ..."
+		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
+	done
+	echo -e "[$(echo_green "$(gettext "succeed!")")]"
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE inner plugins execution done. details in ${INNER_LOG##*/}."
+	
+	gettext "7. starting mole cron        ... "
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE starting mole core cron... "
+	{ while : ; do
+		
+		### trap signal HUP to reload bin/include
+		trap '  write_log -f "${MOLE_LOG}" "TRAP0000 MOLE Main:::Caught:::SIGHUP, Reloading..."
+			source ${BASE_DIR}/bin/include 1>/dev/null 2>&1
+			[ $? == "0" ] && {
+				write_log -f "${MOLE_LOG}" "TRAP0000 MOLE Main:::RELOADED"
+			} || {
+				write_log -f "${MOLE_LOG}" "TRAP0000 MOLE Main:::RELOAD-FAILD"
+			}
+	   	' 1
+
+		### trap signal TERM to clean up and exit
+		trap '  write_log -f "${MOLE_LOG}" "TRAP0000 MOLE Main:::Caught:::SIGTERM, Shuting Down..." 
+			list_running_plugin_section | while read rp
+			do
+				write_log -f "${MOLE_LOG}" "TRAP0000 MOLE try to stop running plugin: [${rp}]"
+				stop_single_plugin "${rp}"
+				clear_dead_lock_pid "${rp}"			
+			done
+			/bin/rm -f "${PID_FILE}" 1>&- 2>&-
+			write_log -f "${MOLE_LOG}" "TRAP0000 MOLE Main:::EXIT"
+			exit 1
+		' 15
+
+		### trap signal ERR to catch unsucceed function or command
+		trap ' write_log -f "${ERRLOG}" "TRAPERROR [LINE:$LINENO] exited with status: $?" 
+		' ERR
+
+		### Important !!!  
+		### [wait] can NOT be placed in  "list|while ... done"  struct  !!!
+		### as wait will lead to mole haning up.
+
+		list_enabled_plugin_section | while read plugin_name
+		do
+			clear_dead_lock_pid "${plugin_name}"
+			if [ "$(time2run_ornot "${plugin_name}")" == "yes" ]; then
+				if [ ! -s "${RUN_DIR}/${plugin_name}.pid" ]; then
+					add_runlock_on_pid_notexist ${plugin_name}
+					[ "$?" == "0" ] && {
+						if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
+							process_plugin ${plugin_name} &
+							_pid=$!
+							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
+						else
+							process_inner_plugin ${plugin_name} &
+							_pid=$!
+							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
+						fi
+					}
+				else
+					check_runlock_on_pid_exist ${plugin_name}
+					[ "$?" == "4" ] && {
+						if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
+                                                        process_plugin ${plugin_name} &
+							_pid=$!
+                                                        echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
+						else
+                                                        process_inner_plugin ${plugin_name} &
+							_pid=$!
+                                                        echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
+						fi
+					}
+				fi
+			fi
+		done
+
+		### sleep for a while.
+		INTERVAL=$( read_mole_config global scan_interval )
+		if [ -z "${INTERVAL}" -o ! -z "${INTERVAL//[0-9]}" ]; then
+			INTERVAL=5
+		else
+			[ ${INTERVAL} -lt 5 ] && INTERVAL=5
+		fi
+		sleep ${INTERVAL}
+
+	done 
+	} >> "${MOLE_LOG}" 2>&1  &   ### running as daemon
+
+	### save daemon pid
+	echo $! > ${PID_FILE}
+	echo -e "[$(echo_green "$(gettext "succeed!")")]"
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE start finished, pid=[$!]"
+fi 
+
+}
+
+
+### Stop mole
+##
+stop_core_cron() {
+  local status=  rps=  result=  rc=
+
+  result=$( eval ${PRECHECK_SH} 2>&1 )
+  rc=$?
+  if [ "$rc" != "0" ]; then
+	echo -e "\n$(gettext "PreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run MOLE") \n" 
+	echo -e "${result}"
+	exit 1
+  fi  
+
+  gettext "trying to stop mole ... "
+  status=$( show_status 2>&1 )
+  if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
+  	write_log -f "${MOLE_LOG}" "S0000000 MOLE stopping..."
+
+		# 1. first stop core cron
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE 1 => stop mole core cron"
+		stopps_by_pidfile ${PID_FILE}
+
+		# 2. then stop all running plugins
+		rps="$(list_running_plugin_section | tr '\n' ' ')"
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE 2 => stop all of running plugins: [${rps}]"
+		for p in `echo "${rps}"`
+  		do
+			stop_single_plugin "${p}"
+			clear_dead_lock_pid "${p}"
+  		done
+
+	echo_green "$(gettext " [OK]")"; echo
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE 3 => stop mole done"
+  else
+	echo_yellow "$(gettext " [SKIP]")" ; echo
+	echo "${status}"
+  fi
+}
+
+
+### Send single HUP to reload bin/include.
+##
+reload_core_cron(){
+  local status= pid=  result=  rc=
+
+  result=$( eval ${PRECHECK_SH} 2>&1 )
+  rc=$?
+  if [ "$rc" != "0" ]; then
+        echo -e "\n$(gettext "PreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run MOLE") \n" 
+        echo -e "${result}"
+        exit 1
+  fi  
+
+  echo_green "$(gettext "trying to reload mole include file: bin/include ...")"
+  status=$( show_status 2>&1 )
+  if [ "$?" == "0" ]; then   ### mole is running      status: fake? is DANGEROUS ! ==> SKIP
+  	read pid < "${PID_FILE}"
+	write_log -f "${MOLE_LOG}" "R0000000 MOLE Deamon is Running, PID: [${pid}]"
+	write_log -f "${MOLE_LOG}" "R0000000 MOLE Reloading Include File, Sending Signal 1 to MOLE Daemon: [${pid}]"
+	kill -1 "${pid}" 2>&-   ### send signal 1 to mole daemon.
+	echo_green "$(gettext "  [OK]")"; echo
+	return 0
+  else
+	echo_red  "$(gettext "  [SKIP]")"; echo 
+	echo "${status}"
+  fi
+}
+
+### List all plugin status
+##
+list_core_cron() {
+  list_plugin_status all
+}
+
+
+
+
+#
+### Main Body
+#
+case "$#" in 
+"1")
+	arg1=$1;
+	case "$arg1" in
+	"help"|"h")
+		show_help		
+		show_example			;;
+	"version"|"v")
+		echo "${MOLE_VERSION}"	;;
+	"basedir"|"b")
+		echo "${BASE_DIR}"		;;
+	"start")
+		start_core_cron			;;
+	"stop")
+		stop_core_cron 			;;
+	"restart")
+		stop_core_cron
+		sleep 1
+		start_core_cron			;;
+	"status"|"s")
+		show_status			;;
+	"list"|"l")
+		show_status
+		list_core_cron			;;
+	"ln")
+		list_plugin_section | tr ' ' '\n'
+						;;
+	"le")
+		list_plugin_status $(list_enabled_plugin_section)
+						;;
+	"lr")
+		list_plugin_status $(list_running_plugin_section)
+						;;
+	"li")
+		list_plugin_status $(list_inner_plugin_section)
+						;;
+	"Re")
+		for s in `list_enabled_plugin_section`
+		do
+			eval "${REPORT_SH} "${s}""
+		done
+						;;
+	"Rr")
+		for s in `list_running_plugin_section`
+		do
+			eval "${REPORT_SH} "${s}""
+		done
+						;;
+	"Ri")
+		for s in `list_inner_plugin_section`
+		do
+			eval "${REPORT_SH} "${s}""
+		done
+						;;
+	"precheck"|"p")
+		. ${PRECHECK_SH}		;;
+	"checkconf"|"c")
+		. ${CHECKCONF_SH}		;;
+	"makedir"|"m")
+		. ${MAKEDIR_SH}			;;
+	"takesnap"|"t")
+		. ${TAKESNAP_SH} 		;;
+	"reload")
+		reload_core_cron		;;
+	"config"|"config-help")
+		show_confhelp
+		show_confexample		;;
+	"?"|"/?")
+		show_shorttips			;;
+	*)
+		show_help
+		show_example			;;
+	esac
+	;;
+
+"2")
+
+	arg1=$1; arg2=$2
+	[ -z "${arg2//[ ]}" ] && {
+		echo_yellow "$(gettext "need arguments.")";echo
+		exit 1
+	}
+
+	case "$arg1" in
+	"?")
+		show_shorttips		;;
+	"list"|"l")
+		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### must be plugin
+			list_plugin_status  "$arg2"
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+			;;	
+	"enable"|"e")
+		rcode=0
+		for plugin in $arg2
+		do
+			if [ "$(read_plugin_section "$plugin")" == "$plugin" ]; then	### must be plugin
+                        	enable_plugin  "$plugin"
+				rc=$?
+				case "$rc" in
+				"0")  echo "$(eval_gettext "enable [\$plugin] success") [$(echo_green OK)]"
+			      		init_plugin mole_report_conf
+					;;
+				"2")  echo "$(eval_gettext "enable [\$plugin] skip") [$(echo_yellow "$(gettext "NoNeed: already enabled")")]"	;;
+				"5")  echo "$(eval_gettext "enable [\$plugin] warn") [$(echo_yellow "$(gettext "NoConf: config [enable] not found")")]"
+			      		echo "$(eval_gettext "trying to add config [enable] for [\$plugin], and set enable=yes")"
+			      		add_mole_config "$plugin" "enable" "yes"
+			      		rc=$?
+			      		case "$rc" in
+						"0") echo "$(eval_gettext "enable [\$plugin] success") [$(echo_green OK)]"
+				     			init_plugin mole_report_conf
+							;;
+						*)   echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}]" ;;
+			      		esac
+					;;
+				*)    echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}" 	;;
+				esac
+				((rcode+=$rc))
+			else
+				echo "$(echo_yellow "[$plugin]") : $(gettext "not registered in any config file.")"
+				((rcode+=9))
+                	fi
+		done
+		exit $rcode
+			;;
+	"disable"|"d")
+		rcode=0
+		for plugin in $arg2
+		do
+			if [ "$(read_plugin_section "$plugin")" == "$plugin" ]; then	### must be plugin
+                        	disable_plugin  "$plugin"
+				rc=$?
+				case "$rc" in
+                        	"0")  echo "$(eval_gettext "disable [\$plugin] success") [$(echo_green OK)]"
+			      		init_plugin mole_report_conf 
+					;;
+                        	"2")  echo "$(eval_gettext "disable [\$plugin] skip") [$(echo_yellow "$(gettext "NoNeed: already disabled")")]"            ;;
+                        	"5")  echo "$(eval_gettext "disable [\$plugin] warn") [$(echo_yellow "$(gettext "NoConf: config name [enable] not found")")]"
+			      	echo "$(eval_gettext "trying to add config [enable] for [\$plugin], and set enable=no")"
+			      	add_mole_config "$plugin" "enable" "no"
+			      	rc=$?
+			      	case "$rc" in
+					"0") echo "$(eval_gettext "disable [\$plugin] success") [$(echo_green OK)]"
+				     		init_plugin mole_report_conf
+						;;
+					*)   echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}]" ;;
+			      	esac
+				;;
+                        	*)    echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"       ;;
+                        	esac
+				((rcode+=$rc))
+			else
+				echo "$(echo_yellow "[$plugin]") : $(gettext "not registered in any config file.")"
+				((rcode+=9))
+                	fi
+		done
+		exit $rcode
+			;;
+	"init"|"i")
+		if [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+			init_plugin
+		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### is plugin
+                        init_plugin  "$arg2"
+		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
+			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then    ### is inner plugin
+				init_plugin "$arg2"
+			fi
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+                fi
+			;;
+	"view"|"config-view"|"v")
+		if [ "$arg2" == "mole" ]; then
+			for s in global default sendmail postlog takesnap `list_inner_plugin_section`   ### output about mole section 
+			do
+				echo_green "[${s}] $(gettext "configuration"):";echo
+				{ 
+				for key in `list_section_keys "${s}"`
+				do
+					value=$(read_mole_config ${s} ${key})
+					echo -e "${key} ==> ${value}"
+				done	
+				} | column -t -s "==>"
+				echo;echo;
+			done
+		elif [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+			for s in global default sendmail postlog takesnap `list_inner_plugin_section`   ### output about mole section 
+			do
+				echo_green "[${s}] $(gettext "configuration"):";echo
+				{ 
+				for key in `list_section_keys "${s}"`
+				do
+					value=$(read_mole_config ${s} ${key})
+					echo -e "${key} ==> ${value}"
+				done	
+				} | column -t -s "==>"
+				echo;echo;
+			done
+			for p in `list_plugin_section`		### output plugins
+			do
+				view_base_config  "${p}"
+				view_extra_config "${p}"
+				echo;echo;
+			done
+		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then	### is mole section
+			echo_green "[${2}] $(gettext "configuration"):";echo
+			{ 
+			for key in `list_section_keys "${2}"`
+			do
+				value=$(read_mole_config ${2} ${key})
+				echo -e "${key} ==> ${value}"
+			done	
+			} | column -t -s "==>"
+		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### must be plugin
+                        view_base_config "$arg2"
+			view_extra_config "$arg2"
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+			;;
+	"udef")
+		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### must be plugin
+			view_extra_config "$arg2" 1
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+			;;
+	"printdef")
+			eval "echo "\${${2}}""
+			;;
+	"report"|"R")
+		if [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+			. ${REPORT_SH} "all"
+		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then 	### is plugin
+			. ${REPORT_SH} "$arg2"
+		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
+			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then    ### is inner plugin
+				. ${REPORT_SH} "$arg2"
+			fi
+		fi
+			;;
+	"run"|"r")
+		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### is plugin
+			output=$( eval "${PLUGIN_DIR}/${2}" 2>&1 )
+			[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
+			. ${REPORT_SH} -f "$arg2" -i "${output}"
+		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
+			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then	### is inner plugin
+				output=$( eval "${INNER_DIR}/${2}" 2>&1 )
+				[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
+			fi
+			. ${REPORT_SH} -f "$arg2" -i "${output}"
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+			;;
+	"checkconf"|"c")
+		if [ "$arg2" == "verbose" -o "$arg2" == "-v" ]; then
+			. ${CHECKCONF_SH} "$arg2"
+		fi
+			;;
+	"makedir"|"m")
+		if [ "$arg2" == "c" -o "$arg2" == "-c" ]; then
+			. ${MAKEDIR_SH} "-c"
+		fi
+			;;
+	*)
+		show_help
+		show_example		;;
+	esac
+	;;
+"3")
+	arg1=$1; arg2=$2; arg3=$3
+	[ -z "${arg2//[ ]}" -o -z "${arg3//[ ]}"  ] && {
+		echo_yellow "$(gettext "need arguments.")";echo
+		exit 1
+        }
+
+	case "$arg1" in 
+        "view"|"config-view"|"v")
+                if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+			read_mole_config "$arg2" "$arg3"
+			rc=$?
+			exit ${rc}
+                else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+                        exit 9;
+                fi
+                        ;;
+	"config-del")
+		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+			del_mole_config "$arg2" "$arg3"
+			rc=$?
+			case "$rc" in
+			"0") echo "$(eval_gettext "delete [\$arg2]-[\$arg3] success") [$(echo_green OK)]"
+			     init_plugin mole_report_conf
+				;;
+			"2") echo "$(eval_gettext "delete [\$arg2]-[\$arg3] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already not exists")")]"	;;
+			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **"					;;
+			*)   echo "$(eval_gettext "delete [\$arg2]-[\$arg3] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"    	;;
+			esac
+			exit ${rc}
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+		;;
+	*)
+		show_help
+		show_example
+		;;
+	esac
+	;;
+"4")
+	arg1=$1; arg2=$2; arg3=$3; arg4=$4
+	[ -z "${arg2//[ ]}" -o -z "${arg3//[ ]}" -o -z "${arg4//[ ]}" ] && {
+		echo_yellow "$(gettext "need arguments.")";echo
+		exit 1
+	}
+
+	case "$arg1" in
+	"config-add"|"a")
+		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+			add_mole_config "$arg2" "$arg3" "$arg4"
+			rc=$?
+			case "$rc" in
+			"0") echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] success") [$(echo_green OK)]"
+			     init_plugin mole_report_conf
+				;;
+			"2") echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already exists")")]"		;;
+			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **" 					  ;;
+			*)   echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"        ;;
+			esac
+			exit ${rc}
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+		;;
+	"config-update"|"u")
+		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+			update_mole_config "$arg2" "$arg3" "$arg4"
+			rc=$?
+			case "$rc" in
+			"0") echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] success") [$(echo_green OK)]"
+			     init_plugin mole_report_conf
+				;;
+			"2") echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] is already what you want")")]" ;;
+			"5") echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] warn") [$(echo_yellow "$(eval_gettext "NoConf: config [\$arg3] not found")")]"	;;
+			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **" 					;;
+			*)   echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] failed") $(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"		;;
+			esac
+			exit ${rc}
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+		;;
+	*)
+		show_help
+		show_example
+		;;
+	esac
+	;;
+*)
+	show_help
+	show_example
+	;;
+esac

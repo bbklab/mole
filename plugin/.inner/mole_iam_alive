@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic post heartbeat.
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        BASE_DIR=${BASE_DIR%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# check function here
+check() {
+  ${POSTLOG_SH} -t heartbeat >/dev/null 2>&1
+  rc=$?
+  if [ "$rc" == "0" ]; then
+	EXIT_STATUS="${STATE_OK}"
+	LEVEL="ok"
+	TYPE="str"
+	CONTENT=" post heartbeat succeed | post mole heartbeat return ${rc}"
+  else
+	EXIT_STATUS="${STATE_WARNING}"
+	LEVEL="warn"
+	TYPE="str"
+	CONTENT=" post heartbeat failed | post mole heartbeat return ${rc}"
+  fi
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}  

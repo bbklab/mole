@@ -1,0 +1,2959 @@
+#!/bin/bash
+#
+#
+# =======================================================================================
+#  This File Contains Global Variables and Public Functions Used by MOLE and Plugins. 
+# =======================================================================================
+#
+#
+
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+
+
+
+
+####################################
+#				   #
+#  --*--< Global Variables >--*--  #
+#			           #
+####################################
+
+# VER DEF
+MOLE_VERSION="2.0-beta3"
+
+# DIR DEF
+BIN_DIR="${BASE_DIR}/bin"
+CONF_DIR="${BASE_DIR}/conf"
+HANDLER_DIR="${BASE_DIR}/handler"
+OPT_DIR="${BASE_DIR}/opt"
+PLUGIN_DIR="${BASE_DIR}/plugin"
+INNER_DIR="${PLUGIN_DIR}/.inner"
+TMP_DIR="${BASE_DIR}/tmp"
+RUN_DIR="${TMP_DIR}/run"
+LOG_DIR="${BASE_DIR}/log"
+BACK_DIR="${LOG_DIR}/backup"
+SNAPSHOT_DIR="${LOG_DIR}/snapshot"
+SHARE_DIR="${BASE_DIR}/share"
+LOCALE_DIR="${SHARE_DIR}/locale"
+
+# SH DEF
+PRECHECK_SH="${BIN_DIR}/precheck"
+UPDATE_SH="${BIN_DIR}/update"
+REPORT_SH="${BIN_DIR}/report"
+CHECKCONF_SH="${BIN_DIR}/checkconf"
+POSTLOG_SH="${HANDLER_DIR}/postlog"
+TAKESNAP_SH="${HANDLER_DIR}/takesnap"
+SENDMAIL="${HANDLER_DIR}/sendmail"
+SENDEMAIL="${OPT_DIR}/sendEmail"
+MAKEDIR_SH="${BIN_DIR}/makedir"
+SETINIT_SH="${BIN_DIR}/setinit"
+
+# PERL UTIL DEF
+PLUTIL="${BIN_DIR}/util.pl"
+
+# LOG DEF
+MOLE_LOG="${LOG_DIR}/mole.log"
+INNER_LOG="${LOG_DIR}/inner.log"
+PRECHECK_LOG="${LOG_DIR}/precheck.log"
+POSTLOG_LOG="${LOG_DIR}/postlog.log"
+TAKESNAP_LOG="${LOG_DIR}/takesnap.log"
+UPDATE_LOG="${LOG_DIR}/update.log"
+SENDMAIL_LOG="${LOG_DIR}/sendmail.log"
+ERRLOG="${LOG_DIR}/error.log"
+
+# CFG DEF
+CONFIG_FILE="${CONF_DIR}/.mole.ini"
+
+# INC DEF
+INCLUDE_FILE="${BIN_DIR}/include"
+
+# PID DEF
+PID_FILE="${RUN_DIR}/mole.pid"
+
+# TMP FILE DEF
+TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"
+TMP_NEXTRUN="${TMP_DIR}/.nextrun.dat"
+TMP_REPEAT="${TMP_DIR}/.repeat.dat"
+TMP_STATUS="${TMP_DIR}/.status.dat"
+SMTPHOST_STATUS="${TMP_DIR}/.smtphost.status"
+POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
+
+### PLUGIN BASE CONFIG NAME
+ARRAY_BASE_CONFIG=(
+  enable
+  comment
+  frequency
+  exec_tmout
+  maxerr_times
+  take_snapshot
+  mail_notify
+  sms_notify
+  post_notify
+  mail_receviers
+  sms_receviers
+  attsnap_mail
+  auto_handle
+  auto_handler
+  locale
+  debug
+)
+
+### PLUGIN RETRUN CODE MAPS
+ARRAY_RCSTATUS_MAPS=(
+  0 succ
+  1 warn
+  2 crit
+  3 unkn
+  4 noop
+  5 notify
+)
+
+### VALID ACTION CONFIG
+# all     = crit warn unkn succ notify tmout
+# default = crit warn unkn notify tmout
+# none	  = none
+VALID_ACTION_CONFIG="crit warn unkn succ notify tmout all default none"
+
+
+####################################
+#				   #
+#  --*--< Public Functions >--*--  #
+#				   #
+####################################
+
+
+
+# Terminal color
+echo_green() {
+  local content=$*
+  echo -e "\033[1;32m${content}\033[0m\c "
+}
+echo_yellow() {
+  local content=$*
+  echo -e "\033[1;33m${content}\033[0m\c "
+}
+echo_red() { 
+  local content=$* 
+  echo -e "\033[1;31m${content}\033[0m\c "
+}
+
+# HTML color
+html_green() {
+  local content=$*
+  echo -e "<font color=green>${content}</font> \c "
+}
+html_yellow() {
+  local content=$*
+  echo -e "<font color=yellow>${content}</font> \c "
+}
+html_red() {
+  local content=$*
+  echo -e "<font color=red>${content}</font> \c "
+}
+
+# Random Number in specified range
+# Usage:	random_num  min  max
+#
+random_num() {
+  local min=$1 max=$2 tmp=$(echo "$2-$1" | bc 2>&-) base=$(date +%N%s)
+  echo "${base} % ${tmp} + ${min} " | bc 2>&-
+}
+
+# $1 contains $2 or not
+# Usage:	sub_str "strings" "str"
+#
+sub_str() {  
+  [ "${1#*$2*}" == "$1" ] && echo no || echo yes  
+}
+
+# Write log
+# Usage1:	1: set {_LOG} and ${_DEBUG} before you call this function.
+# Usage2:	2: -f path/to/log/file     Note: this pattern will ignore ${_DEBUG} flag.
+# Example1:	export _LOG=/tmp/log DEBUG=1 && write_log any stuff you want to log && unset _LOG
+# Example2:	write_log -f /tmp/log  any stuff you want to log.
+#
+write_log() {
+  local logfile=  content=
+  [ "$1" == "-f" ] && {
+	logfile="$2" ; shift 2
+	content=$*
+  } || {
+  	[ "${_DEBUG}" != "1" ] && return 0
+  	[ -z "${_LOG}" ] &&  logfile="${MOLE_LOG}" || logfile="${_LOG}"
+ 	content=$*
+  }
+  echo "$(date +%s)" "$(date +%F_%T)" "${content}"  >> ${logfile} 2>&-
+}
+
+# Return Code and Return Level is Matched or not, According to ARRAY_RCSTATUS_MAPS
+# Usage:	is_match  succ 1
+# Output:	yes | no
+# Example:	is_match  {level} {rc}
+#
+is_match() {
+  local level=$1  rc=$2  result=
+
+  for ((i=0;i<=${#ARRAY_RCSTATUS_MAPS[@]}-1;i++))
+  do
+	if [ "${ARRAY_RCSTATUS_MAPS[${i}]}" == "${rc}" ]; then
+		local i2=$((${i}+1))
+		[ "${ARRAY_RCSTATUS_MAPS[${i2}]}" == "${level}" ] && result="yes" || result="no"
+		break
+	fi
+  done
+  
+  echo -en "${result}"
+}
+
+# According to input pidfile, output process state.
+# Usage:	check_ps_on_pid_file  {pid_file}
+# Return: 	0 1 2 3  ==>  Running | Missing arguments | Dead but pid file exists | Dead
+#
+check_ps_by_pid_file() {
+  local pid_file=$1  pid=
+  [ -z "${pid_file}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 check_ps_by_pid_file error:"\
+		 "missing arguments, fpid=[${fpid}]";
+	return 1
+  }
+  [ -f "${pid_file}" -a -s "${pid_file}" ] && {
+  	read line < ${pid_file}
+	for x in `echo ${line}`; do
+  		[ -z "${x//[0-9]/}" -a -d "/proc/${x}" ] && pid="${pid} ${x}"
+  	done
+  	[ ! -z "${pid//[ ]}" ] && return 0 || return 2
+  }
+  return 3
+}
+
+# According to input ppid, search all of kid pids, output by reverse order.
+# Usage:        get_pidkids_bypid {father_pid}
+# Example:      get_pidkids_bypid 1876
+#
+get_pidkids_bypid() {
+  local father_pid=$1
+  local array_result=()
+  # if empty, pstree will output all kid pids of init(1)
+  [ -z "${father_pid}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_pidkids_bypid error:"\
+		"missing arguments, father_pid=[${father_pid}]";
+	return 2
+  }
+  if [ -z "${father_pid//[0-9]}" ]; then
+	array_result=( $(/usr/bin/pstree -p ${father_pid} |\
+			 grep -E -o "\([0-9]+\)" |\
+			 tr -d '[\(\)]' | tail -n +2 |\
+			 tr '\n\r' ' ') )
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 get_pidkids_bypid error:"\
+		"input father_pid must be interger: [${father_pid}]";
+	return 1
+  fi
+  
+  for ((i=${#array_result[@]}-1;i>=0;i--))  ; do
+     echo -n "${array_result[$i]} "
+  done
+  unset array_result
+}
+
+# According to input ppid, output kids number
+# Usage:	get_kidsnum {father_pid}
+# Example:	get_kidsnum 1876
+#
+get_kidsnum() {
+  local father_pid=$1
+  local result=
+  # if empty, pstree will output all kid pids of init(1)
+  [ -z "${father_pid}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_kidsnum error:"\
+                "missing arguments, father_pid=[${father_pid}]";
+        return 2
+  }
+  if [ -z "${father_pid//[0-9]}" ]; then
+	result=$(/usr/bin/pstree -p ${father_pid} | grep -E -o -c "\([0-9]+\)")
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 get_kidsnum error:"\
+		"input father_pid must be interger: [${father_pid}]";
+	return 1
+  fi
+  echo "${result}"
+}
+
+# Check the file is plugin config file or not, retun plugin-name if valid file.
+# Conditions: 
+#   1. filename like {plugin-name}.ini
+#   2. headline of file like  [plugin-name]
+#   3. filesize must less than 1048576 bytes.(1M)
+#   4. filetype must be like Text
+# Output:  plugin-name | no  (blank space will be trimed)
+# Example:  is_plugin_conifgfile "/dev/mcelog"
+# Example:  is_plugin_configfile "/etc/abc.ini"
+#
+is_plugin_configfile(){
+  local filepath=$1  result=
+  local ftype=$(echo "${filepath}" | LANG=C /usr/bin/perl -ne 'chomp;print -T "$_"?"text":"nontext";' 2>&-)
+  if [ "${ftype}" != "text" ]; then
+	result="no"
+  else
+	local fsize=$(echo "${filepath}" | LANG=C /usr/bin/perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
+  	if [ -z "${fsize}" -o ! -z "${fsize//[0-9]}" ]; then
+		result="no"
+  	elif [ ${fsize} -ge 1048576 ]; then
+		result="no"
+	else
+  		local pname=$(echo "${filepath##*/}" |LANG=C /usr/bin/perl -ne 'if(m/\A(\S+)\.ini\Z/i){print "$1"};' 2>&-)
+  		local hname=$(head -n1 "${filepath}" |LANG=C /usr/bin/perl -ne 'if(m/\A\s*\[\s*(\S+)\s*\]\s*/){print "$1"};' 2>&-)
+  		if [ -z "${pname}" -o -z "${hname}" ]; then
+			result="no"
+  		elif [ "${pname}" != "${hname}" ]; then
+			result="no"
+  		else
+			result="${pname}"
+		fi
+	fi
+  fi
+  echo "${result}"
+}
+
+# List all registered plugins exclude inners.  		
+# Note: 	blank space will be trimed
+#
+list_plugin_section() {
+  local config_files_arr=  result=
+  config_files_arr=( $(ls "${CONF_DIR}/"*.ini 2>&-) )
+  for((i=0;i<=${#config_files_arr[*]};i++));
+  do
+	filepath="${config_files_arr[$i]}"
+	[ "${filepath##*/}" == "" ] && continue
+	[ "${filepath##*/}" == ".mole.ini" ] && continue
+	pluginname="$(is_plugin_configfile "${filepath}")"
+	if [ "${pluginname}" != "no" ]; then
+		[ ! -z "${result}" ] && result="${result} ${pluginname}" || result="${pluginname}"
+	fi
+  done
+  echo "${result}"
+}
+
+# List all inner plugins.		
+# Note: 	blank space will be trimed
+#
+list_inner_plugin_section() {
+  local result=
+  # Do NOT pass widechars such as chinese input to sed, which will lead to hangup in some circumstances.
+  result=$( cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+		sed -e '/^\[mole_.*\]$/!d; s/^\[//; s/\]$//;' 2>&- |\
+		tr '\r\n' ' ')
+  echo "${result}"
+}
+
+# List all section name.
+# Note: 	(each plugin_name) + (section_name in mole.ini)
+# Note: 	blank space will be trimed
+#
+list_all_section() {
+  local result=
+  # Do NOT pass widechars such as chinese input to sed, which will lead to hangup in some circumstances.
+  result=$( cat ${CONFIG_FILE} | grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+  		sed -e '/^\[.*\]$/!d;/^\[[ \t]*\]$/d;s/^\[//;s/\]$//;' 2>&- |\
+  		tr '\r\n' ' ')
+  result="${result} $(list_plugin_section)"
+  echo "${result}"
+}
+
+# List single section's key name
+#
+list_section_keys(){
+  local section=$1  result=  config_file=
+  [ -z "${section}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 list_section_keys error:"\
+		"missing section name";
+        return 1
+  }
+  # set config file
+  if [ "${section}" == "global" -o "${section}" == "default" ]; then
+	config_file="${CONFIG_FILE}"
+  elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+	config_file="${CONFIG_FILE}"
+  elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+	config_file="${CONFIG_FILE}"
+  else
+	config_file="${CONF_DIR}/${section}.ini"
+  fi
+  [ -f "${config_file}" -a -s "${config_file}" ] || {
+	write_log -f "${MOLE_LOG}" "E0000000 list_section_keys error:"\
+		"section=[${section}], but config file [${config_file}] not exists or empty.";
+	return 1
+  }
+  result=$(cat ${config_file} | tr '\t' ' ' |\
+		awk -F "=" '\
+			($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next} \
+			( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit} \
+			(k==1 && x==1 && $0!~/^[ \t]*$/ && $0!~/^[ \t]*;/){print $1}' |\
+		sed -e 's/^[ \t]*//; s/[ \t]*$//; s/^\"//; s/\"$//' 2>&-)
+  echo -e "${result}"
+}
+
+# According to input plugin-name, output matched plugin-name in plugin config file.
+# Example:	read_plugin_section  check_sysload
+# Return:	0 1:  OK | Missing arguments
+#
+read_plugin_section(){
+  local section=$1
+  if [ -z "${section}" ]; then 
+	write_log -f "${MOLE_LOG}" "E0000000 read_plugin_section error:"\
+		"missing arguments, section=[${section}]";
+	return 1
+  else
+        config_file="${CONF_DIR}/${section}.ini"
+	if [ "$(is_plugin_configfile "${config_file}")" == "${section}" ]; then
+		echo "${section}"
+		return 0
+	fi
+  fi
+}
+
+# According to input section-name, output matched section-name in mole config file.
+# Example:	read_mole_section   mole_iam_alive
+# Return:	0 1 2 3 :  OK | Missing arguments | ${config_file} empty / not exist | Null
+#
+read_mole_section() {
+  local section=$1  value= config_file=
+  if [ -z "${section}" ]; then 
+        write_log -f "${MOLE_LOG}" "E0000000 read_mole_section error:"\
+                "missing arguments, section=[${section}]";
+        return 1
+  else 
+	config_file="${CONFIG_FILE}"
+        if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then 
+                write_log -f "${MOLE_LOG}" "E0000000 read_mole_section error:"\
+                        "config file [${config_file}] not exists or empty.";
+                return 2
+        else 
+                value=$(cat ${config_file} |\
+                        grep -E -v "^[ \t]*;" | tr -d ' \t' |\
+                        sed -e '/^\['${section}'\]$/!d; s/^\[//; s/\]$//;' 2>&-)
+                if [ -n "${value}" ]; then 
+                        echo "${value}" 
+                        return 0
+                else 
+                        return 3
+                fi   
+        fi   
+  fi
+}
+
+# According to input plugin-name config-name, output matched config-value in config file.
+# Usage:  	read_mole_config {plugin-name} {config-name}
+# Example:  	read_mole_config check_sysload  enable
+# Return:	0 1 2 3 :  OK | Missging arguments | ${config_file} empty / not exist | Null
+#
+read_mole_config(){
+  local section=$1  key=$2  value=  config_file=
+  if [ -z "${section}" -o -z "${key}" ]; then
+	write_log -f "${MOLE_LOG}" "E0000000 read_mole_config error:"\
+		"missing arguments, section=[${section}] key=[${key}]";
+	return 1
+  else
+	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+        	config_file="${CONFIG_FILE}"
+	elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		###  Notice:  \s NOT match : []space
+  		value=$( cat ${config_file} | tr '\t' ' ' |\
+			awk -F "=" '\
+				($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+				( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+				( k==1 && x==1 && $1~/^'${key}'\>/ ){$1="";print;exit}' |\
+			 sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
+		if [ -n "${value}" ]; then
+			echo "${value}" && return 0 
+		else
+			# this may lead to plenty of log records in {MOLE_LOG}
+			# write_log -f "${MOLE_LOG}" E0000000 read_mole_config error: "[${section}.${key}]" return NULL.
+			return 3
+		fi
+	else
+		write_log -f "${MOLE_LOG}" "E0000000 read_mole_config error:"\
+			"config file [${config_file}] not exists or empty.";
+		return 2
+	fi
+  fi
+}
+
+# According to exist plugin-name/key and input value, update matched value in config file.
+# Usage:	update_mole_config [force] {plugin-name} {config-name} {value}
+# Example:	update_mole_config 	       check_sysload enable no
+# Return:	
+# 0 : Update OK
+# 1 : Update ERROR
+# 2 : No Need, Nothing to do (nower value equals what you want to set)
+# 3 : Missging arguments
+# 4 : ${config_file} empty / not exist 
+# 5 : [section].key not exist
+# 9 : WARN -> update global.id global.name global.parter_id
+# LogFlag:      CHNG0000
+# 
+update_mole_config() {
+  local mode=$1 
+  if [ "${mode}" == "force" ]; then   ### only called by bin/setinit
+ 	local section=$2 key=$3 ; shift 3 ; local value=$*
+  else
+  	local section=$1 key=$2 ; shift 2 ; local value=$*
+  fi
+  local errinfo=  config_file=
+  if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then
+        write_log -f "${MOLE_LOG}" "E0000000 update_mole_config error:"\
+		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
+        return 3
+  else
+	# return 9(warn) if global.id global.name
+	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "force" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "force" ]; then
+		return 9
+        elif [ "${section}" == "global" -a "${key}" == "parter_id" -a "${mode}" != "force" ]; then                
+                return 9
+	fi
+	# set config_file
+	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+        	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+  		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
+				 awk -F"=" '\
+					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+					( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+					( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
+  		if [ -z "${linenum}" ]; then
+			write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config notice:"\
+				"section=[${section}] key=[${key}] not found in config file."
+			return 5
+  		else
+			local nowvalue=$(read_mole_config "${section}" "${key}")
+			if [ "${value}" != "${nowvalue}" ]; then
+				write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config notice:"\
+					"section=[${section}] key=[${key}] found in config file,"\
+					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
+					 "trying to change as [${value}]"
+			else
+				write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config notice:"\
+					"section=[${section}] key=[${key}] found in config file,"\
+					"line-number=[${linenum}], nower value=[${nowvalue}],"\
+					"no need to change as [${value}], nothing to do."
+				return 2
+			fi
+                        ### '"${value}"' is important, if ${value} is multi part or cotains invalid chars, sed won't complain
+                        ### '${value}' is wrong.
+			### sed command c to replace the whole line.
+			errinfo=$(\
+			    sed -i ''${linenum}'c'"${key}"' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
+			if [ "$?" == "0" ]; then
+				write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config change"\
+					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
+					"success"
+				return 0
+			else
+				write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config error:"\
+					"section=[${section}] key=[${key}] value=[${value}] line-number=[${linenum}]"\
+					"errinfo=[${errinfo}]" 
+				return 1
+			fi
+  		fi
+	else
+		write_log -f "${MOLE_LOG}" "E0000000 update_mole_config error:"\
+			"config file [${config_file}] not exists or empty.";
+		return 4
+	fi
+  fi
+}
+
+# According to exist plugin-name and input key/value , add key = value into config file.
+# Usage:        add_mole_config [force] {plugin-name} {config-name} {value}
+# Example:      add_mole_config 	    check_sysload enable no
+# Return:       
+# 0 : ADD OK
+# 1 : ADD ERROR
+# 2 : No Need, Nothing to do (key already exist)
+# 3 : Missging arguments
+# 4 : ${config_file} empty / not exist 
+# 5 : [section] not exist
+# 9 : WARN -> add global.id global.name global.parter_id
+# LogFlag:      ADDC0000
+# 
+add_mole_config() {
+  local mode=$1 
+  if [ "${mode}" == "force" ]; then   ### only called by bin/setinit
+        local section=$2 key=$3 ; shift 3 ; local value=$*
+  else 
+        local section=$1 key=$2 ; shift 2 ; local value=$*
+  fi
+  local errinfo=  config_file=
+  if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then 
+        write_log -f "${MOLE_LOG}" "E0000000 add_mole_config error:"\
+                "missing arguments, section=[${section}] key=[${key}] value=[${value}]";
+        return 3
+  else 
+	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "force" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "force" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "parter_id" -a "${mode}" != "force" ]; then
+		return 9
+	fi
+	# set config_file 
+	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+        	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
+					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
+		if [ -z "${section_linenum}" ]; then
+			write_log -f "${MOLE_LOG}" "ADDC0000 add_mole_config notice:"\
+				"section=[${section}] not found in config file."
+                        return 5
+		else
+			local flag=0
+			for k in `list_section_keys "${section}"`
+			do
+				if [ "${key}" != "${k}" ]; then
+					continue
+				else
+					flag=1; break
+				fi
+			done
+			if [ "${flag}" == "0" ]; then
+                                write_log -f "${MOLE_LOG}" "ADDC0000 add_mole_config notice:"\
+                                        "key=[${key}] for section=[${section}] not found in config file,"\
+                                        "trying to add config [${key}] for [${section}]"\
+					"under line [${section_linenum}]"
+			else
+                                write_log -f "${MOLE_LOG}" "ADDC0000 add_mole_config notice:"\
+                                        "key=[${key}] for section=[${section}] already exists in config file,"\
+                                        "no need to add config [${key}] for [${section}], nothing to do."
+				return 2
+			fi
+			### '"${value}"' is important, if ${value} is multi part or cotains invalid chars, sed won't complain
+			### '${value}' is wrong.
+			### sed command a to add newline under specified line.
+			errinfo=$(\
+				sed -i ''${section_linenum}'a'"${key}"' = '"${value}"'' "${config_file}" 2>&1 1>/dev/null)
+                        if [ "$?" == "0" ]; then 
+                                write_log -f "${MOLE_LOG}" "ADDC0000 add_mole_config add"\
+                                        "config [${key} = ${value}] for section [${section}] under [${section_linenum}]"\
+                                        "success"
+                                return 0
+                        else 
+                                write_log -f "${MOLE_LOG}" "ADDC0000 add_mole_config error: [${errinfo}]" 
+                                return 1
+                        fi
+		fi
+	else
+                write_log -f "${MOLE_LOG}" "E0000000 add_mole_config error:"\
+                        "config file [${config_file}] not exists or empty.";
+                return 4
+	fi
+  fi
+}
+
+# According to exist plugin-name and input key , delete plugin's key from config file.
+# Usage:        del_mole_config {plugin-name} {config-name}
+# Example:      del_mole_config check_sysload enable
+# Return:
+# 0 : DEL OK
+# 1 : DEL ERROR
+# 2 : No Need, Nothing to do (key already not exist)
+# 3 : Missging arguments
+# 4 : ${config_file} empty / not exist 
+# 5 : [section] not exist
+# 9 : WARN -> del global.id global.name global.parter_id
+# LogFlag:	DELC0000
+#
+del_mole_config() {
+  local section=$1 key=$2 config_file=
+  local errinfo=
+  if [ -z "${section}" -o -z "${key}" ]; then
+        write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config error:"\
+		"missing arguments, section=[${section}] key=[${key}]";
+        return 3
+  else
+	# return 9(warn) if global.id global.name
+	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+		return 9
+	elif [ "${section}" == "global" -a "${key}" == "parter_id" ]; then
+		return 9
+	fi
+	# set config_file 
+	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+        	config_file="${CONFIG_FILE}"
+        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		config_file="${CONFIG_FILE}"
+  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+        	config_file="${CONFIG_FILE}"
+  	else 
+        	config_file="${CONF_DIR}/${section}.ini"
+  	fi
+
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
+					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
+		if [ -z "${section_linenum}" ]; then 
+			write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
+				"section=[${section}] not found in config file."
+			return 5
+  		else
+			local nowvalue=$(read_mole_config "${section}" "${key}")
+			local flag=0
+			for k in `list_section_keys "${section}"`
+			do
+				if [ "${key}" != "${k}" ]; then
+					continue
+				else
+					flag=1; break
+				fi
+			done
+			if [ "${flag}" == "1" ]; then
+				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
+					"section=[${section}] key=[${key}] found in config file,"\
+					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
+					 "trying to delete config [${key}]"
+  				local linenum=$( cat ${config_file} | tr '\t' ' ' |\
+				 	awk -F"=" '\
+						($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+						( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+						( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
+			else
+				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
+					"section=[${section}] key=[${key}] not found in config file,"\
+					"no need to delete it, nothing to do."
+				return 2
+			fi
+			### sed command d to delete the whole line.
+			errinfo=$(\
+			    sed -i ''${linenum}'d' "${config_file}" 2>&1 1>/dev/null)
+			if [ "$?" == "0" ]; then
+				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config delete"\
+					"section=[${section}] key=[${key}] line-number=[${linenum}]"\
+					"success"
+				return 0
+			else
+				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config error:"\
+					"section=[${section}] key=[${key}] line-number=[${linenum}]"\
+					"errinfo=[${errinfo}]" 
+				return 1
+			fi
+  		fi
+	else
+		write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config error:"\
+			"config file [${config_file}] not exists or empty.";
+		return 4
+	fi
+  fi
+}
+
+# Get plugin status    config-name:  enable
+# Note: if returned config-value is invalid, return no
+#
+get_enable() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_enable error: missing plugin name";
+	return 1
+  }
+  result=$(read_mole_config ${plugin_name} enable)
+  [ -z "${result}" ] && result=$(read_mole_config default enable)
+
+  # check valid or not
+  [ -z "${result}" ] && {
+	result="no"
+  } || {
+  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="no"
+  }
+  echo "${result}"
+}
+
+# Get plugin debug	config-name:  debug
+# Note: if returned config-value is invalid, return yes
+#
+get_debug() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_debug error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} debug)
+  [ -z "${result}" ] && result=$(read_mole_config default debug)
+ 
+  # check valid or not
+  [ -z "${result}" ] && {
+        result="yes"
+  } || {
+        [ "${result}" != "yes" -a "${result}" != "no" ] && result="yes"
+  }
+  echo "${result}"
+}
+
+# Get plugin attsnap_mail config-name:  attsnap_mail
+# Note: called by script: bin/sendmail
+# Note: if returned config-value null or invalid, return no
+#
+get_attsnap_mail() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_attsnap_mail error: missing plugin name";
+        return 1
+  }
+
+  result=$(read_mole_config ${plugin_name} attsnap_mail)
+  [ -z "${result}" ] && result=$(read_mole_config default attsnap_mail)
+  # check null or invalid or not
+  [ -z "${result}" ] && {
+ 	result="no"
+  } || {
+  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="no"
+  }
+  echo "${result}"
+}
+
+# Get plugin frequency    config-name: frequency
+# Note: if returned config-value is invalid, return 30min
+#
+get_frequency() {
+  local plugin_name=$1  result=  value=   min=30
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_frequency error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} frequency)
+  [ -z "${result}" ] && result=$(read_mole_config default frequency)
+
+  # check valid or not
+  value=$( conv_time2sec "${result}" )
+  if [ "${value}" == "invalid" ]; then
+	write_log -f "${MOLE_LOG}" "E0000000 get_frequency on"\
+		"[${plugin_name}]: return is invalid:"\
+		"[${result}] ==> auto set to 30min.";
+	result="30min"
+  elif [ ! -z "${value}" -a -z "${value//[0-9]}" ]; then
+	[ "$(echo "${value} < ${min}" | bc 2>&-)" == "1" ] && {
+		write_log -f "${MOLE_LOG}" "E0000000 get_frequency on"\
+			"[${plugin_name}]: return [${result}] is smaller than minimum"\
+			"==> auto set to 30sec";
+		result="30sec"
+	}
+  fi
+  echo "${result}"
+}
+
+# Get plugin execution timeout      config-name:  exec_tmout
+# Note: if returned config-value is invalid. return 10min
+# 
+get_exec_tmout() {
+  local plugin_name=$1  result=  value=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_exec_tmout error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} exec_tmout)
+  [ -z "${result}" ] && result=$(read_mole_config default exec_tmout)
+
+  # check valid or not
+  value=$( conv_time2sec "${result}" )
+  [ "${value}" == "invalid" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_exec_tmout on [${plugin_name}]:"\
+		"return is invalid: [${result}]"\
+		"==>auto set to 10min.";
+        result="10min"
+  }
+  echo "${result}"
+}
+
+# Get plugin mail receviers	config-name:  mail_receviers
+# called by script bin/sendmail
+# Note: if returned email address is empty. return "root_bbk@126.com"
+#
+get_mail_receviers() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_mail_receviers error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} mail_receviers)
+  [ -z "${result}" ] && result=$(read_mole_config default mail_receviers)
+
+  if [ -f "/${result##*file:}" -a -s "/${result##*file:}" ]; then
+        result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "/${result##*file:}")
+  elif [ -f "${BASE_DIR}/${result##*file:}" -a -s "${BASE_DIR}/${result##*file:}" ]; then
+        result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "${BASE_DIR}/${result##*file:}")
+  else
+        [ -z "${result}" ] && result="root_bbk@126.com"  ### set default whatever.
+  fi
+  echo -en "${result}"
+}
+
+# Get plugin sms receviers	config-name:  sms_receviers
+#
+get_sms_receviers() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_sms_receviers error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} sms_receviers)
+  [ -z "${result}" ] && result=$(read_mole_config default sms_receviers)
+
+  if [ -f "/${result##*file:}" -a -s "/${result##*file:}" ]; then
+        result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "/${result##*file:}")
+  elif [ -f "${BASE_DIR}/${result##*file:}" -a -s "${BASE_DIR}/${result##*file:}" ]; then
+        result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "${BASE_DIR}/${result##*file:}")
+  fi
+  echo -en "${result}"
+}
+
+# Get plugin auto handler	config-name auto_handler
+# called by process_plugin
+#
+get_auto_handler() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_auto_handler error: missing plugin name";
+	return 1
+  }
+  result=$(read_mole_config ${plugin_name} auto_handler)
+  [ -z "${result}" ] && result=$(read_mole_config default auto_handler)
+  echo -e "${result}"
+}
+
+
+# Get plugin comment		config-name:  comment
+# Note: if returned config-value is empty. return "Mole Plugin"
+#
+get_comment() {
+  local plugin_name=$1  result=  default="Mole Plugin"
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_comment error: missing plugin name";
+	return 1
+  }
+  result=$(read_mole_config ${plugin_name} comment)
+  [ -z "${result}" ] && result=$(read_mole_config default comment)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+
+# Get plugin locale		config-name:  locale
+# Note: if returned config-value is empty. return "zh_CN.UTF-8"
+#
+get_locale() {
+  local plugin_name=$1  result=  default="zh_CN.UTF-8"
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_locale error: missing plugin name";
+	return 1
+  }
+  result=$(read_mole_config ${plugin_name} locale)
+  [ -z "${result}" ] && result=$(read_mole_config default locale)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get global name		config-name:  name
+# Note: if returned config-value is empty. return "mole__ops.eyou.net"
+#
+get_global_name() {
+  local result=  default="mole__ops.eyou.net"
+  result=$(read_mole_config global name)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get mole id			config-name:  id
+# Note: if returned config-value is empty. return "0000000000"
+#
+get_mole_id() {
+  local result=  default="0000000000"
+  result=$(read_mole_config global id)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get parter id			config-name:  parter_id
+# Note: if returned config-value is empty. return "0000000000"
+#
+get_parter_id() {
+  local result=  default="0000000000"
+  result=$(read_mole_config global parter_id)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+
+# Get plugin max repeat errtimes	config-name:  maxerr_times
+# Note: if returned config-value is invalid. return 1
+#
+get_maxerr_times() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_maxerr_times error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} maxerr_times)
+  [ -z "${result}" ] && result=$(read_mole_config default maxerr_times)
+
+  # check valid or not ==> ( 0 is invalid )
+  [ -z "${result}" -o ! -z "${result//[1-9]}" ] && result=1  # set default whatever.
+  echo "${result}"
+}
+
+# Get plugin's xxxx_action_type value.		
+# allowed action_type ==> [ take_snapshot | mail_notify | sms_notify | post_notify | auto_handle ]
+# Usage:      get_action_type  plugin-name  xxxx_action_type
+# Example:	get_action_type  check_sysload mail_notify
+# Note: invalid values will be ignored, only return valid values.
+# Note: duplication items will be removed.
+# Return:  1: plugin_name or action_type empty  2: action_type invalid
+#
+get_action_type() {
+  local plugin_name=$1  action_type=$2
+  local result=  output=  item=
+  [ -z "${plugin_name}" -o -z "${action_type}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_action_type error:"\
+		"missing plugin_name or action_type : [$*]";
+        return 1
+  }
+  [ "${action_type}" != "take_snapshot" -a "${action_type}" != "mail_notify" -a "${action_type}" != "post_notify" -a "${action_type}" != "auto_handle" -a "${action_type}" != "sms_notify" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_action_type error:"\
+		"action_type: [${action_type}] is invalid,"\
+		"only [ take_snapshot/mail_notify/sms_notify/post_notify/auto_handle ] is acceptable.";
+	return 2
+  }
+
+  ### read values
+  result=$(read_mole_config ${plugin_name} ${action_type})
+  [ -z "${result}" ] && result=$(read_mole_config default ${action_type})
+
+  ### unfolder [all|default|none] and remove invalid values.
+  for item in `echo "${result}"`
+  do
+	if [ "$(echo -e "${VALID_ACTION_CONFIG}"|grep -E -o -w "${item}")" == "${item}" ]; then  ### item valid
+		case "${item}" in
+		"all")
+			output="${output} crit warn unkn succ notify tmout "	;;
+		"default")
+			output="${output} crit warn unkn notify tmout"		;;
+		"none")
+			output="none"  ### break while "none"
+			break						;;
+		*)
+			output="${output} ${item}"
+		esac	
+	fi
+  done
+
+  ### remove duplication items.
+  output=$(echo "${output}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++')
+  echo "${output}"
+}
+
+# Take action or not
+# Argument 1:  plugin-name
+# Argument 2:  action_type => take_snapshot mail_notify sms_notify post_notify auto_handle
+# Argument 3:  event	=> 0 1 2 3 4 5 tmout
+# Example:	take_action_ornot  check_sysload mail_notify 3
+# Example:	take_action_ornot  check_v4_ps post_notify 0
+# Example:	take_action_ornot  check_cpu_usage take_snapshot tmout
+# 
+take_action_ornot() {
+  local plugin_name=$1  action_type=$2  event=$3
+  local result=
+  [ -z "${plugin_name}" -o -z "${action_type}" -o -z "${event}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 take_action_ornot error:"\
+		"missing plugin_name or action_type or event : [$*]";
+        return 1
+  }
+  
+  ### 1. read plugin_name action_type
+  local action_type_config=$(get_action_type ${plugin_name} ${action_type})
+
+  ### 2. event in actinon_type or not ? 
+  local status=
+  if [ "${event}" == "tmout" ]; then  ### 2.1 process event: tmout 
+	[ "$(echo -e "${action_type_config}"|grep -E -o -w "${event}")" == "${event}" ] && {
+		result="yes"
+	} || {
+		result="no"
+	}
+  else
+  	for ((i=0;i<=${#ARRAY_RCSTATUS_MAPS[@]}-1;i++))  ### 2.2 process event: return_code
+  	do
+		[ "${ARRAY_RCSTATUS_MAPS[${i}]}" == "${event}" ] && {
+			local i2=$((${i}+1))
+			status=${ARRAY_RCSTATUS_MAPS[${i2}]}
+			# echo "${i} ${i2} ${ARRAY_RCSTATUS_MAPS[${i2}]} ${action_type_config}"
+			[ "$(echo -e "${action_type_config}"|grep -E -o -w "${status}")" == "${status}" ] && {
+				result="yes"
+			} || {
+				result="no"
+			}
+			break
+		}
+  	done
+	[ -z "${result}" ] && result="no"   ### if not matched, return no
+  fi
+  echo "${result}"
+}
+
+# Convert timelong to seconds
+# Output:	seconds	| invalid
+# Example:	conv_time2sec  30sec | 30seconds | 30min | 1hour | 1day | 2week | 3month | 4year | 2day5hour54sec
+#
+conv_time2sec(){
+  local timelong=$1 result=
+  local now=$(date +%s)
+  local after=$(date -d "+${timelong}" +%s 2>&-)
+  if [ ! -z "${after}" -a -z "${after//[0-9]}" ]; then
+	result=$(echo "${after//[!0-9]} - ${now}" | bc 2>&-)
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 conv_time2sec error:"\
+		"input invalid: ${timelong}";
+	result="invalid"
+  fi
+  echo "${result}"
+}
+
+# Get timestamp of plugin last-run.
+# Output:	never_run | invalid_lastrun | "timestamps of last run"
+#
+get_lastrun() {
+  local plugin_name=$1  result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_lastrun error: missing plugin name";
+	return 1
+  }
+  if [ ! -s ${TMP_LASTRUN} ]; then
+	result="never_run"
+  else
+  	result=$(awk '($1~/\<'${plugin_name}'\>/) {print $2;exit}' ${TMP_LASTRUN} 2>&-)
+  	[ -z "${result}" ] && {
+		result="never_run" 
+	} || {
+		[ ! -z "${result//[0-9]/}" ]  && result="invalid_lastrun"
+	}
+  fi
+  echo "${result}"
+}
+
+# Get timestamp of plugin next-run.
+# Output:	null | invalid_nextrun | "timestamps of next run"
+#
+get_nextrun() {
+  local plugin_name=$1 result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_nextrun error: missing plugin name";
+	return 1
+  }
+  if [ ! -s ${TMP_NEXTRUN} ]; then
+	result="null"
+  else
+	result=$(awk '($1~/\<'${plugin_name}'\>/) {print $2;exit}' ${TMP_NEXTRUN} 2>&-)
+	[ -z "${result}" ] && {
+		result="null"
+	} || {
+		[ ! -z "${result//[0-9]/}" ]  && result="invalid_nextrun"
+	}
+  fi
+  echo "${result}" 
+}
+
+# Update timestamp of plugin last-run and next-run
+# Note: 	only called on plugin finished.
+# LogFlag:	CRIT0000 | 00000000
+#
+update_lastrun_and_nextrun() {
+  local plugin_name=$1  jobid=$2	# get jobid only for log record
+  local rc=  errinfo=
+  local now=$(date +%s) 
+  local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 update_lastrun_and_nextrun error: missing plugin name";
+	return 1
+  }
+
+  if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
+	local logfile="${MOLE_LOG}"
+  else
+	local logfile="${INNER_LOG}"                                                                                   
+  fi
+
+  touch ${TMP_LASTRUN} ${TMP_NEXTRUN}
+  [ ! -s ${TMP_LASTRUN} ] && echo -e "${headline}" > ${TMP_LASTRUN}
+  [ ! -s ${TMP_NEXTRUN} ] && echo -e "${headline}" > ${TMP_NEXTRUN}
+
+  # Step 1: first update last-run
+  # following sed command will lead to some repeat records.
+  # sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}'/;tk;$s/$/\n'${plugin_name}' '${now}'/;:k'  ${TMP_LASTRUN}
+  local l_time=$(awk '/^'${plugin_name}'\>/' ${TMP_LASTRUN} 2>&-)
+  if [ -z "${l_time}" ]; then
+	### only collect stderr output
+	### '"${plugin_name}"' is important, sed won't complain if plugin_name contains multi part or special chars.
+	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${now}"'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
+			"error: [${errinfo}]";
+	else
+		write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
+			"success";
+	fi
+  else
+	### only collect stderr output
+	### sed command c to replace the whole line.
+	errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${now}"'' ${TMP_LASTRUN} 2>&1 1>/dev/null )
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [update lastrun time as nower: ${now}]"\
+			"error: [${errinfo}]";
+	else
+		write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [update lastrun time as nower: ${now}]"\
+			"success";
+	fi
+  fi
+
+  # Step 2: then read last-run and update next-run
+  local lastrun=$(get_lastrun ${plugin_name})
+  local frequency=$(get_frequency ${plugin_name})
+  local nextrun=$(( ${lastrun} + $(conv_time2sec "${frequency}") ))
+  # following sed command will lead to some repeat records.
+  # sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${nextrun}'/;tk;$s/$/\n'${plugin_name}' '${nextrun}'/;:k' ${TMP_NEXTRUN}
+  local n_time=$( awk '/^'${plugin_name}'\>/' ${TMP_NEXTRUN} 2>&-)
+  if [ -z "${n_time}" ]; then
+	### only collect stderr output
+	### '"${plugin_name}"' is important, sed won't complain if plugin_name contains multi part or special chars.
+        errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${nextrun}"'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
+			"error: [${errinfo}]";
+	else
+                write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
+			"success";
+	fi
+  else
+	### only collect stderr output
+	### sed command c to replace the whole line.
+        errinfo=$( sed -i '/^'${plugin_name}'\>/c'"${plugin_name}"' '"${nextrun}"'' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
+			"error: [${errinfo}]";
+	else
+                write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
+			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
+			"success";
+        fi
+  fi
+  return ${rc}
+}
+
+
+# Update status of plugin result.
+# Note:         only called on plugin finished or output result.
+#
+update_status() {
+  local plugin_name=${1} jobid=${2}; shift 2
+  local content=$*
+  local rc= errinfo= 
+  local now=$(date +%s)
+  local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
+  
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 update_status error: missing plugin name";
+        return 1
+  }
+
+  if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
+	local logfile="${MOLE_LOG}"
+  else
+	local logfile="${INNER_LOG}"                                                                                   
+  fi
+
+  
+  touch ${TMP_STATUS}
+  [ ! -s ${TMP_STATUS} ] && echo -e "${headline}" > ${TMP_STATUS}
+
+  local n_record="${plugin_name} ${jobid} ${now} ${content}"
+  local l_record=$(awk '/^'${plugin_name}'\>/' ${TMP_STATUS} 2>&-)
+  if [ -z "${l_record}" ]; then
+	echo "${n_record}" >> ${TMP_STATUS} 2>/dev/null
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+	       write_log -f "${logfile}" "E0000000 update_status on:"\
+			"[${plugin_name}] for [append newitem] error";
+	else
+	       write_log -f "${logfile}" "$jobid update_status on:"\
+			"[${plugin_name}] for [append newitem] success";
+	fi
+  else
+	### following sed command can NOT deal with special chars. (if ${content} contains /)
+	# sed -i '/^'${plugin_name}'\>/s/.*/'${plugin_name}' '${now}' '${content}'/' ${TMP_STATUS}
+	errinfo=$( sed -i '/^'"${plugin_name}"'\>/d' ${TMP_STATUS} 2>&1 1>/dev/null )
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+	       write_log -f "${logfile}" "E0000000 update_status on:"\
+			"[${plugin_name}] for [delete olditem error: ${errinfo}]";
+	else
+	       write_log -f "${logfile}" "$jobid update_status on:"\
+			"[${plugin_name}] for [delete olditem] success"
+	       echo "${n_record}" >> ${TMP_STATUS} 2>/dev/null
+	       rc=$?
+	       if [ "${rc}" != "0" ]; then
+			write_log -f "${logfile}" "E0000000 update_status on:"\
+				"[${plugin_name}] for [append newitem] error";
+	       else
+			write_log -f "${logfile}" "$jobid update_status on:"\
+				"[${plugin_name}] for [append newitem] success";
+	       fi
+	fi
+  fi
+  return ${rc}
+}
+
+
+# Get accumulated return-err number
+# Usage:	get_repeat_errcount  plugin_name  [-v]
+# Note:		-v only be used on add_repeat_errcount()
+# Example:	get_repeat_errcount  check_sysload
+# Example:	get_repeat_errcount  check_sysload -v
+# Return:	0, [0-9]+
+# Return:	if -v, return  null, invalid, [0-9]+
+#
+get_repeat_errcount() {
+  local plugin_name=$1 mode=$2 result=
+
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_repeat_errcount error: missing plugin name";
+        return 1
+  }
+
+  result=$(awk '/^'${plugin_name}'\>/ {print $2;exit}' ${TMP_REPEAT} 2>&-)
+  if [ -z "${result}" ]; then
+	[ "${mode}" == "-v" ] && result="null" || result=0
+  elif [ ! -z "${result//[0-9]}" ]; then
+	[ "${mode}" == "-v" ] && result="invalid"  || result=0
+  fi
+
+  echo -e "${result}"
+
+}
+
+# Check accumulated return-err number overthan err-limit or not
+# Output:	{0 =>no | 1 =>yes}  {now_err_num}  {err_num_limit}  
+# Usage:        check_repeat_errcount  plugin_name
+# Example:	check_repeat_errcount  check_sysload
+#
+check_repeat_errcount() {
+  local plugin_name=$1 result=
+  local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
+  
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 check_repeat_errcount error: missing plugin name";
+        return 1
+  }
+
+  local repeat_errlimit=$(get_maxerr_times "${plugin_name}")
+  local repeat_errcount=$(get_repeat_errcount "${plugin_name}")
+
+  [ "$(echo "${repeat_errcount}>=${repeat_errlimit}" | bc 2>&-)" == "1" ] && {
+	result=1    # reached  
+  } || {
+	result=0    # unreached
+  }
+
+  echo "${result}" "${repeat_errcount}" "${repeat_errlimit}"
+}
+
+# Accumulated return-err number +1 
+# Note: 	only called at plugin return err (non-zero)
+# Usage:        add_repeat_errcount  plugin_name  [jobid]
+# Example:	add_repeat_errcount  check_sysload  [jobid]
+# Note:   null 	        =>   insert new as 1
+# 	  invalid	=>   update to 1
+#         numberic	=>   update to +1
+#
+add_repeat_errcount() {
+  local plugin_name=$1  jobid=$2	# get jobid only for log record
+  local rc=  errinfo=
+  local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
+
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 add_repeat_errcount error: missing plugin name";
+        return 1
+  }
+
+  touch ${TMP_REPEAT}
+  [ ! -s ${TMP_REPEAT} ] && echo -e "${headline}" > ${TMP_REPEAT}
+
+  local repeat_errcount=  num=  mode=
+  repeat_errcount=$(get_repeat_errcount "${plugin_name}" -v)
+  if [ "${repeat_errcount}" == "null" ]; then
+	num=1;
+	mode="add"
+  elif [ "${repeat_errcount}" == "invalid" ]; then
+	num=1;
+	mode="update"
+  else
+  	num=$(( ${repeat_errcount} + 1 ))  # update to +1
+	mode="update"
+  fi
+  # only collect stderr output
+  if [ "${mode}" == "update" ]; then
+	# update old
+  	errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${num}"'' ${TMP_REPEAT} 2>&1 1>/dev/null )
+  elif [ "${mode}" == "add" ]; then
+	# add new
+	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${num}"'/' ${TMP_REPEAT} 2>&1 1>/dev/null )   
+  fi
+  rc=$?
+  if [ "${rc}" != "0" ]; then
+	write_log -f "${MOLE_LOG}" "E0000000 add_repeat_errcount on:"\
+		"[${plugin_name}] for [ ${repeat_errcount} +1 = ${num} ]"\
+		"error: [${errinfo}]";
+  else
+	write_log -f "${MOLE_LOG}" "$jobid add_repeat_errcount on:"\
+		"[${plugin_name}] for [ ${repeat_errcount} +1 = ${num} ]"\
+		"success";
+  fi
+
+  return ${rc}
+}
+
+# Reset accumulated return-err number to 0
+# Note:		only called at plugin return ok (zero)
+# Example:	zero_repeat_errcount  check_sysload   [jobid]
+#
+zero_repeat_errcount() {
+  local plugin_name=$1  jobid=$2	# get jobid only for log record
+  local rc=  errinfo=
+  local headline="NOTICE  --*--< DO NOT EDIT THIS FILE >--*-- \n\n"
+
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 zero_repeat_errcount error: missing plugin name"
+        return 1
+  }
+
+  touch ${TMP_REPEAT}
+  [ ! -s ${TMP_REPEAT} ] && echo -e "${headline}" > ${TMP_REPEAT}
+
+  # only collect stderr  output
+  errinfo=$( sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT} 2>&1 1>/dev/null)
+  rc=$?
+  if [ "${rc}" == "0" ]; then
+	write_log -f "${MOLE_LOG}" "$jobid zero_repeat_errcount on"\
+		"[${plugin_name}] success."
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 zero_repeat_errcount on"\
+		"[${plugin_name}] error: [${errinfo}]"
+  fi
+
+  return "${rc}"
+}
+
+# List enabled plugins include inners
+#
+list_enabled_plugin_section() {
+  # list_plugin_section | while read plugin_name
+  for plugin_name in `list_plugin_section`
+  do
+	[ "$(get_enable ${plugin_name})" == "yes" ] && echo "${plugin_name}"
+  done
+
+  for plugin_name in `list_inner_plugin_section`
+  do
+	echo "${plugin_name}"
+  done
+}
+
+# List running plugins include inners
+# 
+list_running_plugin_section() {
+  for plugin_name in `list_plugin_section` `list_inner_plugin_section`
+  do
+	lock_result=$(check_lock ${plugin_name})
+	[ ! -z "${lock_result}" -a -z "${lock_result//[0-9]}" ] && echo "${plugin_name}"
+  done
+}
+
+# Generate an empty temporary file for plugin if needed.
+# Output:	path of temporary file
+# Usage:	gen_tmpfile  plugin_name
+# Example:	gen_tmpfile  check_sysload
+#
+gen_tmpfile() {
+  local plugin_name=$1  rc=  errinfo=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 gen_tmpfile error: missing plugin name";
+	return 1
+  }
+
+  [ ! -d "${TMP_DIR}/${plugin_name}" ] && /bin/mkdir -p ${TMP_DIR}/${plugin_name} 2>&-
+  local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}_$( ${PLUTIL} unique_digest )"
+  # only collect stderr output.
+  errinfo=$( touch "${filepath}" 2>&1 1>/dev/null )
+  rc=$?
+  if [ "${rc}" == "0" ]; then
+  	echo "${filepath}"
+	write_log -f "${MOLE_LOG}" "00000000 gen_tmpfile success:"\
+		"[${filepath}]";
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 gen_tmpfile error:"\
+		"touch tmpfile [${filepath}]"\
+		"return error: [${errinfo}]";
+  fi
+
+  return "${rc}"
+}
+
+# Time to run plugin or not ( nower timestamp > next-run timestamp or not)
+# Usage:	time2run_ornot  plugin_name
+# Output:	yes | no
+#
+time2run_ornot() {
+  local plugin_name=$1 result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 time2run_ornot error: missing plugin name";
+	return 1
+  }
+  local nextrun=$(get_nextrun ${plugin_name})
+  local now=$(date +%s)
+  [ "$(echo "${nextrun} <= ${now}"|bc)" == "1"  ] && result="yes" || result="no"
+  echo "${result}"
+}
+
+# Generate run-lock on plugin  (atomic operation)
+# Usage:        gen_lock  plugin_name
+#
+gen_lock() {
+  local plugin_name=$1  rc=  errinfo=  logfile=  p_path=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 gen_lock error: missing plugin name";
+  	return 1
+  }
+  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+	p_path="${PLUGIN_DIR}/${plugin_name}"
+	logfile="${MOLE_LOG}"
+  } || {
+   	p_path="${INNER_DIR}/${plugin_name}"
+	logfile="${INNER_LOG}"
+  }
+  # only collect stderr output.
+  errinfo=$( ln -s "${p_path}" "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
+  rc=$?
+  if [ "${rc}" != "0" ]; then
+	write_log -f "${logfile}" "E0000000 gen_lock on plugin:"\
+		"[${plugin_name}] error: [${errinfo}]";
+  else
+	write_log -f "${logfile}" "00000000 gen_lock on plugin:"\
+		"[${plugin_name}] success.";
+  fi
+
+  return "${rc}"
+}
+
+# Unlock plugin
+# Usage:        un_lock  plugin_name  [jobid]
+#
+un_lock() {
+  local plugin_name=$1  jobid=$2	# get jobid only for log record when called in process_xxxx
+  local rc=  errinfo=  logfile=
+  [ -z "${jobid}" ] && jobid="00000000"	# if not specified jobid, means not called in process_xxxx
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 un_lock error: missing plugin name";
+        return 1
+  }
+  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+        logfile="${MOLE_LOG}"
+  } || {
+        logfile="${INNER_LOG}"
+  }
+  # only collect stderr output.
+  errinfo=$( unlink "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
+  rc=$?
+  if [ "${rc}" != "0" ]; then
+	write_log -f "${logfile}" "E0000000 un_lock on:"\
+		"[${plugin_name}] error: [${errinfo}]";
+  else
+	write_log -f "${logfile}" "$jobid un_lock on:"\
+		"[${plugin_name}] success";
+  fi
+  return "${rc}"
+}
+
+# Remove pidfile for plugin
+# Usage:	del_fpid  plugin_name  [jobid]
+#
+del_fpid() {
+  local plugin_name=$1  jobid=$2	# get jobid only for log record when called in process_xxxx
+  local rc=  errinfo=  logfile=
+  [ -z "${jobid}" ] && jobid="00000000" # if not specified jobid, means not called in process_xxxx
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 del_fpid error: missing plugin name";
+        return 1
+  }
+  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+        logfile="${MOLE_LOG}"
+  } || {
+        logfile="${INNER_LOG}"
+  }
+  # only collect stderr output.
+  errinfo=$( /bin/rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
+  rc=$?
+  if [ "${rc}" != "0" ]; then
+	write_log -f "${logfile}" "E0000000 del_fpid on:"\
+		"[${plugin_name}] error: [${errinfo}]";
+  else
+	write_log -f "${logfile}" "$jobid del_fpid on:"\
+		"[${plugin_name}] success.";
+  fi
+  return "${rc}"
+}
+
+# Check run-lock status for plugin
+# Output:	nolock | linkerror | start timestamp (plugin is running)
+# Usage:        check_lock  plugin_name
+# Example:	check_lock  check_sysload
+#
+check_lock() {
+  local plugin_name=$1 result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 check_lock error: missing plugin name";
+	return 1
+  }
+  # [ -e ${RUN_DIR}/${plugin_name}.lock ] && {   ###  never check broken link: never return linkerror
+  if [ -L "${RUN_DIR}/${plugin_name}.lock" ]; then
+	local f=$(readlink "${RUN_DIR}/${plugin_name}.lock" 2>&-)
+	[ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+        	local p_path="${PLUGIN_DIR}/${plugin_name}"
+		local logfile="${MOLE_LOG}"
+	} || {
+		local p_path="${INNER_DIR}/${plugin_name}"
+		local logfile="${INNER_LOG}"
+	}
+	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
+		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
+		[ -z "${result}" -o ! -z "${result//[0-9]}" ] && {
+			write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
+				"runlock timestamp is not numberic: [${result}], "\
+				"return linkerror";
+			result="linkerror"
+		}
+	else
+		write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
+				"runlock link->target is mistake or target not exist: "\
+				"[${f}] ==> [${p_path}], "\
+				"return linkerror";
+		result="linkerror"
+	fi
+  else
+	result="nolock"
+  fi
+
+  echo "${result}"
+}
+
+# Remove error lock and dead pid for plugin
+# Clear conditions:
+# 1. lock exists, but run-lock link error   ==>  remove lock
+# 2. lock exists, but pid file not exists   ==>  remove lock
+# 3. lock exists, pid file exist, but according to the pid file, no process running ==> remove lock,remove pidfile
+# 4. pid file exists, but according to the pid file, no process running ==> remove pidfile
+# Note:		No arguments will clear all plugins.
+# Usage:	clear_dead_lock_pid  [ plugin_name ]
+# Example1:	clear_dead_lock_pid  check_sysload
+# Example2:	clear_dead_lock_pid
+# LogFlag:	D0000000
+#
+clear_dead_lock_pid() {
+  local plugin_name=$1
+
+  clear_single_dead_lock_pid() {
+	local _p=$1  _rc=
+	[ -z "${_p}" ] && {
+		write_log -f "${MOLE_LOG}" "E0000000 clear_single_dead_lock_pid error: missing plugin name";
+		return 1
+	}
+  	if [ -z "$( echo "${_p}" | grep -E -o "^mole_" )" ]; then
+        	local logfile="${MOLE_LOG}"
+	else
+        	local logfile="${INNER_LOG}"
+  	fi
+
+	[ -L "${RUN_DIR}/${_p}.lock" ] && {
+		if [ "$(check_lock  "${_p}")" == "linkerror" ]; then   ### condition: 1
+			write_log -f ${logfile} "D0000000 MOLE remove linkerror lock for"\
+				"[${_p}]: link error";
+			un_lock "${_p}"
+		fi
+		if [ ! -f "${RUN_DIR}/${_p}.pid" ]; then  ### condition: 2
+			write_log -f ${logfile} "D0000000 MOLE remove dead lock for"\
+				"[${_p}]: pid not exists";
+			un_lock "${_p}"        
+		else
+			check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
+			_rc=$?
+			if [ "$_rc" != "0" ]; then  ### condition: 3
+				write_log -f ${logfile} "D0000000 MOLE remove dead lock and pid for"\
+					"[${_p}]: pid exists but process not running";
+				un_lock "${_p}"  	# unlock first
+				del_fpid "${_p}"	# then del pid file
+			fi
+		fi
+	}
+	if [ -s "${RUN_DIR}/${_p}.pid" ]; then
+		check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
+		_rc=$?
+		if [ "$_rc" != "0" ]; then  ### condition: 4
+			write_log -f ${logfile} "D0000000 MOLE remove dead pid for [${_p}]";
+			del_fpid "${_p}"
+		fi
+	fi
+  }
+
+  if [ -z "${plugin_name}" ]; then
+	# list_plugin_section | while read p   
+	for p in `list_plugin_section`
+	do
+		clear_single_dead_lock_pid "${p}"
+	done 
+	for q in `list_inner_plugin_section`
+	do
+		clear_single_dead_lock_pid "${q}"
+	done
+  else
+	clear_single_dead_lock_pid "${plugin_name}"
+  fi
+}
+
+# According to input pid file to stop process.
+# Steps:
+# 1. read first line from pid file as pids.
+#  1.1. for each pid, if directory /proc/${pid}/ exists, search all of its son-pids
+#  1.2. send signal TERM to all son pids
+#  1.3. read /proc/${pid}/cmdline as variable cmdline1
+#  1.4. send signal TERM to ${pid}, sleep 3 seconds in case the process trap signal TERM
+#  1.5. if directory /proc/${pid}/ still exists, read /proc/${pid}/cmdline as variable cmdline2
+#  1.6. if cmdline1=cmdline2, send signal KILL to ${pid}, no more than 3 times.
+# 2. remove pid file
+# Usage:	stopps_by_pidfile   /path/to/pid/file
+# Example:	stopps_by_pidfile   /var/run/crond.pid
+# LogFlag: 	STP00000
+#
+stopps_by_pidfile() {
+  local fpid=$1
+  [ -z "${fpid}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pidfile error:"\
+		"missing arguments, fpid=[${fpid}]";
+  	return 1
+  }
+
+  if [ -f "${fpid}" ]; then
+	read line < ${fpid}    ### step: 1
+	write_log -f "${MOLE_LOG}" "STP00000 MOLE read pids from pidfile:"\
+		"[${fpid}] result: [${line}]";
+
+	for x in `echo ${line}`;do
+		[ -z "${x//[0-9]/}" -a -d "/proc/${x}" ] && {
+			local kidpids=$(get_pidkids_bypid ${x})    ### step: 1.1
+			write_log -f "${MOLE_LOG}" "STP00000 MOLE get_kidpids for pid:"\
+				"[${x}] result:[${kidpids}]";
+
+			for cpid in `echo ${kidpids}`    ### step: 1.2
+			do
+				local cmdline=$(ps -p "${cpid}" -o cmd= 2>&-)
+				write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating child pid:"\
+					"[${cpid}] => [${cmdline}] SIG:TERM";
+				kill -15  "${cpid}" 1>&- 2>&-
+			done
+
+			local cmdline1=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.3
+
+			local cmdline=$(ps -p "${x}" -o cmd= 2>&-)
+			write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating father pid:"\
+				"[${x}] => [${cmdline}] SIG:TERM ";
+			kill -15 "${x}" 1>&- 2>&-	 ### step: 1.4
+			sleep 3   ### in case the process trap signal TERM
+
+			if [ -d "/proc/${x}" ]; then
+				local cmdline2=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.5
+				local kn=1  kmax=3
+				until [ "${cmdline1}" != "${cmdline2}" ]     ### step: 1.6
+				do
+					write_log -f "${MOLE_LOG}" "STP00000 MOLE father pid:"\
+						"[${x}] => [${cmdline2}] still running, kill it by SIG:KILL, times:[${kn}]";
+					kill -9 ${x} 1>&- 2>&-
+					sleep 0.1
+					local cmdline2=$(cat /proc/${x}/cmdline 2>&-)
+					((kn++))
+					### kill the process no more than ${kmax} times.
+					[ "$( echo "${kn}>${kmax}" | bc 2>&- )" == "1" ] && break
+				done
+			else
+				write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate father pid:"\
+					"[${x}] => [${cmdline}] SIG:TERM success";
+			fi
+		}
+	done
+
+	local errinfo=  rc=
+  	errinfo=$( /bin/rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
+	rc=$?
+	if [ "${rc}" != "0" ]; then
+		write_log -f "${MOLE_LOG}" "STP00000 MOLE remove pidfile:"\
+			"[${fpid}] error: [${errinfo}]";
+		return 2
+	else
+		write_log -f "${MOLE_LOG}" "STP00000 MOLE remove pidfile:"\
+			"[${fpid}] success";
+		return 0
+	fi
+  else
+	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pidfile error:"\
+		"input pidfile not exists: [${fpid}]";
+	return 3
+  fi
+}
+
+# Stop plugin	( kill process / remove pid / unlock )
+# Usage:	stop_single_plugin   plugin_name
+# LogFlag: 	STP00000 
+#
+stop_single_plugin() {
+  local plugin_name=$1  
+  local pidfile="${RUN_DIR}/${plugin_name}.pid"
+  if [ -z "${plugin_name}" ]; then
+	write_log -f "${MOLE_LOG}" "E0000000 stop_single_plugin error: missing plugin name";
+	return 1
+  else
+	write_log -f "${MOLE_LOG}" "STP00000 MOLE stop plugin"\
+		"[${plugin_name}]: 1 => stop process on pidfile: [${pidfile}]";
+  	stopps_by_pidfile "${pidfile}"
+	write_log -f "${MOLE_LOG}" "STP00000 MOLE stop plugin"\
+		"[${plugin_name}]: 2 => remove lockfile";
+  	un_lock "${plugin_name}"
+  fi
+}
+
+# Check plugin has been running timeout or not  (must be running,otherwise return error directly)
+# Output:	yes duration(s) | no duration(s) | error 0 (maybe not ruuning)
+# Usage:	timeout_ornot  plugin_name
+# Example:	timeout_ornot  check_sysload
+#
+timeout_ornot() {
+  local plugin_name=$1 result=
+  [ -z "${plugin_name}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 timeout_ornot error: missing plugin name";
+	return 1
+  }
+  local exec_tmout=$(conv_time2sec "$(get_exec_tmout ${plugin_name})")
+  local starttime=$(check_lock ${plugin_name})
+  if [ -z "${starttime}" -o ! -z "${starttime//[0-9]/}" ]; then		### maybe not running
+	write_log -f "${MOLE_LOG}" "E0000000 timeout_ornot error:"\
+		"starttime [${starttime}] not numberic on plugin "\
+		"[${plugin_name}]: maybe not running.";
+	result="error 0"
+  else				### is running
+	local durationtime=$(echo " "$(date +%s)" - "${starttime}" " | bc 2>&-) 
+  	[ "$(echo "${durationtime} >= ${exec_tmout}"|bc 2>&-)" == "1" ] && {
+		result="yes ${durationtime}"
+	} || {
+		result="no  ${durationtime}"
+	}
+  fi
+  echo -en "${result}"
+}
+
+# Add run-lock on plugin while pid file not exist
+# Note:		called to add run-lock at next scan period begins, previous plugin has already finished. 
+# 		No need to check previous plugin running timeout or not
+# Output:	0 1   ==>  Succ | Fail
+# Usage:        add_runlock_on_pid_notexist      plugin_name
+# LogFlag: 	P0000000
+#
+add_runlock_on_pid_notexist(){
+  local plugin_name=$1 _rc=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 add_runlock_on_pid_notexist error: missing plugin name";
+        return 1
+  }
+  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+        local logfile="${MOLE_LOG}"
+  } || {
+        local logfile="${INNER_LOG}"
+  }
+
+  gen_lock "${plugin_name}"
+  _rc=$?
+  if [ "${_rc}" != "0" ]; then
+	write_log -f ${logfile} "P0000000 MOLE add runlock on"\
+		"[${plugin_name}]: without pidfile but add runlock: failed. EXIT";
+	return 1
+  else
+	write_log -f ${logfile} "P0000000 MOLE add runlock on"\
+		"[${plugin_name}]: without pidfile and add runlock: succeed. OK";
+	return 0
+  fi
+}
+
+# Check run-lock on plugin while pid file exists
+# Note:		called to check run-lock at next scan period begins, previous plugin is still running.
+# Output: 	0 1 2 3 4 5
+# Steps:
+#   0: running, but timeout  ==>  stop plugin  ==>  process_plugin_timeout  ==>  skip 
+#   1: running, and NOT timeout  ==>  skip
+#   2: linkerror  ==>  remove dead run-lock  ==>  skip
+#   3: nolock  ==>  add run-lock  ==>  failed  ==>  skip
+#   4: nolock  ==>  add run-lock  ==>  succ    ==>  process_plugin
+#   5: unknown  ==>  skip
+# Usage:	check_runlock_on_pid_exist  plugin_name
+# Example:	check_runlock_on_pid_exist  check_sysload   
+# LogFlag: 	L0000000
+#
+check_runlock_on_pid_exist() {
+  local plugin_name=$1  r_c=
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 check_runlock_on_pid_exist error: missing plugin name";
+        return 1
+  }
+
+  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
+	local logfile="${MOLE_LOG}"
+  } || {
+	local logfile="${INNER_LOG}"
+  }
+
+  local lockinfo=$(check_lock "${plugin_name}")
+  [ -z "${lockinfo//[0-9]/}" ] && {	    ###   is running
+	local timeout_result=( $(timeout_ornot "${plugin_name}") )
+	if [ "${timeout_result[0]}" == "yes" ]; then   ### condition: 0
+		write_log -f ${logfile} "L0000000 MOLE plugin"\
+			"[${plugin_name}] has been running for ${timeout_result[1]} seconds, timeout. STOP IT"
+		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
+		return 0
+	else    
+		# write_log -f ${logfile} "L0000000 MOLE plugin"\
+			# "[${plugin_name}] has been running for ${timeout_result[1]} seconds"
+		return 1	### condition: 1
+	fi
+  }
+
+  [ "${lockinfo}" == "linkerror" ] && {
+	un_lock "${plugin_name}"
+	write_log -f ${logfile} "L0000000 MOLE plugin"\
+		"[${plugin_name}] running but linkerror. UNLOCK IT";
+	return 2      ### condition: 2
+  }
+
+  [ "${lockinfo}" == "nolock" ] && {    ### not running
+	gen_lock "${plugin_name}"
+        r_c=$?
+	if [ "${r_c}" != "0" ]; then
+		write_log -f ${logfile} "L0000000 MOLE add runlock on"\
+			"[${plugin_name}]: without runlock but add runlock failed. EXIT";
+		return 3      ### condition: 3
+	else		
+		write_log -f ${logfile} "L0000000 MOLE add runlock on"\
+			"[${plugin_name}]: without runlock and add runlock succeed. OK";
+		return 4      ### condition: 4
+	fi
+  }
+
+  write_log -f ${logfile} "L0000000 MOLE plugin"\
+	"[${plugin_name}] something unknown occure. EXIT";
+  return 5 	### condition: 5
+}
+
+# List plugin status and scheduling information
+#   		include: enable status starttime durationtime lastruntime frequency nextruntime repeaterrnum
+# Usage:	list_plugin_status  [ plugin_name1 plugin_name2 plugin_name3 ... ]    
+# Example1:	list_plugin_status  check_sysload  check_cpu_usage
+# Example2:	list_plugin_status  all
+#
+list_plugin_status() {
+  local plugin_name="$*"
+  local headline="Plugin Enable Running StartOn Duration LastRun Frequency NextRun RepeatErr"
+  list_single_status() {
+	local _p=$1 enable= running= starttime= durationtime= lastruntime= frequency= nextruntime= repeaterrnum=
+	local lastruntime=$(get_lastrun $_p) 
+    	local frequency=$(get_frequency $_p)
+	local nextruntime=$(get_nextrun $_p)
+	local repeaterrnum=$(get_repeat_errcount "${_p}")
+
+	[ ! -z "$( echo "${_p}" | grep -E -o "^mole_" )" ] && {
+		enable="yes"
+	} || {
+		enable=$(get_enable "${_p}")
+        }
+
+	if [ -z "${lastruntime//[0-9]/}" ]; then
+		lastruntime=$(date -d "1970-01-01 UTC ${lastruntime} seconds" +%F_%T)
+	else
+		[ "${lastruntime}" == "never_run" ] && {
+			lastruntime="Never_Run"
+		} || {
+			[ "${lastruntime}" == "invalid_lastrun" ] && {
+				lastruntime="Internal_Error"
+			} || {
+				lastruntime="Unknown"
+			}
+		}
+	fi
+
+	if [ -z "${nextruntime//[0-9]/}" ]; then
+		nextruntime=$(date -d "1970-01-01 UTC ${nextruntime} seconds" +%F_%T)
+	else
+		[ "${nextruntime}" == "null" ] && {
+			nextruntime="NULL"
+		} || {
+			[ "${nextruntime}" == "invalid_nextrun" ] && {
+				nextruntime="Internal_Error"
+			} || {
+				nextruntime="Unknown"
+			}
+		}
+	fi
+
+ 	[ "${enable}" == "yes" ] && {
+		enable="Yes"
+	} || {
+		enable="No" 
+		nextruntime="-"
+	}
+
+	local lockinfo=$(check_lock $_p)
+ 	if [ -z "${lockinfo//[0-9]/}" ]; then
+		running="Yes"
+		starttime=$(date -d "1970-01-01 UTC ${lockinfo} seconds" +%F_%T)
+		durationtime="$( echo "$(date +%s) - ${lockinfo}" | bc 2>&- )s"
+	else
+		running="No"
+		starttime="-"
+		durationtime="-"
+	fi
+
+	echo "$_p ${enable} ${running} ${starttime} ${durationtime} ${lastruntime} ${frequency} ${nextruntime} ${repeaterrnum}"
+	# echo "p=$_p e=${enable} r=${running} s=${starttime} d=${durationtime} l=${lastruntime} f=${frequency} n=${nextruntime} r=${repeaterrnum}"
+	
+	
+  }
+
+  if [ "${plugin_name}" == "all" ]; then
+		{  echo "${headline}"
+		for p in `list_plugin_section`
+		do
+			[ ! -z "${p}" ] &&  list_single_status "${p}"
+		done 
+		#for q in `list_inner_plugin_section`
+		#do
+			#[ ! -z "${q}" ] && list_single_status "${q}"
+		#done
+		} | column -t 
+  else
+		{ echo "${headline}" 
+		for o in `echo "${plugin_name}"`
+		do
+			list_single_status "${o}" 
+		done
+		} | column -t
+  fi
+}
+
+# Enable Plugin (update config file to set enable = yes)
+# LogFlag	ENAB0000
+#
+enable_plugin(){
+  local plugin_name=$1  rc=
+  write_log -f "${MOLE_LOG}" "ENAB0000 enable_plugin trying to enable plugin [${plugin_name}]";
+  update_mole_config "${plugin_name}" "enable" "yes"
+  rc=$?
+  return "${rc}"
+}
+
+# Disable Plugin (update config file to set enable = no)
+# LogFlag	DSAB0000
+#
+disable_plugin() {
+  local plugin_name=$1  rc=
+  write_log -f "${MOLE_LOG}" "DSAB0000 disable_plugin trying to disable plugin [${plugin_name}]";
+  update_mole_config "${plugin_name}" "enable" "no"
+  rc=$?
+  return "${rc}"
+}
+
+# Reset scheduling information and repeat err-num of plugin
+# Note:		No arguments will reset all plugins
+# Usage:	init_plugin  [plugin_name]
+# Example1:	init_plugin  check_sysload
+# Example2:	init_plugin 
+# LogFlag:	INIT0000
+# 
+init_plugin() {
+  local plugin_name=$1
+  if [ -z "${plugin_name}" ]; then
+	write_log -f "${MOLE_LOG}" "INIT0000 resetting all plugins ...";
+	: > ${TMP_LASTRUN} >/dev/null 2>&1
+  	: > ${TMP_NEXTRUN} >/dev/null 2>&1
+  	: > ${TMP_REPEAT}  >/dev/null 2>&1
+  else
+	write_log -f "${MOLE_LOG}" "INIT0000 resetting plugin: [${plugin_name}] ..."
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
+ 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
+  fi
+  return $?
+}
+
+# List base-config-name ==> config-value of plugin
+# Note:		No arguments will list all plugins
+# Note:		Extra (user-defination) config-name will not be displayed.
+# Usage:  view_base_config 	plugin_name
+# 
+view_base_config() {
+  local plugin_name=$1
+  [ -z "${plugin_name}" ] && {
+	echo_red "$(gettext "view_base_config error: please specify plugin name.")"; echo
+	return 1
+  }
+  echo_green "[${plugin_name}]: $(gettext "basic configuration")" ; echo
+  { 
+	echo "$(gettext "config_name") ==> $(gettext "value") ==> $(gettext "is_default")"
+  	for cname in ${ARRAY_BASE_CONFIG[@]} 
+  	do
+        	cvalue=$(read_mole_config ${plugin_name} ${cname})
+        	if [ -z "${cvalue}" ]; then
+                	cvalue="$(read_mole_config default ${cname}) ==> Yes"
+		else
+			cvalue="${cvalue} ==> No"
+        	fi
+        	echo -e  "${cname} ==> ${cvalue} "
+  	done
+  } | column -t -s "==>"
+}
+
+# List user-defined-config-name ==> config-value of plugin
+# Note:         No arguments will list all plugins
+# Note:         Basic config-name will not be displayed.
+# Usage:  view_extra_config      plugin_name  0|1
+# 
+view_extra_config() {
+  local plugin_name=$1  silient=$2
+  [ -z "${silient}"  ] && silient=0 || silient=1
+  [ "${silient}" == "0" -a -z "${plugin_name}" ] && {
+	echo_red "$(gettext "view_extra_config error: please specify plugin_name.")"; echo
+ 	return 1
+  }
+  [ "${silient}" == "0" ] && { 
+	echo_green "[${plugin_name}]: $(gettext "extra configuration")"
+	echo
+  }
+  {
+	local search_tag=0  headline="$(gettext "config_name(user-def)") ==> $(gettext "value")"
+  	for cname in `list_section_keys "${plugin_name}"`
+  	do
+		[ "$(echo -e "${ARRAY_BASE_CONFIG[@]}"  | grep -E -o -w "${cname}")" == "" ] && {  ### 2. user-def config
+			cvalue=$(read_mole_config ${plugin_name} ${cname})
+			[ "${silient}" == "0" -a "${search_tag}" == "0" ] && echo -e "${headline}"
+			echo -e "${cname} ==> ${cvalue}"
+			search_tag=1
+		}
+  	done
+  } | column -t -s "==>"
+}
+
+# Process plugin 
+# Note:		core function, each enabled plugin will be handed over to this function.
+# Usage:        process_plugin   plugin_name
+# LogFlag:	random 8 character
+#
+process_plugin() {
+
+  local plugin_name=$1
+
+  # Step 1: set jid / set debug flag / set logfile
+  local jid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
+  export _LOG="${MOLE_LOG}"          ### set logfile 
+  local debug=$(get_debug "${plugin_name}")   ### set debug flag
+  [ "${debug}" == "yes" ] && export _DEBUG="1" || export _DEBUG="0"
+
+  # Step 2.1: check current overloaded or not,  yes ==> process_sysoverload ==> return
+  SYSLOAD_UPLIMIT=$( read_mole_config global sysload_uplimit )
+  [ -z "${SYSLOAD_UPLIMIT}" -o ! -z "${SYSLOAD_UPLIMIT//[0-9]}" ] && SYSLOAD_UPLIMIT=30
+  local sysload=$( cut -d" " -f1 /proc/loadavg 2>&- )
+  if [ "$(echo  "${sysload} > $SYSLOAD_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
+	write_log "${jid} ${plugin_name} system overloaded,"\
+		"[${sysload}] > [${SYSLOAD_UPLIMIT}], EXIT";
+	process_sysoverload "${plugin_name}" "${sysload}" "${SYSLOAD_UPLIMIT}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+	write_log ${jid} ${plugin_name} "FINISHED"
+	unset _LOG
+	return 1
+  else
+	write_log ${jid} ${plugin_name} "system load normal: [${sysload}] CONTINUE";
+  fi
+
+  # Step 2.2: check current mole kids exceed or not,  yes ==> process_kidsexceed ==> return
+  KIDSNUM_UPLIMIT=$( read_mole_config global max_kidsnum )
+  [ -z "${KIDSNUM_UPLIMIT}" -o ! -z "${KIDSNUM_UPLIMIT//[0-9]}" ] && KIDSNUM_UPLIMIT=30
+  if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
+ 	read empid < "${PID_FILE}"
+  	local kidsnum=$( get_kidsnum "${empid}" )
+  	if [ "$(echo  "${kidsnum} > $KIDSNUM_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
+		write_log "${jid} ${plugin_name} kids number exceed,"\
+			"[${kidsnum}] > [${KIDSNUM_UPLIMIT}], EXIT";
+		process_kidsexceed "${plugin_name}" "${kidsnum}" "${KIDSNUM_UPLIMIT}" "${jid}"
+		un_lock "${plugin_name}" "${jid}"	# unlock first
+		del_fpid "${plugin_name}" "${jid}"	# then del pid file
+		write_log ${jid} ${plugin_name} "FINISHED"
+		unset _LOG
+		return 1
+  	else
+		write_log ${jid} ${plugin_name} "mole kids number normal: [${kidsnum}] CONTINUE";
+  	fi
+  else
+	write_log ${jid} ${plugin_name}\
+		"mole pid file not exist or empty, SKIP max_kids_num check, CONTINUE"
+  fi
+
+
+  # Step 3: check if input plugin-name registered in config file or not
+  write_log ${jid} ${plugin_name} "START";
+  if [ -z "${plugin_name}" ]; then   ### plugin finished
+	write_log ${jid} "plugin_name empty, please specify plugin_name. EXIT";
+	update_status "${plugin_name}" "${jid}" "EXIT on Empty Plugin Name"
+	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+	unset _LOG
+	return 1
+  else
+  	if [ "$(read_plugin_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### plugin finished
+		write_log ${jid} ${plugin_name} "not registered in config file. EXIT";
+		update_status "${plugin_name}" "${jid}" "EXIT on Plugin NOT Registered";
+		update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+		un_lock "${plugin_name}" "${jid}"	# unlock first
+		del_fpid "${plugin_name}" "${jid}"	# then del pid file
+		unset _LOG
+		return 2
+	else
+		write_log ${jid} ${plugin_name} "registered in config file. CONTINUE";
+	fi
+  fi
+
+  # Step 4: check if input plugin-name enabled in config file or not
+  local status=$(get_enable "${plugin_name}")
+  if [ "${status}" != "yes" ]; then	### plugin finished
+	write_log ${jid} ${plugin_name} "not enabled."\
+		"status=[${status}] EXIT";
+	update_status "${plugin_name}" "${jid}" "EXIT on Plugin Disabled"
+	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+	unset _LOG
+	return 0
+  else
+	write_log ${jid} ${plugin_name} "enabled. status=[${status}] CONTINUE";
+  fi
+
+  # Step 5: check if plugin file exists under PLUGIN_DIR or not
+  if [ ! -f "${PLUGIN_DIR}/${plugin_name}" -o ! -s "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished
+	write_log ${jid} ${plugin_name} "plugin file:"\
+		"[${PLUGIN_DIR}/${plugin_name}] not exist or empty. EXIT";
+	update_status "${plugin_name}" "${jid}" "EXIT on Plugin File Not Found or Empty"
+	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+	unset _LOG
+	return 3
+  else
+	write_log ${jid} ${plugin_name} "plugin file:"\
+		"[${PLUGIN_DIR}/${plugin_name}] exist. CONTINUE";
+  fi
+
+  # Step 6: exec plugin / obtain returned code / obtain returned stuff
+  [ -x "${PLUGIN_DIR}/${plugin_name}" ] || {
+	/bin/chmod a+x "${PLUGIN_DIR}/${plugin_name}" 2>&-
+  }
+  # local output=$( eval "..." 2>&1 )    # is wrong! can NOT get returned code, as be 0 always
+  local output=  rc=
+  output=$( eval "${PLUGIN_DIR}/${plugin_name}" 2>&1 )
+  rc=$?
+  write_log ${jid} ${plugin_name} "execution completed."\
+	"return code: [${rc}]  return string: [${output}]. CONTINUE";
+
+  # Step 6.1: check plugin output max length
+  PLUGIN_MAXLEN=$( read_mole_config global plugin_maxlen )
+  [ -z "${PLUGIN_MAXLEN}" -o ! -z "${PLUGIN_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=65536
+  local plugin_output_length="${#output}"
+  if [ "$(echo  "${plugin_output_length} > $PLUGIN_MAXLEN" | bc 2>&-)" == "1" ]; then      ### truncate and plugin continue.
+	write_log "${jid} ${plugin_name} plugin output length exceed,"\
+		"[${plugin_output_length}] > [${PLUGIN_MAXLEN}], TRUNCATE";
+	output="${output:0:${PLUGIN_MAXLEN}}"
+	output="${output}}"		### completion '}' after truncated
+	write_log "${jid} ${plugin_name} plugin output length exceed,"\
+		"truncated result: [${output}], CONTINUE"
+  else
+	write_log ${jid} ${plugin_name} "plugin output length normal: [${plugin_output_length}] CONTINUE";
+  fi
+
+  # Step 6.2: check plugin return code
+  case "${rc}" in
+  "0"|"1"|"2"|"3"|"4"|"5")
+	write_log ${jid} ${plugin_name} "plugin return code normal: [${rc}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin return code invalid: [${rc}], EXIT";  	  ### plugin finished
+        process_plugin_misform "${plugin_name}"  "rc"  "${rc}"  "${jid}"
+        un_lock "${plugin_name}" "${jid}"	# unlock first
+        del_fpid "${plugin_name}" "${jid}"	# then del pid file
+        write_log ${jid} ${plugin_name} "FINISHED"
+        unset _LOG
+        return 1
+	;;
+  esac 
+
+  # Step 6.3: check plugin output format
+
+  # Step 6.3.1: check output lines number
+  local output_linenum=
+  output_linenum=$(echo -en "${output}"|awk 'END{print NR}')
+  if [ "${output_linenum}" != "1" ]; then
+        write_log "${jid} ${plugin_name} plugin output lines number invalid:"\
+                "[${output_linenum}], should be one-line-output, EXIT";
+	process_plugin_misform "${plugin_name}"  "lines"  "${output_linenum}" "${jid}"
+        un_lock "${plugin_name}"  "${jid}"       # unlock first
+        del_fpid "${plugin_name}" "${jid}"       # then del pid file
+        write_log ${jid} ${plugin_name} "FINISHED"
+        unset _LOG
+        return 1
+  else
+        write_log ${jid} ${plugin_name} "plugin output lines number normal: [${output_linenum}] CONTINUE";
+  fi
+
+  local part1= part2= part3=
+  # Step 6.3.2: check output parts format: {a}:{b}:{c}
+  part3=$( ${PLUTIL} "parted_output" "3" "${output}" )
+  if [ -z "${part3}" ]; then
+        write_log "${jid} ${plugin_name} plugin output format unrecognized, EXIT";
+	process_plugin_misform "${plugin_name}"  "format" "third part empty" "${jid}"
+        un_lock "${plugin_name}" "${jid}"      # unlock first
+        del_fpid "${plugin_name}" "${jid}"       # then del pid file
+        write_log ${jid} ${plugin_name} "FINISHED"
+        unset _LOG
+        return 1
+  else
+	write_log ${jid} ${plugin_name} "plugin output format normal, CONTINUE";
+  fi
+
+  # Step 6.3.3: check output part1 -> {level}
+  part1=$( ${PLUTIL} "parted_output" "1" "${output}" | tr '[A-Z]' '[a-z]' )
+  case "${part1}" in
+  "succ"|"warn"|"crit"|"unkn"|"noop"|"notify")
+	write_log ${jid} ${plugin_name} "plugin output level normal: [${part1}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin output level invalid: [${part1}], EXIT";	### plugin finished
+	process_plugin_misform "${plugin_name}"  "level"  "${part1}" "${jid}"
+        un_lock "${plugin_name}" "${jid}"        # unlock first
+        del_fpid "${plugin_name}" "${jid}"      # then del pid file
+        write_log ${jid} ${plugin_name} "FINISHED"
+        unset _LOG
+        return 1
+	;;
+  esac
+
+  # Step 6.3.4: check output part1 and return code match or not ?
+  if [ "$(is_match "${part1}" "${rc}")" == "yes" ]; then
+	write_log ${jid} ${plugin_name} "plugin output level [${part1}] match return code [${rc}], CONTINUE"
+  else
+	write_log ${jid} ${plugin_name} "plugin output level [${part1}] mismatch return code [${rc}], EXIT";  ### plugin finished
+	process_plugin_misform "${plugin_name}" "mismatch" "${part1} <=> ${rc}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"		# then del pid file
+	write_log ${jid} ${plugin_name} "FINISHED"
+	unset _LOG
+	return 1
+  fi
+
+  # Step 6.3.5: check output part2 -> {type}
+  part2=$( ${PLUTIL} "parted_output" "2" "${output}" | tr '[A-Z]' '[a-z]' )
+  case "${part2}" in
+  "file"|"str")
+	write_log ${jid} ${plugin_name} "plugin output type normal: [${part2}], CONTINUE";
+	;;
+  *)
+	write_log ${jid} ${plugin_name} "plugin output type invalid: [${part2}], EXIT";		### plugin finished
+	process_plugin_misform "${plugin_name}"  "type"  "${part2}"  "${jid}"
+        un_lock "${plugin_name}" "${jid}"        # unlock first
+        del_fpid "${plugin_name}" "${jid}"	   # then del pid file
+        write_log ${jid} ${plugin_name} "FINISHED"
+        unset _LOG
+        return 1
+	;;
+  esac
+  
+
+  # update plugin execution result
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+
+  # Step 7: special steps.   
+  # while plugin return status = 0(OK) or 4(NOOP) or 5(NOTIFY)
+  # return status: 0:OK  
+  if [ "${rc}" == "0" ]; then    
+	write_log ${jid} ${plugin_name}\
+		"return status: [SUCC], will check nower errcount. CONTINUE";
+	local _now_errcount=$(get_repeat_errcount "${plugin_name}")
+	if [ "$(echo "${_now_errcount} > 0" | bc 2>&-)" == "1" ]; then
+		local new_part1="recovery";
+		output="{${new_part1}}:{${part2}}:{${part3}}"  # reset {output}
+		write_log ${jid} ${plugin_name}\
+			"nower errcount [${_now_errcount}], reset level from ${part1} to ${new_part1}. CONTINUE"
+	fi
+	write_log ${jid} ${plugin_name}\
+		"return status: [SUCC], will zero repeat errcount. CONTINUE";
+	zero_repeat_errcount "${plugin_name}" "${jid}"		# reset accumulated return-err number => 0
+  # return status: 4:NOOP
+  elif [ "${rc}" == "4" ]; then  ### plugin finished. 
+	write_log ${jid} ${plugin_name}\
+		"return status: [NOOP], Noting to do. EXIT";
+	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+	un_lock "${plugin_name}" "${jid}"	# unlock first
+	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+	write_log ${jid} ${plugin_name} "FINISHED"
+	unset _LOG
+	return 0
+  # return status: 5:NOTIFY
+  elif [ "${rc}" == "5" ]; then
+	write_log ${jid} ${plugin_name}\
+		"return status: [NOTIFY], CONTINUE";
+  # return status: (1/2/3  warn,crit,unkn) == (! 0/4/5  succ,noop,notify)
+  else  
+	write_log ${jid} ${plugin_name}\
+		"return code: [${rc}]. try to +1 on repeat errcount. CONTINUE";
+  	add_repeat_errcount "${plugin_name}" "${jid}"	# accumulated error number +1, on plugin return warn,crit,unkn
+  	local array_repeat_err_stuff=()
+  	array_repeat_err_stuff=( $(check_repeat_errcount ${plugin_name}) )
+  	local _yes_ornot=${array_repeat_err_stuff[0]} 
+	local _now_errcount=${array_repeat_err_stuff[1]} 
+	local _errcount_uplimit=${array_repeat_err_stuff[2]}
+  	if [ "${_yes_ornot}" == "1" ]; then  # plugin continue
+		write_log ${jid} ${plugin_name} "reached maximize errtimes:"\
+			"[(${_now_errcount}) >= (${_errcount_uplimit})] CONTINUE";
+  	else  # plugin finished
+		write_log ${jid} ${plugin_name} "have-not-yet reached maximize errtimes:"\
+			"[(${_now_errcount}) < (${_errcount_uplimit})] EXIT";
+        	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+        	un_lock "${plugin_name}" "${jid}"	# unlock first
+        	del_fpid "${plugin_name}" "${jid}"	# then del pid file
+        	write_log ${jid} ${plugin_name} "FINISHED"
+        	unset _LOG
+        	return 0
+  	fi
+  fi
+
+  # Step 8: check action: take_snapshot
+  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot ${rc})
+  local snapfile=
+  if [ "${t_snap}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "take snapshot disabled. SKIP";
+  else
+	write_log ${jid} ${plugin_name} "take snapshot enabled. CONTINUE";
+	snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "${jid}" 2>/dev/null )
+ 	snapfile=" ${t_snap} ### ${snapfile} "
+	write_log ${jid} ${plugin_name} "take snapshot finished."\
+		"detailis in ${TAKESNAP_LOG##*/}. CONTINUE";
+  fi
+	
+  # Step 9: check action: auto_handle
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle ${rc})
+  local hd_output=  hd_rc=
+  if [ "${a_hand}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "auto handle disabled. SKIP";
+	hd_output="auto handle is disabled. Nothing to do"
+  else
+	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
+	local handler=$(get_auto_handler "${plugin_name}")
+	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
+ 		[ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
+		hd_rc=$?
+		write_log ${jid} ${plugin_name} "auto handler execution completed."\
+			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
+		HANDLER_MAXLEN=$( read_mole_config global handler_maxlen )
+		[ -z "${HANDLER_MAXLEN}" -o ! -z "${HANDLER_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=32768
+		local handler_output_length="${#hd_output}"
+  		if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
+        		write_log "${jid} ${plugin_name} handler output length exceed,"\
+                		"[${handler_output_length}] > [${HANDLER_MAXLEN}], TRUNCATE";
+        		hd_output="${hd_output:0:${HANDLER_MAXLEN}}"
+        		hd_output="${hd_output}}"             ### completion '}' after truncated
+        		write_log "${jid} ${plugin_name} handler output length exceed,"\
+                		"truncated result: [${hd_output}], CONTINUE"
+  		else 
+        		write_log "${jid} ${plugin_name} handler output length normal: [${handler_output_length}] CONTINUE";
+  		fi
+		hd_output="auto handler [${HANDLER_DIR}/${handler}] return ### ### ${hd_output}"
+  	else
+		write_log ${jid} ${plugin_name} "auto handler:"\
+			"[${HANDLER_DIR}/${handler}] not exist or empty. SKIP";
+		hd_output="auto handler [${HANDLER_DIR}/${handler}] not exist or empty. Nothing to do"
+	fi
+  fi
+
+  # Step 10: check action: sms_notify
+  local s_alert=$(take_action_ornot "${plugin_name}" sms_notify ${rc})
+  local result_smslst=
+  local sms_receviers=$(get_sms_receviers "${plugin_name}")
+  if [ "${s_alert}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "sms notify disabled. SKIP";
+  else
+	write_log ${jid} ${plugin_name} "sms notify enabled. CONTINUE";
+	result_smslst=" ${s_alert} ###  ###  ${sms_receviers} "
+	write_log ${jid} ${plugin_name} "sms notify without local handler, set all receviers as failed. CONTINUE";
+  fi
+
+  # Step 11: check action: mail_notify
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify ${rc})
+  local failed_eml_flag=0  result_emllst=
+  if [ "${m_alert}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
+  else
+	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
+	# eval  will return syntax error. why ?
+	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
+	result_emllst=" ${m_alert} ### ${result_emllst} " 
+	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
+	write_log ${jid} ${plugin_name} "mail notify finished, failed_eml_flag=[${failed_eml_flag}]."\
+		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
+  fi
+
+  # Step 12: check action: post_notify
+  local p_alert=$(take_action_ornot "${plugin_name}" post_notify ${rc})
+  if [ "${p_alert}" != "yes" ]; then
+	write_log ${jid} ${plugin_name} "post notify disabled. SKIP";
+  else
+	write_log ${jid} ${plugin_name} "post notify enabled. CONTINUE";
+	[ "${hd_output}" == "auto handle is disabled. Nothing to do" ] && hd_output="disabled"
+	# eval  will return syntax error. why ?
+	[ -z "${_now_errcount}" ] && _now_errcount=0
+	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "${jid}" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r "${_now_errcount}" 2>&1
+	write_log ${jid} ${plugin_name} "post notify finished."\
+		"details in ${POSTLOG_LOG##*/}. CONTINUE";
+  fi
+
+  # Step 13: plugin finished
+  update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+  un_lock "${plugin_name}" "${jid}"	# unlock first
+  del_fpid "${plugin_name}"  "${jid}"	# then del pid file
+  write_log ${jid} ${plugin_name} "FINISHED"
+  unset _LOG
+  return 0
+}
+
+
+
+# Process inner plugin, in fact simplified version of process_plugin
+# Usage:	process_inner_plugin    plugin_name  [startrun]
+# Note: 	if startrun, no need to unlock when inner plugin finished, because didn't add lock
+#
+process_inner_plugin() {
+  local plugin_name=$1  mode=$2 output=
+
+  # Step 1: set random/unique jid
+  local jid=$( ${PLUTIL} unique_digest ) 
+
+  # Step 2: check plugin script 
+  write_log -f ${INNER_LOG} ${jid} ${plugin_name} "START"
+  if [ ! -f "${INNER_DIR}/${plugin_name}" ]; then
+        write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
+		"[${INNER_DIR}/${plugin_name}] not exist. EXIT";
+        [ "${mode}" == "startrun" ] || un_lock "${plugin_name}" "${jid}"
+	del_fpid "${plugin_name}" "${jid}"
+        return 3
+  else
+        write_log -f ${INNER_LOG} ${jid} ${plugin_name} "plugin file:"\
+		"[${INNER_DIR}/${plugin_name}] exist -> exec. CONTINUE";
+  fi
+
+  # Step 3: execute plugin / get return stuff
+  [ ! -x "${INNER_DIR}/${plugin_name}" ] && /bin/chmod a+x "${INNER_DIR}/${plugin_name}"
+  output=$( eval "${INNER_DIR}/${plugin_name}" 2>&1 )
+  write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution completed."\
+	"return: [${output}]";
+
+ # Step 4: plugin finished
+ update_status "${plugin_name}" "${jid}" "${output}"
+ update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+ [ "${mode}" == "startrun" ] || un_lock "${plugin_name}" "${jid}"	# unlock first
+ del_fpid "${plugin_name}" "${jid}"				# then del pid file
+ write_log -f ${INNER_LOG} ${jid} ${plugin_name} "execution DONE."
+
+}
+
+# Process plugin running timeout
+# Usage:    	process_plugin_timeout   plugin_name  durationtime
+# 
+process_plugin_timeout() {
+  local plugin_name=$1  durationtime=$2
+  # local jid=$3          # can't inherit jobid from caller, will set a new jid
+  local jid=$( ${PLUTIL} unique_digest )      ### set a new jid
+  local level="tmout"
+  local output="{${level}}:{str}:{ Plugin Execution TimeOut"\
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "Plugin: [${plugin_name}] execution timeout, has been terminated.") ### }";
+
+  write_log -f "${MOLE_LOG}" "$jid ${plugin_name} running timeout"\
+	"has been running for ${durationtime} seconds"
+
+  # Step 0: update status
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+  # Step 1: update lastrun and nextrun
+  update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+
+  # Step 2: stop timeout plugin 
+  stop_single_plugin "${plugin_name}"
+  # return here while inner plugin
+  [ "$( echo "${plugin_name}" | grep -E -o "^mole_" )" != "" ] && return 0
+
+  # Step 2: take snapshot
+  local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot "tmout")
+  local snapfile=
+  if [ "${t_snap}" != "yes" ]; then
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"take snapshot disabled. SKIP"
+  else
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"take snapshot enabled. CONTINUE"
+        snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "$jid" 2>/dev/null )
+	snapfile=" ${t_snap} ### ${snapfile} "
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"take snapshot finished, detailis in ${TAKESNAP_LOG##*/}. CONTINUE"
+  fi
+
+  # Step 3: auto handler while timeout
+  local a_hand=$(take_action_ornot "${plugin_name}" auto_handle "tmout")
+  local hd_output=  hd_rc=
+  if [ "${a_hand}" != "yes" ]; then
+ 	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"auto handle disabled. SKIP"
+	hd_output="auto handle is disabled. Nothing to do"
+  else
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"auto handle enabled. CONTINUE"
+	local handler=$(get_auto_handler "${plugin_name}")
+        if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+                write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+			"auto handler [${HANDLER_DIR}/${handler}] exists. CONTINUE"
+                [ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
+		hd_output=$( eval "${HANDLER_DIR}/${handler}" 2>&1 )
+		hd_rc=$?
+                write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+			"auto handle execution completed, return code:[${hd_rc}] return string: [${hd_output}], CONTINUE"
+                HANDLER_MAXLEN=$( read_mole_config global handler_maxlen )
+                [ -z "${HANDLER_MAXLEN}" -o ! -z "${HANDLER_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=32768
+                local handler_output_length="${#hd_output}"
+                if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
+                        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"handler output length exceed, ${handler_output_length} > ${HANDLER_MAXLEN}, TRUNCATE"
+                        hd_output="${hd_output:0:${HANDLER_MAXLEN}}"
+                        hd_output="${hd_output}}"             ### completion '}' after truncated
+                        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"handler output length exceed, truncated result: [${hd_output}], CONTINUE"
+                else 
+			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"handler output length normal ${handler_output_length}, CONTINUE";
+                fi   
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] return ### ### ${hd_output}"
+        else
+                write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+			"auto handler [${HANDLER_DIR}/${handler}] not exist or empty. SKIP"
+		hd_output="auto handler file [${HANDLER_DIR}/${handler}] not exist or empty. Nothing to do"
+        fi
+  fi
+
+  # Step 4: send timeout notify sms
+  local s_alert=$(take_action_ornot "${plugin_name}" sms_notify "tmout")
+  local result_smslst=
+  local sms_receviers=$(get_sms_receviers "${plugin_name}")
+  if [ "${s_alert}" != "yes" ]; then
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sms notify disabled. SKIP"
+  else
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sms notify enabled. CONTINUE"
+        result_smslst=" ${s_alert} ### ### ${sms_receviers} "
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sms notify without local handler, set all receviers as failed. CONTINUE"
+  fi
+
+  # Step 5: send timeout notify mail
+  local m_alert=$(take_action_ornot "${plugin_name}" mail_notify "tmout")
+  local failed_eml_flag=0  result_emllst=
+  if [ "${m_alert}" != "yes" ]; then
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"mail notify disabled. SKIP"
+  else
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"mail notify enabled. CONTINUE"
+	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+	result_emllst=" ${m_alert} ### ${result_emllst} "
+	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"send timeout mail finished, failed_eml_flag=[${failed_eml_flag}], details in ${SENDMAIL_LOG##*/}. CONTINUE"
+  fi
+
+  # Step 6: post timeout information
+  local p_alert=$(take_action_ornot "${plugin_name}" post_notify "tmout")
+  if [ "${p_alert}" != "yes" ]; then
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"post notify disabled. SKIP"
+  else
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"post notify enabled. CONTINUE"
+	[ "${hd_output}" == "auto handle is disabled. Nothing to do" ] && hd_output="disabled"
+  	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jobid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"post alert finished, details in ${POSTLOG_LOG##*/}. CONTINUE"
+  fi
+
+
+}
+
+# Process system overloaded
+# Usage:    	process_sysoverload  plugin-name   sysload_now  sysload_limit   jobid
+# Example:	process_sysoverload  check_smtp_svr  39  30
+# 
+process_sysoverload() {
+  local plugin_name=$1  sysload_now=$2  sysload_limit=$3
+  local jid=$4          # inherit jobid
+  local level="ovld"
+  local output="{${level}}:{str}:{ System OverLoad"\
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]") ### "\
+"Plugin: [${plugin_name}] has been cancled ### }";
+  local hd_output="System OverLoaded, Nothing to do"
+
+  write_log -f "${MOLE_LOG}" "$jid MOLE sysload overloaded:"\
+	"${sysload_now} >= ${sysload_limit}"
+
+  # Step 0: update status.
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+
+  # Step 2: take snapshot whatever.
+  local snapfile=
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"taking snapshot"
+  snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "$jid" 2>/dev/null )
+  snapfile=" yes ### ${snapfile} "
+
+  # Step 3: send sms_notify.
+  local result_smslst=
+  local sms_receviers=$(get_sms_receviers "${plugin_name}")
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sending sms"
+  result_smslst=" yes ### ### ${sms_receviers} "
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sms notify without local handler, set all receviers as failed. CONTINUE";
+
+  # Step 4: send alert mail whatever.
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sending alert mail"
+  local failed_eml_flag=0  result_emllst=
+  result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+  result_emllst=" yes ### ${result_emllst} "
+
+  # Step 5: post alert information whatever.
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"posting alert data"
+  [ "${hd_output}" == "System OverLoaded, Nothing to do" ] && hd_output="disabled"
+  ${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+}
+
+
+# Process kids process number exceed
+# Usage:    	process_kidsexceed plugin-name   kidsnum_now  kidsnum_limit  jobid
+# Example:	process_kidsexceed check_smtp_svr  32  30
+# 
+process_kidsexceed() {
+  local plugin_name=$1  kidsnum_now=$2  kidsnum_limit=$3
+  local jid=$4          # inherit jobid
+  local level="kids"
+  local output="{${level}}:{str}:{ Too Many Agent Kid Processes"\
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| $(html_red "Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]") ### "\
+"Plugin: [${plugin_name}] has been cancled ### }";
+  local hd_output="Kid Processes Number Exceed, Nothing to do"
+
+  write_log -f "${MOLE_LOG}" "$jid MOLE kidsnum exceed:"\
+	"${kidsnum_now} >= ${kidsnum_limit}"
+
+  # Step 0: update status.
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+
+  # Step 2: take snapshot whatever.
+  local snapfile=
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"taking snapshot"
+  snapfile=$( ${TAKESNAP_SH} -f "${plugin_name}" -s "$jid" 2>/dev/null )
+  snapfile=" yes ### ${snapfile} "
+
+  # Step 3: send sms_notify.
+  local result_smslst=
+  local sms_receviers=$(get_sms_receviers "${plugin_name}")
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+        "sending sms"
+  result_smslst=" yes ### ### ${sms_receviers} "
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sms notify without local handler, set all receviers as failed. CONTINUE"
+
+  # Step 4: send alert mail whatever.
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sending alert mail"
+  local failed_eml_flag=0  result_emllst=
+  result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+  result_emllst=" yes ### ${result_emllst} "
+
+  # Step 5: post alert information whatever.
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"posting alert data";
+  [ "${hd_output}" == "Kid Processes Number Exceed, Nothing to do" ] && hd_output="disabled"
+  ${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+}
+
+# Process plugin misform rcode/output
+# Usage:	process_plugin_misform {plugin-name}  {reason_type}  {reason_value}  {jobid}
+# Note:		reason_type	~  rc|lines|format|level|mismatch|type
+# Example:	process_plugin_misform sysload  rc  9
+#
+process_plugin_misform() {
+  local plugin_name=$1  reason_type=$2  reason_value=$3 
+  local jid=$4		# inherit jobid
+  local level="misform"
+  local reason=
+  case "${reason_type}" in
+  "rc") 
+	reason="plugin return code invalid: [${reason_value}], only 0-4 allowed"
+	;;
+  "lines")
+	reason="plugin output lines number invalid: [${reason_value}], only one-line allowed"
+	;;
+  "format")
+	reason="plugin output format unrecognized: [${reason_value}], only {a}:{b}:{c} allowed"
+	;;
+  "level")
+	reason="plugin output level unrecognized: [${reason_value}], only [succ,warn,crit,unkn,noop,notify] allowed"
+	;;
+  "mismatch")
+	reason="plugin output level mismatch: [${reason_value}], only matched level <=> rc allowed"
+	;;
+  "type")
+	reason="plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
+	;;
+  esac
+  local output="{${level}}:{str}:{ Misforma Plugin Output"\
+"| ${plugin_name} has been cancled at $(date +%F_%T)"\
+"| plugin ${plugin_name} output misforma on [${reason_type}] ### "\
+"$(html_red "${reason}") ### }";
+  local hd_output="Plugin Output Misform, Nothing to do"
+
+  write_log -f "${MOLE_LOG}" "$jid ${plugin_name} output misforma:"\
+	"${reason}"
+
+  # Step 0: update status.
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+  # Step 1: update lastrun and nextrun.
+  update_lastrun_and_nextrun "${plugin_name}" "${jid}"
+
+  # Step 2: send misforma notify-mail or not ?
+  local notify_onmisform=$(read_mole_config global notify_onmisform)
+  [ -z "${notify_onmisform}" ] && notify_onmisform="yes"
+  local result_emllst=  result_smslst=  snapfile=" no ### "
+  if [ "${notify_onmisform}" == "yes" ]; then
+  	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+        	"sending notify mail"
+  	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+	result_emllst=" yes ### ${result_emllst} "
+
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sending notify sms"
+	local sms_receviers=$(get_sms_receviers "${plugin_name}")
+	result_smslst=" yes ### ### ${sms_receviers} "
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sms notify without local handler, set all receviers as failed."
+	
+  else
+	result_emllst=" no ### "
+	result_smslst=" no ### "
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"misform notify(mail/sms) disabled, SKIP" 
+  fi
+
+  # Step 3: post misforma information whatever.
+  write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+        "posting notify data"
+  [ "${hd_output}" == "Plugin Output Misform, Nothing to do" ] && hd_output="disabled"
+  ${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+}
+
+
+
+#################  Debug Area  #####################
+
+
+
+# read_mole_config check_v5_mailq notify_alert
+# read_mole_config default notify_alert
+# read_mole_config global name

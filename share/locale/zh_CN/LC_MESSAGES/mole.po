@@ -1,0 +1,580 @@
+# Copyright (C) 2013 MOLE LANGUAGE FILE FOR GETTEXT
+# FIRST AUTHOR <zhangguangzheng@eyou.net>,<zhang.elinks@gmail.com> 2013.
+# This file is distributed under the same license as the mole package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 2.0-beta3\n"
+"Report-Msgid-Bugs-To: zhangguangzheng@eyou.net\n"
+"POT-Creation-Date: 2013-11-29 17:16+0800\n"
+"PO-Revision-Date: 2013-11-29 17:16+0800\n"
+"Last-Translator: Guangzheng Zhang <zhang.elinks@gmail.com>\n"
+"Language-Team: MOLE-LANGUAGE <zhang.elinks@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: CHINA\n"
+
+msgid "\t%+#D"
+msgstr "\t%+#D"
+
+msgid "\n"
+msgstr "\n"
+
+msgid "Options:"
+msgstr "参数:"
+
+msgid "Example:"
+msgstr "示例:"
+
+msgid "ShortTips:"
+msgstr "短参数:"
+
+msgid "ShortTips Example:"
+msgstr "短参数示例:"
+
+msgid "mole (pid: ${pid}) running ..."
+msgstr "实例 (进程号:${pid}) 正在运行 ..."
+
+msgid "mole (pid: ${pid}) running ... but seems fake?"
+msgstr "实例 (进程号:${pid}) 正在运行 ... 但看上去像是伪造者?"
+
+msgid "mole dead, but pid file: ${PID_FILE} left dead."
+msgstr "实例未运行, 但PID文件遗留未删除"
+
+msgid "mole dead."
+msgstr "实例未运行"
+
+msgid "1. prechecking envrioment      ... "
+msgstr "1. 检测当前系统环境       ... "
+
+msgid "PreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run MOLE"
+msgstr "当前系统环境无法正常运行实例"
+
+msgid "2. verifying id/name/receviers ... "
+msgstr "2. 校验ID/名称/默认收件人 ... "
+
+msgid "3. checking config file        ... "
+msgstr "3. 检查配置文件           ... "
+
+msgid "Check Config Result: Sorry, Config File Contains Some Mistakes"
+msgstr "配置文件中含有若干错误"
+
+msgid "4. creating directories        ... "
+msgstr "4. 创建运行所必须的目录   ... "
+
+msgid "Create Directory Result: Sorry, Some Mistakes Occured."
+msgstr "创建目录时发生错误"
+
+msgid "5. checking directories        ... "
+msgstr "5. 检查运行所必须的目录   ... "
+
+msgid "DirCheck Result: Sorry, Directories not prepared"
+msgstr "若干运行所必须的目录尚未就绪"
+
+msgid "Try to Run: ${MAKEDIR_SH}"
+msgstr "请尝试运行: ${MAKEDIR_SH}"
+
+msgid "6. running inner plugins       ... "
+msgstr "6. 运行内部功能插件       ... "
+
+msgid "7. starting mole cron        ... "
+msgstr "7. 启动插件任务调度       ... "
+
+msgid "trying to stop mole ... "
+msgstr "正在停止实例 ... "
+
+msgid "trying to reload mole include file: bin/include ..."
+msgstr "重新加载全局函数文件 ..."
+
+msgid " [OK]"
+msgstr " [成功]"
+
+msgid " [SKIP]"
+msgstr " [跳过]"
+
+msgid "  [OK]"
+msgstr "  [成功]"
+
+msgid "  [SKIP]"
+msgstr "  [跳过]"
+
+msgid "need arguments."
+msgstr "缺少参数."
+
+msgid "not registered in any config file."
+msgstr "未在配置文件中注册."
+
+msgid "enable [$plugin] success"
+msgstr "激活插件 $plugin 成功"
+
+msgid "enable [$plugin] skip"
+msgstr "激活插件 $plugin 跳过"
+
+msgid "NoNeed: already enabled"
+msgstr "插件已激活"
+
+msgid "NoConf: config [enable] not found"
+msgstr "插件没有[enable]配置项"
+
+msgid "NoNeed: already disabled"
+msgstr "插件已关闭"
+
+msgid "NoConf: config name [enable] not found"
+msgstr "插件没有[enable]配置项"
+
+msgid "configuration"
+msgstr "配置情况"
+
+msgid "details in"
+msgstr "详细信息在"
+
+msgid "NoNeed: config [$arg3] already not exists"
+msgstr "配置项 [$arg3] 并不存在"
+
+msgid "NoNeed: config [$arg3] already exists"
+msgstr "配置项 [$arg3] 已存在"
+
+msgid "NoNeed: config [$arg3] is already what you want"
+msgstr "配置项 [$arg3] 的值已经是所要设定的值"
+
+msgid "NoConf: config [$arg3] not found"
+msgstr "配置项 [$arg3] 并不存在"
+
+msgid "enable [$plugin] warn"
+msgstr "激活插件 $plugin 失败"
+
+msgid "trying to add config [enable] for [$arg2], and set enable=yes"
+msgstr "为插件 $arg2 添加配置项 [enable] 并设定为激活状态"
+
+msgid "enable [$plugin] failed"
+msgstr "激活插件 $plugin 失败"
+
+msgid "disable [$plugin] success"
+msgstr "关闭插件 $plugin 成功"
+
+msgid "disable [$plugin] skip"
+msgstr "关闭插件 $plugin 跳过"
+
+msgid "disable [$plugin] warn"
+msgstr "关闭插件 $plugin 失败"
+
+msgid "trying to add config [enable] for  [$arg2], and set enable=no"
+msgstr "为插件 $arg2 添加配置项 [enable] 并设定为关闭状态"
+
+msgid "disable [$plugin] failed"
+msgstr "关闭插件 $plugin 失败"
+
+msgid "delete [$arg2]-[$arg3] success"
+msgstr "删除插件 $arg2 的配置项 $arg3 成功"
+
+msgid "delete [$arg2]-[$arg3] skip"
+msgstr "删除插件 $arg2 的配置项 $arg3 跳过"
+
+msgid "operation refused"
+msgstr "拒绝操作"
+
+msgid "delete [$arg2]-[$arg3] failed"
+msgstr "删除插件 $arg2 的配置项 $arg3 失败"
+
+msgid "add [$arg2]-[$arg3]:[$arg4] success"
+msgstr "为插件 $arg2 添加配置项 $arg3, 并设定值为 $arg4 成功"
+
+msgid "add [$arg2]-[$arg3]:[$arg4] skip"
+msgstr "为插件 $arg2 添加配置项 $arg3, 并设定值为 $arg4 跳过"
+
+msgid "add [$arg2]-[$arg3]:[$arg4] failed"
+msgstr "为插件 $arg2 添加配置项 $arg3, 并设定值为 $arg4 失败"
+
+msgid "update [$arg2]-[$arg3]:[$arg4] success"
+msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 成功"
+
+msgid "update [$arg2]-[$arg3]:[$arg4] skip"
+msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 跳过"
+
+msgid "update [$arg2]-[$arg3]:[$arg4] warn"
+msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 失败"
+
+msgid "update [$arg2]-[$arg3]:[$arg4] failed"
+msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 失败"
+
+msgid "pid file: ${PID_FILE} already exist."
+msgstr "PID文件 ${PID_FILE} 已经存在"
+
+msgid "succeed!"
+msgstr "正常"
+
+msgid "stuff you are reading"
+msgstr "当前你正在阅读的文档"
+
+msgid "print version"
+msgstr "版本号"
+
+msgid "print basedir"
+msgstr "安装目录"
+
+msgid "print mole status"
+msgstr "查看实例状态"
+
+msgid "start mole daemon"
+msgstr "启动实例"
+
+msgid "stop mole daemon"
+msgstr "停止实例"
+
+msgid "restart mole daemon"
+msgstr "重启实例"
+
+msgid "check system environment on start"
+msgstr "预检查系统环境"
+
+msgid "check config file validity on start"
+msgstr "预检查配置文件有效性"
+
+msgid "reload include file (not config file) on fly"
+msgstr "在实例运行期间重新载入函数文件"
+
+msgid "create basic directories"
+msgstr "创建运行所必须的目录"
+
+msgid "create system snapshot once"
+msgstr "创建系统快照 (单次)"
+
+msgid "list plugin's schedule stat, (default list all)"
+msgstr "列出插件的调度状态 (默认列出所有插件)"
+
+msgid "reset plugin's schedul stat, [all] for every plugin"
+msgstr "重置插件调度状态 (被重置插件会被立即调度执行)"
+
+msgid "report plugin's last result, [all] for every plugin"
+msgstr "查看插件的上一次执行结果 (参数 all 输出所有插件)"
+
+msgid "enable plugin (change plugin config enable=yes)"
+msgstr "激活插件"
+
+msgid "disable plugin (change plugin config enable=no)"
+msgstr "关闭插件"
+
+msgid "run plugin once and format output on terminal"
+msgstr "单独一次执行插件并插件结果 (单次执行不算作插件调度)"
+
+msgid "print config->value, [all] for every plugin"
+msgstr "查看插件的配置信息 (参数 all 输出所有插件)"
+
+msgid "help stuff about mole config-*"
+msgstr "查看配置参数帮助信息"
+
+msgid "help stuff about mole config-* (same as above)"
+msgstr "看配置参数帮助信息"
+
+msgid "help stuff about short args"
+msgstr "查看短参数的帮助信息"
+
+msgid "help stuff about config you are reading"
+msgstr "当前你正在阅读的文档"
+
+msgid "print all of config value on single plugin, [all] for every plugin"
+msgstr "查看某个插件的所有配置参数和所设定的值 (参数 all 输出所有插件)"
+
+msgid "print single config value on single plugin"
+msgstr "查看某个插件的某一个配置参数所设定的值"
+
+msgid "print config->value for plugin user-defined config"
+msgstr "查看某个插件的所有自定义配置项所设定的值"
+
+msgid "print the value of variable name"
+msgstr "打印出某个全局变量的值 (供其他程序调用)"
+
+msgid "add config and set value for plugin"
+msgstr "添加插件的一个配置参数并赋值"
+
+msgid "delete config for plugin"
+msgstr "删除插件的一个配置参数"
+
+msgid "update config value for plugin"
+msgstr "更新插件的一个配置参数所设定的值"
+
+### bin/include
+
+msgid "basic configuration"
+msgstr "插件基础配置情况"
+
+msgid "extra configuration"
+msgstr "插件其他配置情况"
+
+msgid "config_name"
+msgstr "配置项"
+
+msgid "value"
+msgstr "配置值"
+
+msgid "is_default"
+msgstr "是否默认值"
+
+msgid "config_name(user-def)"
+msgstr "插件自定义配置项"
+
+msgid "view_base_config error: please specify plugin name."
+msgstr "查看插件基础配置出错: 未指定插件名"
+
+msgid "view_extra_config error: please specify plugin_name."
+msgstr "插件插件其他配置出错: 未指定插件名"
+
+### bin/checkconf
+
+msgid "NULL, set default"
+msgstr "为空值, 将读取默认值"
+
+msgid "[${eml}] invalid"
+msgstr "[${eml}] 不可识别邮件地址"
+
+msgid "${errnum}/${total} invalid email address."
+msgstr "${errnum}/${total} 个邮件地址不可识别."
+
+msgid "rule=[${rule}], min=[${min}] or max=[${max}] is not interger"
+msgstr "规则[${rule}]不合法, 最小值[${min}]或最大值[${max}]必须是整数数字"
+
+msgid "NULL"
+msgstr "空值"
+
+msgid "must be interger"
+msgstr "必须是整数数字"
+
+msgid "must between ${min}-${max}"
+msgstr "数字范围必须在 ${min} 到 ${max} 之间"
+
+msgid "not belongs in"
+msgstr "不在指定集合范围内"
+
+msgid "[${i}] invalid"
+msgstr "[${i}] 不合法"
+
+msgid "${errnum}/${total} invalid, allowed"
+msgstr "${errnum}/${total} 个值不合法, 所允许的值范围"
+
+msgid "file [${file}] not exists or empty"
+msgstr "文件 [${file}] 不存在或空文件"
+
+msgid "${errnum}/${total} file check failed"
+msgstr "${errnum}/${total} 个文件检查失败"
+
+msgid "time format invalid"
+msgstr "时间格式不可识别"
+
+msgid "${type1} return ${rc1}; ${type2} return ${rc2}"
+msgstr "${type1} 类型检查返回 ${rc1}; ${type2} 类型检查返回 ${rc2}"
+
+msgid "OK"
+msgstr "正常"
+
+msgid "WARN"
+msgstr "警告"
+
+msgid "CRIT"
+msgstr "错误"
+
+msgid "NOT contains blank section"
+msgstr "主配文件不包含空白配置段"
+
+msgid "contains blank section in"
+msgstr "主配文件包含有空白配置段, 在行"
+
+msgid "NOT contains duplicated section"
+msgstr "主配文件没有包含重复的配置段"
+
+msgid "contains duplicated section:"
+msgstr "主配文件包含有重复的配置段:"
+
+msgid "NOT contains duplicated key"
+msgstr "配置段没有包含重复的配置项"
+
+msgid "contains duplicated key:"
+msgstr "配置段包含有重复的配置项:"
+
+msgid "is not mole config file."
+msgstr "不是合法的插件配置文件"
+
+msgid "is mole config file."
+msgstr "是合法的插件配置文件"
+
+msgid "[mole_id] is empty. try"
+msgstr "实例ID为空, 请执行:"
+
+msgid "[mole_id] ="
+msgstr "实例ID:"
+
+msgid "[parter_id] is empty. try"
+msgstr "客户ID为空, 请执行:"
+
+msgid "[parter_id] ="
+msgstr "客户ID:"
+
+msgid "[mole_name] is empty. try"
+msgstr "实例名为空, 请执行:"
+
+msgid "[mole_name] ="
+msgstr "实例名:"
+
+msgid "[default_receviers] is empty. try"
+msgstr "默认邮件收件人为空, 请执行:"
+
+msgid "[default_receviers] ="
+msgstr "默认邮件收件人:"
+
+msgid "Result: [total=${totalnum} succ=${oknum} warn=${warnnum} crit=${critnum}]"
+msgstr "配置检查结果: 共检查${totalnum}项, 正常${oknum}, 警告${warnnum}, 错误${critnum}"
+
+### bin/makedir
+
+msgid "prepared"
+msgstr "就绪"
+
+msgid "not prepared"
+msgstr "未就绪"
+
+### bin/precheck
+
+msgid "only platform linux allowed, nower platform"
+msgstr "只能运行在LINUX平台上, 当前平台为"
+
+msgid "platform linux all right"
+msgstr "当前运行平台LINUX"
+
+msgid "root privilege required, nower uid"
+msgstr "需要ROOT权限来运行, 当前用户ID为"
+
+msgid "root privilege available"
+msgstr "当前以ROOT权限运行"
+
+msgid "directory /tmp accessable"
+msgstr "目录/tmp可访问读写"
+
+msgid "directory /tmp not accessable"
+msgstr "目录/tmp可不可读访问"
+
+msgid "Result: ${crit_num} Error, ${ok_num} OK"
+msgstr "环境检查结果: 异常${crit_num}, 正常${ok_num}"
+
+msgid "utils"
+msgstr "外部程序"
+
+### bin/report
+
+msgid "Status File NOT Exist or Empty"
+msgstr "状态文件不存在或空文件"
+
+msgid "No Record, Maybe Plugin Never been Running or Plugin Return Nothing"
+msgstr "没有执行记录, 或许该插件从未执行过或返回了空内容"
+
+msgid "Plugin"
+msgstr "插件"
+
+msgid "JobID"
+msgstr "编号"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Result"
+msgstr "结果"
+
+msgid "Misforma, Plugin Output More Than One Line"
+msgstr "输出格式不可识别, 插件输出文本行超过一行"
+
+msgid "Misforma, Plugin Output Format Unrecognized"
+msgstr "输出格式不可识别, 插件输出格式必须为{a}:{b}:{c}"
+
+msgid "Title"
+msgstr "主题"
+
+msgid "Summary"
+msgstr "摘要"
+
+msgid "Details"
+msgstr "详细"
+
+msgid "Level"
+msgstr "级别"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Strings"
+msgstr "字符串"
+
+msgid "Files"
+msgstr "文件"
+
+msgid "Misforma, Plugin Output Type Unrecognized, Only [file|str] Accepted"
+msgstr "输出格式不可识别, 只允许插件返回类型 file 和 str"
+
+### handler/sendmail
+
+msgid "auto handle is disabled. Nothing to do"
+msgstr "用户自定义自动处理程序被禁止, 什么都没做"
+
+msgid "Notify_Type:"
+msgstr "通知类型:"
+
+msgid "Title:"
+msgstr "标题:"
+
+msgid "Summary:"
+msgstr "摘要:"
+
+msgid "Details:"
+msgstr "详细:"
+
+msgid "Auto Handle:"
+msgstr "自动处理程序结果:"
+
+### bin/setinit
+
+msgid "initialized set mole_id as"
+msgstr "初始化实例ID为"
+
+msgid "mole_id already set"
+msgstr "实例ID已设定"
+
+msgid "role name of this box"
+msgstr "角色名"
+
+msgid "base domain of this box"
+msgstr "基础域名"
+
+msgid "set mole_name as"
+msgstr "初始化实例名为"
+
+msgid "mole_name already set"
+msgstr "实例名已设定"
+
+msgid "parter id of this box"
+msgstr "客户ID"
+
+msgid "set parter id as"
+msgstr "初始化客户ID为"
+
+msgid "parter id already set"
+msgstr "客户ID已设定"
+
+msgid "default mail receviers of this box"
+msgstr "默认收件人"
+
+msgid "not valid email address"
+msgstr "不是可识别的邮件地址"
+
+msgid "set default mail_receviers as"
+msgstr "初始化默认收件人为"
+
+msgid "default mail_receviers already set"
+msgstr "收件人已设定"
+
+msgid "[OK]"
+msgstr "[成功]"
+
+msgid "[SKIP]"
+msgstr "[跳过]"
+
+msgid "[FAIL]"
+msgstr "[失败]"

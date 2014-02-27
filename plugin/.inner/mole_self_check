@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic check self.
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        BASE_DIR=${BASE_DIR%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+
+# check function here
+check() {
+  local result=  oknum=0 warnnum=0 total=0
+
+  status=$(/usr/local/mole/mole status 2>&1); rc=$?
+  if [ "${rc}" != "0" ]; then
+  	result="mole status check return [${rc}] [${status}] ###"
+	((warnnum++))
+  else
+	result="mole status check return [0] OK ###"
+	((oknum++))
+  fi
+  ((total++))
+
+  precheck=$(${PRECHECK_SH} 2>&1); rc=$?
+  precheck=$(echo -en "${precheck}" | sed -e 's/$/###/g' | tr -d '\r\n')
+  if [ "${rc}" != "0" ]; then
+  	result="${result} mole precheck return [${rc}] ### ${precheck} ###"
+	((warnnum++))
+  else
+	result="${result} mole precheck return [0] OK ###"
+	((oknum++))
+  fi
+  ((total++))
+
+  checkconf=$(${CHECKCONF_SH} 2>&1); rc=$?
+  checkconf=$(echo -en "${checkconf}" | sed -e 's/$/###/g' | tr -d '\r\n')
+  if [ "${rc}" != "0" ]; then
+  	result="${result} mole checkconf return [${rc}] ### ${checkconf} ###"
+	((warnnum++))
+  else
+	result="${result} mole checkconf return [0] OK ###"
+	((oknum++))
+  fi
+  ((total++))
+
+  result=$(echo -en "${result}" | tr -d '\r\n')
+  if [ "${warnnum}" != "0" ]; then
+	EXIT_STATUS="${STATE_WARNING}"
+	LEVEL="warn"
+	TYPE="str"
+	CONTENT="SelfCheck FAIL | ${warnnum}/${total} check failed | ${result}"
+  else
+	EXIT_STATUS="${STATE_OK}"
+	LEVEL="ok"
+	TYPE="str"
+	CONTENT="SelfCheck Success | ${oknum}/${total} check success | ${result}"
+  fi
+  
+}
+
+check
+
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}

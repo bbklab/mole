@@ -1,0 +1,222 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Report Plugin's Running Status.
+# 
+# Usage:     ./report {plugin_name}
+# 	     ./report all
+#	     ./report -f {plugin_name} -i {plugin_output_stuff}
+#
+# Example:   ./report check_sysload
+# Example:   ./report all
+# Example:   ./report -f check_sysload -i "{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10] | line1 ### line2 ### <font color=red> line3 </font> ### }"
+#
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+### Function Def
+
+show_usage(){
+  exit 1
+}
+
+print_record(){
+  local pname=${1} ts= result= line= level= type= title= summary= body= content=
+  local aline="=========="
+  local output=
+
+  if [ "${MODE}" == "0" ]; then   ## read from stat file.
+  	if [ -f "${TMP_STATUS}" -a -s "${TMP_STATUS}" ]; then
+		line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_STATUS}" 2>&-)
+  	else
+		echo_yellow "$(gettext "Status File NOT Exist or Empty")" ; echo
+		return 2
+  	fi
+  elif [ "${MODE}" == "1" ]; then  ## read from command args.
+	shift; line="$*"		
+  fi
+
+  if [ -z "${line}" ]; then
+	ts="-"
+	result="$(gettext "No Record, Maybe Plugin Never been Running or Plugin Return Nothing")"
+	output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "Result")   :"\
+"\n${result}"\
+"\n"
+  	echo -e "\n${output}\n${aline}\n"
+	return 1
+  else
+	if [ "${MODE}" == "0" ]; then    ### read from status file, no need to check misforma.
+		id=$(echo -e "${line}" | awk '{print $2}')
+		ts=$(echo -e "${line}" | awk '{print $3}')
+		ts=$(date -d "1970-01-01 UTC ${ts} seconds" +%F_%T 2>&-)
+		result=$(echo -e "${line}" | awk '{$1=$2=$3="";print;exit;}')  
+	elif [ "${MODE}" == "1" ]; then  ### read from args, need to check various misforma here.
+		id="-"
+		ts=$(date +%F_%T)
+		result="${line}"
+		## check line number
+		if [ "$(echo -en "${result}"|awk 'END{print NR}')" != "1" ]; then
+			misform_reason="$(echo_red "$(gettext "Misforma, Plugin Output More Than One Line")")"
+			output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "Result")   :"\
+"\n${misform_reason}"\
+"\n"\
+"\n${result}"\
+"\n"
+			echo -e "\n${output}\n${aline}\n"
+			return 1
+		## check output format
+		elif [ -z "$(${PLUTIL} "parted_output" "3" "${result}" 2>&-)" ]; then
+			misform_reason="$(echo_red "$(gettext "Misforma, Plugin Output Format Unrecognized")")"
+			output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "Result")   :"\
+"\n${misform_reason}"\
+"\n"\
+"\n${result}"\
+"\n"
+			echo -e "\n${output}\n${aline}\n"
+			return 1
+		fi
+	fi
+
+	level=$(${PLUTIL} parted_output 1 "${result}"|tr '[a-z]' '[A-Z]')
+	type=$(${PLUTIL} parted_output 2 "${result}"|tr '[A-Z]' '[a-z]')
+	case "${type}" in 
+	"str")
+		title=$(${PLUTIL} parted_output 4 "${result}")
+		[ -z "${title}" ] || title="$(gettext "Title")   : ${title}"
+		summary=$(${PLUTIL} parted_output 5 "${result}"|sed -e 's/^[ \t]//')
+		[ -z "${summary}" ] || summary="$(gettext "Summary")   : ${summary}"
+		body=$(${PLUTIL} parted_output 6 "${result}"|sed -e 's/^[ \t]//')
+		body=$( ${PLUTIL} format_toterm "${body}")
+		[ -z "${body}" ] || body="$(gettext "Details")   :\n${body}"
+		content="${title}\n${summary}\n${body}\n"
+		output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "JobID")   : ${id}"\
+"\n$(gettext "Result")   :"\
+"\n$(gettext "Level")   : ${level}"\
+"\n$(gettext "$(gettext "Type")   : $(gettext "Strings")")"\
+"\n${content}\n"
+		;;
+	"file")
+		files=$(${PLUTIL} parted_output 3 "${result}")
+		files=$(echo -e "${files}"|sed -e 's/ *### */\n/g')
+		output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "JobID")   : ${id}"\
+"\n$(gettext "Result")   :"\
+"\n$(gettext "Level")   : ${level}"\
+"\n$(gettext "$(gettext "Type")   : $(gettext "Files")")"\
+"\n${files}\n"
+		;;
+	*)
+		misform_reason="$(echo_red "$(gettext "Misforma, Plugin Output Type Unrecognized, Only [file|str] Accepted")")"
+		output="\n$(gettext "Plugin")   : ${pname}"\
+"\n$(gettext "Time")   : ${ts}"\
+"\n$(gettext "Result")   :"\
+"\n${misform_reason}"\
+"\n"\
+"\n${result}"\
+"\n"
+		;;
+	esac
+  fi
+
+  echo -e "\n${output}\n${aline}\n"
+  return 0
+}
+
+
+
+### Main Body Begin ...
+
+MODE=0
+while getopts f:i: opt
+do
+        case ${opt} in
+        "f")
+                plugin_name="${OPTARG}"   ;;  
+        "i")
+                content="${OPTARG}"       ;;  
+	*)
+		show_usage		  ;;
+        esac
+done
+[ ! -z "${plugin_name}" -o ! -z "${content}" ] && MODE=1
+
+if [ "${MODE}" == "0" ]; then
+	plugin_name="${1}"
+	[ -z "${plugin_name}" ] && show_usage
+	if [ "${plugin_name}" == "all" ]; then
+		for p in `list_plugin_section` # `list_inner_plugin_section`
+  		do
+			print_record "${p}"
+			[ "$?" == "2" ] && break   # break on status file not exists
+  		done
+	else
+  		print_record "${plugin_name}"
+	fi
+fi
+
+if [ "${MODE}" == "1" ]; then 
+	print_record "${plugin_name}" "${content}"
+fi

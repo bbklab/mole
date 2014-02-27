@@ -1,0 +1,1057 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use utf8;
+use JSON;
+use Encode;
+use Getopt::Std;
+use IO::Socket;
+use IO::Socket::INET;
+use Time::HiRes;
+use Benchmark ':hireswallclock';
+# use Smart::Comments;
+
+binmode(STDIN, ":encoding(utf8)");
+binmode(STDOUT, ":encoding(utf8)");
+
+$| = 1;
+
+
+# declar global vars
+our $filename = (split /\//, __FILE__)[-1];
+our $mole = '/usr/local/mole/mole';
+our %opts = ();
+our ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = ();
+our $logfrom;
+our (%json_data,$json_result) = ('','');
+
+
+# check mole 
+unless (-f $mole && -x $mole) {
+  printf "$mole not prepared.\n";
+  exit 1;
+} 
+
+our $postlog = '/usr/local/mole/log/postlog.log';
+open my $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
+if($fh){
+  while(<$fh>){
+	chomp; $postlog = $_;
+	last;
+  }
+}
+
+our $statfile = '/usr/local/mole/tmp/.posthost.status';
+open $fh, "$mole printdef POSTHOST_STATUS 2>&- | ";
+if($fh){
+  while(<$fh>){
+	chomp; $statfile = $_;
+	last;
+  }
+}
+
+our $parter_id = '0000000000';
+open $fh, "$mole view global parter_id 2>&- | ";
+if($fh){
+  while(<$fh>){
+	chomp; $parter_id = $_;
+	last;
+  }
+}
+
+our $hid = '0000000000';
+open $fh, "$mole view global id 2>&- | ";
+if($fh){
+  while(<$fh>){
+	chomp; $hid = $_;
+	last;
+  }
+}
+
+our $hname = '0000000000__mole__ops.eyou.net';
+open $fh, "$mole view global name 2>&- | ";
+if($fh){
+  while(<$fh>){
+	chomp; $hname = $hid.'__'.$_;
+	last;
+  }
+}
+close $fh if ($fh);
+
+
+
+# read args from cli
+getopts('t:p:j:o:h:e:s:f:r:d',\%opts);
+($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = @opts{'t','p','j','o','h','e','s','f','r','d'};
+
+# important to check utf8 flag on/off, or lead to json encode problems
+foreach my $chinese ($output,$houtput){
+  unless (Encode::is_utf8($chinese)){
+    	Encode::_utf8_on($chinese);
+  }
+}
+
+# set initial logfrom first
+$logfrom = 'AGENT.CHECK';
+
+# check arg [type] first
+unless (defined $type && $type ne '') {
+  &log("ERROR: $logfrom type required. EXIT");
+  print "type required.\n";
+  &help;
+  exit 1;
+}
+if ($type ne 'post' 
+	&& $type ne 'plugin'
+	&& $type ne 'config'
+        && $type ne 'heartbeat') {
+  &log("ERROR: $logfrom type $type invalid. EXIT");
+  print "type $type invalid.\n";
+  &help;
+  exit 1;
+}
+# reset [logfrom] [houtput]
+if ($type eq 'post') {
+  unless (defined $plugin && defined $jobid && defined $output){
+        &log("ERROR: $logfrom plugin or jobid or plugin_output required on type=post. EXIT");
+        print "plugin or jobid or plugin_output required on type=post\n";
+        &help;
+        exit 1;
+  } else {
+	# reset logfrom
+        $logfrom = $plugin.'.'.$jobid;
+        &log("INFO: $logfrom type is post, set logfrom=[$logfrom]");
+  }
+  if (!defined $houtput || $houtput eq ''){ 
+	# reset houtput
+        $houtput = 'Nothing to do';
+        &log("INFO: $logfrom houtput empty, reset houtput=[$houtput]");
+  }
+} elsif ($type eq 'plugin') {                                                                                                
+  $logfrom = 'AGENT.PLUGIN';
+} elsif ($type eq 'config') {
+  $logfrom = 'AGENT.CONFIG';
+} elsif ($type eq 'heartbeat') {
+  $logfrom = 'AGENT.HEARTBEAT';
+}
+
+&log("");
+&log("");
+&log("INFO: $logfrom script postlog start ...");
+
+if(!defined $debug || $debug eq ''){
+  open my $fh, "$mole view postlog post_debug 2>&- |";
+  if($fh){
+	while(<$fh>){
+		chomp; $debug = ($_ eq 'yes') ? 1 : 0;
+		last;
+	}
+  }
+  close $fh if ($fh);
+  &log("INFO: $logfrom set debug=[$debug] from config file.");
+} else {
+  &log("INFO: $logfrom set debug=[$debug] from cli argument.");
+}
+
+
+# check post host status
+if (-f $statfile && -s $statfile){
+  if(open FH, "<", $statfile) {
+	while(<FH>){
+		my @array_status = split /\s+/;
+		if (@array_status) {
+  			my $conn_status = shift @array_status;
+  			my $conn_details = "@array_status";
+  			if ($conn_status ne '0') {
+				&log("CRIT: $logfrom post host seems down, [$conn_details], exit");
+  				exit 2;
+  			} else {
+				&log("INFO: $logfrom post host seems online, continue.");
+  			}
+		}
+		last;
+	}
+	close FH;
+  }
+} else {
+  &log("INFO: $logfrom post host status file not exist or empty, continue.");
+}
+
+
+# generate json data by {action_type}: [post|plugin|config|heartbeat]
+if ($type eq 'post') {
+  %json_data = &genjson_post($plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat);
+} elsif ($type eq 'plugin') {
+  %json_data = &genjson_plugin;
+} elsif ($type eq 'config') {
+  %json_data = &genjson_config;
+} elsif ($type eq 'heartbeat') {
+  %json_data = &genjson_heartbeat;
+} 
+
+$json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
+&log("INFO: $logfrom json result: [$json_result]") if ($debug && $json_result);
+&log("INFO: $logfrom json result length: [".length($json_result)."]") if ($debug && $json_result);
+### %json_data
+### $json_result
+
+
+# set post address
+our %post_server = (
+  'post_server'		=> '',
+  'post_server_port'	=> '',
+  'post_port_type'	=> '',
+  'post_timeout'	=> '',
+);
+foreach my $key (keys %post_server) {
+  open my $fh, "$mole view postlog $key 2>&- |";
+  if($fh){
+	while(<$fh>){
+		chomp; $post_server{$key} = $_;
+		last;
+	}
+  }
+}
+
+unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
+  &log("ERROR: $logfrom configurations not complete: post_server not defined. EXIT");
+  print "post_server not defined.\n";
+  exit 1;
+}
+
+unless (exists $post_server{'post_server_port'} && $post_server{'post_server_port'} ne '') {
+  $post_server{'post_server_port'} = 8548;
+} elsif ($post_server{'post_server_port'} =~ /\D/) {
+  $post_server{'post_server_port'} = 8548;
+}
+
+unless (exists $post_server{'post_port_type'} && $post_server{'post_port_type'} ne '') {
+  $post_server{'post_port_type'} = 'tcp';
+} elsif ($post_server{'post_port_type'} ne 'tcp' && $post_server{'post_port_type'} ne 'udp') {
+  $post_server{'post_port_type'} = 'tcp';
+}
+
+unless (exists $post_server{'post_timeout'} && $post_server{'post_timeout'} ne '') {
+  $post_server{'post_timeout'} = 10;
+} elsif ($post_server{'post_timeout'} =~ /\D/) {
+  $post_server{'post_timeout'} = 10;
+}
+
+&log("INFO: $logfrom set post_server=[$post_server{'post_server'}], post_server_port=[$post_server{'post_server_port'}]");
+&log("INFO: $logfrom set post_port_type=[$post_server{'post_port_type'}], post_timeout=[$post_server{'post_timeout'}]");
+
+# post data
+my $sock=IO::Socket::INET->new(
+  'PeerAddr' =>     $post_server{'post_server'},
+  'PeerPort' =>     $post_server{'post_server_port'},
+  'Proto'    =>     $post_server{'post_port_type'},
+  'Timeout' =>      $post_server{'post_timeout'}, 
+);
+unless (defined $sock) {
+  my $response = '';
+  if ($@) {
+	( $response = $@ ) =~ s/[\r\n]//g;
+  }
+  &log("ERROR: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] error, response: [$response] EXIT");
+  exit 2;
+} else {
+  &log("INFO: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] succeed!");
+  print $sock "$json_result\n\r";
+  my $sock_response = <$sock>;
+  unless ($sock_response) {
+	$sock_response = '';
+  } else {
+	chomp $sock_response;
+	$sock_response =~ s/[\r\n ]//g;
+  }
+  &log("INFO: $logfrom post json data to post server response: [$sock_response]");
+  &log("INFO: $logfrom script postlog finished.");
+  if ($sock_response =~ /\A\d+\Z/) {
+  	exit $sock_response;
+  } else {
+	exit 9;
+  }
+}
+
+
+
+#
+# SUB DEF
+#
+
+sub help(){
+print <<HELP;
+
+Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -d
+type:    post,  plugin,  config,  heartbeat
+
+HELP
+}
+
+sub log {
+  my $message = shift;
+  my $time = time;
+  my ($sec,$min,$hour,$day,$mon,$year) = localtime(time);
+  my $localtime = sprintf("%d-%d-%d_%d:%d:%d",$year+1900,$mon+1,$day,$hour,$min,$sec);
+  open FH, ">>", $postlog || return;
+  print FH "$time $localtime $message\n";
+  close FH;
+}
+
+sub parted_output {
+  my $part = shift;
+  my $content = shift;
+  exit(1) if (!$part || $part =~ /\D/);
+  exit(1) if ($part > 6 || $part < 1); 
+  exit(1) if (!defined $content);
+  $content =~ m/{\s*(\w+)\s*}\s*:\s*{\s*(\w+)\s*}\s*:\s*{\s*(([^\|]+)(\|([^\|]+))?(\|([^\|]+))?)\s*}/i;
+  my $result = ''; 
+  if($1 && $part eq '1') { $result = $1; };
+  if($2 && $part eq '2') { $result = $2; };
+  if($3 && $part eq '3') { $result = $3; };
+  if($4 && $part eq '4') { $result = $4; };
+  if($6 && $part eq '5') { $result = $6; };
+  if($8 && $part eq '6') { $result = $8; };
+  $result =~ s/\A\s+//g if ($result);   # trim head \s
+  return ($result);
+}
+
+sub genjson_post {
+  my ($plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat) = @_;
+
+  my %result = (
+	'type'		=> 'post',
+	'parter_id'	=> $parter_id,
+	'hid'		=> $hid,
+	'hname'		=> $hname,
+	'pname'		=> $plugin,
+	'job'		=> '',
+	'data'		=> '',
+  );
+  &log("DEBUG: $logfrom set type=[post]") if $debug;
+  &log("DEBUG: $logfrom set parter_id=[$parter_id]") if $debug;
+  &log("DEBUG: $logfrom set hid=[$hid]") if $debug;
+  &log("DEBUG: $logfrom set hname=[$hname]") if $debug;
+
+  # set job
+  my @raw_job = ($jobid,time());
+  $result{'job'} = \@raw_job;
+  &log("DEBUG: $logfrom set job=[[@raw_job]]") if $debug;
+
+  # initial raw data
+  my %raw_data = (
+	'res'			=> '0',
+	'act'			=> '',
+	'snap'			=> '',
+	'level'			=> '',
+	'repeat'		=> $repeat,
+	'ret'			=> '',
+	'title'			=> '',
+	'summary'		=> '',
+	'detail'		=> '',
+	'auto'			=> '',
+	'extra'			=> '',
+  );
+
+  # set data-> {res / act}
+  my ($mailflag,$smsflag) = (0,0);
+  my @arrsucceml = ();
+  my @arrfaileml = ();
+  my @arrsuccsms = ();
+  my @arrfailsms = ();
+  if (defined $eml && $eml ne '') {
+	&log("DEBUG: $logfrom receive args eml=[$eml]") if $debug;
+  	my ($s_mail,$succeml,$faileml) = split(/\s+###/,$eml);
+  	$s_mail =~ s/\A\s+//; $succeml =~ s/\A\s+//; $faileml =~ s/\A\s+//;
+  	if (defined $faileml && $faileml ne ''){
+		$raw_data{'res'} = 1;
+  	}
+	$mailflag = (defined $s_mail && $s_mail eq 'yes') ? 1 : 0;
+  	@arrsucceml = split(/\s+/,$succeml) if ($succeml);
+  	@arrfaileml = split(/\s+/,$faileml) if ($faileml);
+  }
+  if (defined $sms && $sms ne '') {
+	&log("DEBUG: $logfrom receive args sms=[$sms]") if $debug;
+  	my ($s_sms,$succsms,$failsms) = split(/\s+###/,$sms);
+  	$s_sms =~ s/\A\s+//; $succsms =~ s/\A\s+//; $failsms =~ s/\A\s+//;
+  	if (defined $failsms && $failsms ne ''){
+		$raw_data{'res'} = 1;
+  	}
+	$smsflag = (defined $s_sms && $s_sms eq 'yes') ? 1 : 0;
+  	@arrsuccsms = split(/\s+/,$succsms) if ($succsms);
+  	@arrfailsms = split(/\s+/,$failsms) if ($failsms);
+  }
+  my %raw_eml = (
+	'enabled'	=> $mailflag,
+	'succ'		=> \@arrsucceml,
+	'fail'		=> \@arrfaileml,
+  );
+  my %raw_sms = (
+	'enabled'	=> $smsflag,
+	'succ'		=> \@arrsuccsms,
+	'fail'		=> \@arrfailsms,
+  );
+  my %raw_act = (
+	'mail'		=> \%raw_eml,
+	'sms'		=> \%raw_sms,
+  );
+  my $json_act = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_act);
+  $raw_data{'act'} = $json_act;
+  &log("DEBUG: $logfrom set data.res=[$raw_data{'res'}]") if $debug;
+  &log("DEBUG: $logfrom set data.act=[$raw_data{'act'}]") if $debug;
+  
+  # set data->snap
+  my ($snapflag,$snappath) = (0,'');
+  if (defined $snapfile && $snapfile ne '') {
+  	chomp $snapfile;
+	&log("DEBUG: $logfrom receive args snapfile=[$snapfile]") if $debug;
+	my ($s_snap,$path) = split(/\s+###/,$snapfile);
+	$s_snap =~ s/\A\s+//; $path =~ s/\A\s+//;
+	$snapflag = (defined $s_snap && $s_snap eq 'yes') ? 1 : 0;
+	$snappath = $path if ($path);
+  }
+  my %raw_snap = (
+	'enabled'	=> $snapflag,
+	'path'		=> $snappath,
+  );
+  my $json_snap = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_snap);
+  $raw_data{'snap'} = $json_snap;
+  &log("DEBUG: $logfrom set data.snap=[$raw_data{'snap'}]") if $debug;
+
+  # set data->level
+  my $level = &parted_output(1,$output);
+  if (defined $level && $level ne '') {
+  	$raw_data{'level'} = $level;
+  }
+  &log("DEBUG: $logfrom set data.level=[$raw_data{'level'}]") if $debug;
+
+  # set data->ret
+  my $ret = &parted_output(2,$output);
+  if (defined $ret && $ret ne '') {
+	if ($ret eq 'str' || $ret eq 'file') {
+  		$raw_data{'ret'} = $ret;
+	} else {
+		&log("ERROR: $logfrom data.level must be str or file. RETURN") if $debug;
+		$result{'data'} = \%raw_data;
+		return %result;
+	}
+  } else {
+	&log("ERROR: $logfrom data.level not defined. RETURN") if $debug;
+	$result{'data'} = \%raw_data;
+	return %result;
+  }
+  &log("DEBUG: $logfrom set data.ret=[$raw_data{'ret'}]") if $debug;
+
+  # set data-> {title/ summary/ detail}
+  if ($ret eq 'str') {
+	my $title   = &parted_output(4,$output);
+	if (defined $title && $title ne '') {
+		$raw_data{'title'} = $title;
+		&log("DEBUG: $logfrom set data.title=[$raw_data{'title'}]") if $debug;
+	}
+
+	my $summary = &parted_output(5,$output);
+	if (defined $summary && $summary ne '') {
+		$raw_data{'summary'} = $summary;
+		&log("DEBUG: $logfrom set data.summary=[$raw_data{'summary'}]") if $debug;
+	}
+
+	my $detail  = &parted_output(6,$output);
+	my @json_detail;
+	if (defined $detail && $detail ne '') {
+		my @lines = split(/###/, $detail);
+		for (@lines) {
+			my ($color,$content) = ('','');
+			# Notice: must be the whole-line matches  <font color=(\w+)>content</font>
+			if (m/\A\s*(<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>)\s*\Z/) {
+				($color,$content) = ($2,$3);
+			} else {
+				$content = $_;
+			}
+			if (defined $content && $content ne '') {
+				$content =~ s/[\r\n]//g;
+				$content =~ s/&nbsp;/ /g;
+				$content =~ s/(\A\s+|\s+\Z)//g;
+			}
+			my %line = (
+				'color' 	=> $color,
+				'title'		=> '',
+				'val'		=> $content,
+			);
+			push @json_detail, \%line;
+		}
+		my $json_detail = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\@json_detail);
+		$raw_data{'detail'} = $json_detail;
+		&log("DEBUG: $logfrom set data.detail=[$raw_data{'detail'}]") if $debug;
+	}
+  }
+
+  if ($ret eq 'file') {
+	my $detail = &parted_output(3,$output);
+	my @json_detail;
+	if (defined $detail && $detail ne '') {
+		my @files = split(/###/, $detail);
+		for (@files) {
+			my %file = (
+				'color'		=> '',
+				'title'		=> '',
+				'val'		=> $_,
+			);
+			push @json_detail, \%file;
+		}
+		my $json_detail = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\@json_detail);
+		$raw_data{'detail'} = $json_detail;
+		&log("DEBUG: $logfrom set data.detail=[$raw_data{'detail'}]") if $debug;
+	}
+  }
+
+  # set data->auto 
+  my %raw_auto = (
+	'enabled'	=> 0,
+	'result'	=> '',
+  );
+  if (defined $houtput && $houtput ne '') {
+	my @lines = split(/###/, $houtput);
+	if (defined $lines[0] && $lines[0] =~ m/\A\s*disabled\s*\Z/i) {
+		$raw_auto{'enabled'} = 0;
+	} else {
+		$raw_auto{'enabled'} = 1;
+		my @json_auto_result = '';
+		for (@lines) {
+			my %line = (
+				'color'		=> '',
+				'title'		=> '',
+				'val'		=> $_,
+			);
+			push @json_auto_result, \%line;
+		}
+		my $json_auto_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\@json_auto_result);
+		$raw_auto{'result'} = $json_auto_result;
+	}
+  }
+  my $json_auto = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_auto);
+  $raw_data{'auto'} = $json_auto;
+  &log("DEBUG: $logfrom set data.auto=[$raw_data{'auto'}]") if $debug;
+
+  # set data->extra
+  $raw_data{'extra'} = '';
+  &log("DEBUG: $logfrom set data.extra=[$raw_data{'extra'}]") if $debug;
+
+  # set data
+  $result{'data'} = \%raw_data;
+
+  return %result;
+}
+
+sub genjson_plugin() {
+  my %result = (
+	'type'		=> 'plugin',
+	'parter_id'	=> $parter_id,
+	'hid'		=> $hid,
+	'hname'		=> $hname,
+	'data'		=> '',
+  );
+  &log("INFO: $logfrom set type=[plugin]");
+  &log("INFO: $logfrom set parter_id=[$parter_id]");
+  &log("INFO: $logfrom set hid=[$hid]");
+  &log("INFO: $logfrom set hname=[$hname]");
+
+  my @raw_data = ();
+  my @array_plugins = ();
+  open my $fh, "$mole ln 2>&- | ";
+  if($fh){
+	while(<$fh>){
+		chomp;
+		push @array_plugins, $_;
+	}
+  }
+  &log("DEBUG: $logfrom plugin array=[@array_plugins]") if $debug;
+
+  foreach my $plugin (@array_plugins) {
+  	my %single_plugin = (
+		'name'		=> $plugin,
+		'enable'	=> 'enable',
+		'comment'	=> 'comment',
+		'freq'		=> 'frequency',
+		'timeout'	=> 'exec_tmout',
+		'errnum'	=> 'maxerr_times',
+		'snap'		=> 'take_snapshot',
+		'mail'		=> 'mail_notify',
+		'sms'		=> 'sms_notify',
+		'post'		=> 'post_notify',
+		'auto'		=> 'auto_handle',
+		'attsnap'	=> 'attsnap_mail',
+		'debug'		=> 'debug',
+		'mail_rec'	=> 'mail_receviers',
+		'sms_rec'	=> 'sms_receviers',
+		'handler'	=> 'auto_handler',
+		'locale'	=> 'locale',
+		'udef'		=> '',
+  	);
+
+	foreach my $key (keys %single_plugin) {
+		next if $key eq 'name';
+		next if $key eq 'udef';
+		open my $fh, "$mole view $plugin $single_plugin{$key} 2>&- | ";
+		my $default_flag = 0;
+		if($fh){
+			my $value = <$fh>;
+			chomp $value if ($value);
+			if (!defined $value || $value eq '') {
+				open my $fh1, "$mole view default $single_plugin{$key} 2>&- | ";
+				$default_flag = 1;
+				if($fh1){
+					my $default_value = <$fh1>;
+					if (defined $default_value && $default_value ne '') {
+						chomp $default_value;
+						$single_plugin{$key} = $default_value;
+					} else {
+						$single_plugin{$key} = '';
+					}
+				}
+				close $fh1 if ($fh1);
+			} else {
+				$single_plugin{$key} = $value; 
+			}
+		}
+		close $fh if ($fh);
+		if ($default_flag) {
+			&log("DEBUG: $logfrom plugin-config [$plugin.$key]=[$single_plugin{$key}] (default)") if $debug;
+		} else {
+			&log("DEBUG: $logfrom plugin-config [$plugin.$key]=[$single_plugin{$key}]") if $debug;
+
+		}
+	}
+
+	# convert yes|no  to 1|0
+	$single_plugin{'enable'}  = (defined $single_plugin{'enable'} && $single_plugin{'enable'} eq 'yes') ? 1 : 0;
+	$single_plugin{'attsnap'} = (defined $single_plugin{'attsnap'} && $single_plugin{'attsnap'} eq 'yes') ? 1 : 0;
+	$single_plugin{'debug'}   = (defined $single_plugin{'debug'} && $single_plugin{'debug'} eq 'yes') ? 1 : 0;
+
+	# add key: {name} at last
+	$single_plugin{'name'} = $plugin;
+
+	# add key: udef
+	$single_plugin{'udef'} = '';
+	open my $fh, "$mole udef $plugin 2>&- | ";
+	if($fh) {
+		my @udef_array = ();
+		while(<$fh>){
+			my %udef = (
+				'flag'		=> '',
+				'title'		=> '',
+				'val'		=> '',
+			);
+			my @arrline = split /\s+/;
+			if (@arrline) {
+				my $key = shift @arrline;
+				my $value = "@arrline";
+				$udef{'flag'} = $key if ($key);	
+				$udef{'title'} = $key if ($key);
+				$udef{'val'} = $value if ($value);
+			}
+			push @udef_array, \%udef;
+		}
+		my $json_udef = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\@udef_array);
+        	$single_plugin{'udef'} = $json_udef;
+		&log("DEBUG: $logfrom plugin-config [$plugin.udef]=[$single_plugin{'udef'}]") if $debug;
+	}
+
+  	push @raw_data, \%single_plugin;
+  }
+  
+  $result{'data'} = \@raw_data;
+
+  return %result;
+}
+
+sub genjson_config() {
+  my %result = (
+	'type'			=> 'config',
+	'parter_id'		=> $parter_id,
+	'hid'			=> $hid,
+	'hname'			=> $hname,
+	'data'			=> '',
+  );
+
+  &log("INFO: $logfrom set type=[config]");
+  &log("INFO: $logfrom set parter_id=[$parter_id]");
+  &log("INFO: $logfrom set hid=[$hid]");
+  &log("INFO: $logfrom set hname=[$hname]");
+
+  my %raw_data = (
+	'global'		=> '',
+	'default'		=> '',
+	'sendmail'		=> '',
+	'postlog'		=> '',
+	'takesnap'		=> '',
+	'clear_overdue'		=> '',
+	'log_rotate'		=> '',
+	'self_check'		=> '',
+	'iam_alive'		=> '',
+	'check_remote'		=> '',
+	'report_conf'		=> '',
+  );
+
+  my %raw_global = (
+	'scan_interval'		=> '', 
+	'attach_ini_mail'	=> '',
+	'sysload_uplimit'	=> '',
+	'max_kidsnum'		=> '',
+	'plugin_maxlen'		=> '',
+	'handler_maxlen'	=> '',
+	'notify_onmisform'	=> '',
+	'locale'		=> '',
+  );
+  open $fh, "$mole view global 2>&- |";
+  if($fh) {
+	while(<$fh>){
+		chomp;
+		if(/\A\s*scan_interval\s+(.+)\Z/){
+			$raw_global{'scan_interval'} = $1;
+			next;
+		}
+		if(/\A\s*attach_ini_mail\s+(.+)\Z/){
+			$raw_global{'attach_ini_mail'} = $1;
+			$raw_global{'attach_ini_mail'} = (defined $raw_global{'attach_ini_mail'} && $raw_global{'attach_ini_mail'} eq 'yes') ? 1 : 0;
+			next;
+		}
+		if(/\A\s*sysload_uplimit\s+(.+)\Z/){
+			$raw_global{'sysload_uplimit'} = $1;
+			next;
+		}
+		if(/\A\s*max_kidsnum\s+(.+)\Z/){
+			$raw_global{'max_kidsnum'} = $1;
+			next;
+		}
+		if(/\A\s*plugin_maxlen\s+(.+)\Z/){
+			$raw_global{'plugin_maxlen'} = $1;
+			next;
+		}
+		if(/\A\s*handler_maxlen\s+(.+)\Z/){
+			$raw_global{'handler_maxlen'} = $1;
+			next;
+		}
+		if(/\A\s*notify_onmisform\s+(.+)\Z/){
+			$raw_global{'notify_onmisform'} = $1;
+			$raw_global{'notify_onmisform'} = (defined $raw_global{'notify_onmisform'} && $raw_global{'notify_onmisform'} eq 'yes') ? 1 : 0;
+			next;
+		}
+		if(/\A\s*locale\s+(.+)\Z/){
+			$raw_global{'locale'} = $1;
+			next;
+		}
+	}
+  }
+  my $json_global = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_global);
+
+  my %raw_default = (
+	'enable'		=> '',
+	'comment'		=> '',
+	'freq'			=> '',
+	'timeout'		=> '',
+	'errnum'		=> '',
+	'snap'			=> '',
+	'mail'			=> '',
+	'sms'			=> '',
+	'post'			=> '',
+	'auto'			=> '',
+	'attsnap'		=> '',
+	'debug'			=> '',
+	'mail_rec'		=> '',
+	'sms_rec'		=> '',
+	'handler'		=> '',
+	'locale'		=> '',
+  );
+  open $fh, "$mole view default 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+                if(/\A\s*enable\s+(.+)\Z/){
+                        $raw_default{'enable'} = $1; 
+			$raw_default{'enable'} = (defined $raw_default{'enable'} && $raw_default{'enable'} eq 'yes') ? 1 : 0;
+                        next;
+                }
+                if(/\A\s*comment\s+(.+)\Z/){
+                        $raw_default{'comment'} = $1; 
+                        next;
+                }
+                if(/\A\s*frequency\s+(.+)\Z/){
+                        $raw_default{'freq'} = $1; 
+                        next;
+                }
+                if(/\A\s*exec_tmout\s+(.+)\Z/){
+                        $raw_default{'timeout'} = $1; 
+                        next;
+                }
+                if(/\A\s*maxerr_times\s+(.+)\Z/){
+                        $raw_default{'errnum'} = $1; 
+                        next;
+                }
+                if(/\A\s*take_snapshot\s+(.+)\Z/){
+                        $raw_default{'snap'} = $1; 
+                        next;
+                }
+                if(/\A\s*mail_notify\s+(.+)\Z/){
+                        $raw_default{'mail'} = $1; 
+                        next;
+                }
+                if(/\A\s*sms_notify\s+(.+)\Z/){
+                        $raw_default{'sms'} = $1; 
+                        next;
+                }
+                if(/\A\s*post_notify\s+(.+)\Z/){
+                        $raw_default{'post'} = $1; 
+                        next;
+                }
+                if(/\A\s*auto_handle\s+(.+)\Z/){
+                        $raw_default{'auto'} = $1; 
+                        next;
+                }
+                if(/\A\s*attsnap_mail\s+(.+)\Z/){
+                        $raw_default{'attsnap'} = $1; 
+			$raw_default{'attsnap'} = (defined $raw_default{'attsnap'} && $raw_default{'attsnap'} eq 'yes') ? 1 : 0;
+                        next;
+                }
+                if(/\A\s*debug\s+(.+)\Z/){
+                        $raw_default{'debug'} = $1; 
+			$raw_default{'debug'} = (defined $raw_default{'debug'} && $raw_default{'debug'} eq 'yes') ? 1 : 0;
+                        next;
+                }
+                if(/\A\s*mail_receviers\s+(.+)\Z/){
+                        $raw_default{'mail_rec'} = $1; 
+                        next;
+                }
+                if(/\A\s*sms_receviers\s+(.+)\Z/){
+                        $raw_default{'sms_rec'} = $1; 
+                        next;
+                }
+                if(/\A\s*auto_handler\s+(.+)\Z/){
+                        $raw_default{'handler'} = $1; 
+                        next;
+                }
+                if(/\A\s*locale\s+(.+)\Z/){
+                        $raw_default{'locale'} = $1; 
+                        next;
+                }
+	}
+  }
+  my $json_default = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_default);
+
+  my %raw_sendmail = (
+	'smtp_server'		=> '',
+	'smtp_server_port'	=> '',
+	'auth_user'		=> '',
+	'auth_pass'		=> '',
+	'timeout'		=> '',
+	'charset'		=> '',
+  );
+  open $fh, "$mole view sendmail 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_sendmail){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_sendmail{$key} = $1; 
+				goto MAIL_END;
+                	}
+		}
+		MAIL_END: {
+			next;
+		}
+	}
+  }
+  my $json_sendmail = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_sendmail);
+  
+  my %raw_postlog = (
+	'post_server'		=> '',
+	'post_server_port'	=> '',
+	'post_port_type'	=> '',
+	'post_timeout'		=> '',
+	'post_max_length'	=> '',
+	'post_debug'		=> '',
+  );
+  open $fh, "$mole view postlog 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_postlog){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_postlog{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_postlog = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_postlog);
+
+  my %raw_takesnap = (
+  );
+  open $fh, "$mole view takesnap 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+	}
+  }
+  my $json_takesnap = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_takesnap);
+
+  my %raw_clear_overdue = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+	'tmpfile_reserve_time'	=> '',
+	'logfile_reserve_time'	=> '',
+	'snapfile_reserve_time'	=> '',
+	'snapdir_maxsize'	=> '',
+  );
+  open $fh, "$mole view mole_clear_overdue 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_clear_overdue){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_clear_overdue{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_clear_overdue = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_clear_overdue);
+
+  my %raw_log_rotate = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+	'force_size_uplimit'	=> '',
+  );
+  open $fh, "$mole view mole_log_rotate 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_log_rotate){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_log_rotate{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_log_rotate = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_log_rotate);
+
+  my %raw_self_check = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+  );
+  open $fh, "$mole view mole_self_check 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_self_check){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_self_check{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_self_check = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_self_check);
+
+  my %raw_iam_alive = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+  );
+  open $fh, "$mole view mole_iam_alive 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_iam_alive){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_iam_alive{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_iam_alive = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_iam_alive);
+
+  my %raw_check_remote = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+  );
+  open $fh, "$mole view mole_check_remote 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_check_remote){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_check_remote{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_check_remote = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_check_remote);
+
+  my %raw_report_conf = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+  );
+  open $fh, "$mole view mole_report_conf 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_report_conf){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_report_conf{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_report_conf = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_report_conf);
+
+  close $fh if ($fh);
+
+
+  %raw_data = (
+	'global'		=> $json_global,
+	'default'		=> $json_default,
+	'sendmail'		=> $json_sendmail,
+	'postlog'		=> $json_postlog,
+	'takesnap'		=> $json_takesnap, 
+	'clear_overdue'		=> $json_clear_overdue,
+	'log_rotate'		=> $json_log_rotate,
+	'self_check'		=> $json_self_check,
+	'iam_alive'		=> $json_iam_alive,
+	'check_remote'		=> $json_check_remote,
+	'report_conf'		=> $json_report_conf,
+  );
+
+  $result{'data'} = \%raw_data;
+
+  return %result;
+}
+
+sub genjson_heartbeat() {
+  my %result;
+  return %result;
+}

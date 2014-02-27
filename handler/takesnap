@@ -1,0 +1,323 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Taking SnapShot.
+# 
+# Output: path of snapshot tarball.
+#
+# Usage:     ./takesnap -f {plugin_name} -s {jobid}
+#
+# Example:   ./takesnap -f check_sysload -s AlFt5885
+# Example:   ./takesnap -f check_sysload -s tmout
+#
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+
+show_usage(){
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid}"
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885"
+  exit 1
+}
+
+# read args
+while getopts f:s: opt
+do
+	case ${opt} in
+	"f")
+		plugin_name=${OPTARG}	;;
+	"s")
+		jobid=${OPTARG}		;;
+	*)
+		show_usage		;;
+	esac
+done
+[ -z "${plugin_name}" ] && plugin_name="FNULL"
+[ -z "${jobid}" ] && jobid="00000000"
+from="${plugin_name}.${jobid}"
+
+
+write_log -f ${TAKESNAP_LOG} ""
+write_log -f ${TAKESNAP_LOG} "[${from}]" "INFO: begin to take snapshot"
+[ "${plugin_name}" == "FNULL" -o "${jobid}" == "00000000" ] && {
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: missing arguments [-f/-s], maybe script running from command line"
+}
+
+
+# check {SNAPSHOT_DIR} is invalid or not 
+if [ "$(sub_str "${SNAPSHOT_DIR}" "mole/log/snapshot")" == "no" ]; then
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"ERROR: {SNAPSHOT_DIR} is invalid: [${SNAPSHOT_DIR}]"
+  	exit 1
+else
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: {SNAPSHOT_DIR} check valid: [${SNAPSHOT_DIR}]"
+fi
+
+# check SNAPSHOT_DIR is accessable or not
+if [ ! -d "${SNAPSHOT_DIR}" -o ! -w "${SNAPSHOT_DIR}" ]; then
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"ERROR: [${SNAPSHOT_DIR}] not prepared: [not directory or writable]"
+  	exit 1
+else
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: [${SNAPSHOT_DIR}] prepared"
+fi
+
+
+###  set sanp_workdir / snap_tarfile
+snap_day="$(date +%F)"
+snap_time="$(date +%H-%M-%S).${from}"
+snap_workdir="${SNAPSHOT_DIR}/${snap_day}/${snap_time}"
+snap_tarfile="${snap_workdir}.tgz"
+write_log -f ${TAKESNAP_LOG} "[${from}]"\
+	"INFO: set snap_workdir=[${snap_workdir}], snap_tarfile=[${snap_tarfile}]"
+
+
+### create snap_workdir dircoty 
+# only collect stderr output
+errstr=$( /bin/mkdir -p "${snap_workdir}" 2>&1  1>/dev/null )   
+if [ "$?" != 0 ]; then
+  	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"ERROR: create snap workdir error: [${errstr}]"
+  	exit 1
+else
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: create snap workdir success"
+fi
+
+### change to snap_workdir
+# only collect stderr output
+# errstr=$( cd "${snap_workdir}" 2>&1 1>/dev/null )  ### this will not really changes directory in this script.
+						     ### it changes directory in sub shell-script.
+cd "${snap_workdir}" 2>/tmp/.ftmpxxx_mole.takesnap 1>/dev/null
+if [ "$?" != "0" ]; then
+   	errstr=$(cat /tmp/.ftmpxxx_mole.takesnap 2>&-|tr -d '\r\n')
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"ERROR: change directory to snap workdir error: [${errstr}]"
+	exit 1
+else
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: change directory to snap workdir success"
+fi
+
+
+### define function take_snap
+take_snap() {
+
+################################
+###  collect command output. ###
+################################
+
+# about process and jobs
+[ -x /bin/ps ] && {
+	/bin/ps -ef > ps-ef
+	/bin/ps aux > ps-aux
+	/bin/ps -eLf > ps-eLf
+}
+[ -x /usr/bin/ipcs ] && {
+	/usr/bin/ipcs -a > ipcs-a
+	/usr/bin/ipcs -u > ipcs-u
+	/usr/bin/ipcs -l > ipcs-l
+}
+[ -x /usr/bin/crontab ] && /usr/bin/crontab -l > crontab-l 2>&1
+[ -x /usr/bin/atq ] && /usr/bin/atq > atq
+
+# about performance
+[ -x /usr/bin/top ] && /usr/bin/top -b -n1 > top
+[ -x /usr/bin/vmstat ] && /usr/bin/vmstat 1 3 > vmstat
+if [ -x /usr/bin/iostat ]; then
+	/usr/bin/iostat 1 3 > iostat
+elif [ -x /usr/local/bin/iostat ]; then
+	/usr/local/bin/iostat 1 3 > iostat
+fi
+[ -x /usr/bin/free ] && /usr/bin/free -ltm > free-ltm
+
+# about online users
+[ -x /usr/bin/w ] &&  /usr/bin/w > w
+[ -x /usr/bin/who ] && /usr/bin/who > who
+[ -x /usr/bin/screen ] && /usr/bin/screen -ls > screen-ls
+
+# about env
+[ -x /bin/env ] && /bin/env > env
+# if type -all set >/dev/null 2>&1 ; then set > set ; fi
+
+# about disk and devices
+[ -x /sbin/fdisk ] && /sbin/fdisk -l > fdisk-l
+[ -x /bin/mount ] && /bin/mount > mount
+[ -x /bin/df ] && {
+	/bin/df -Thl > df-Thl
+	/bin/df -Til > df-Til
+}
+#[ -x /sbin/lspci ] && /sbin/lspci > lspci
+#[ -x /sbin/lsusb ] && /sbin/lsusb > lsusb
+
+# about network
+[ -x /sbin/iptables-save ] && /sbin/iptables-save > iptables-save
+[ -x /sbin/ifconfig ] && /sbin/ifconfig -a > ifconfig-a
+[ -x /sbin/route ] && /sbin/route -n > route-n
+[ -x /sbin/arp ] && /sbin/arp -n > arp-n
+[ -x /usr/sbin/ss ] && /usr/sbin/ss -a > ss-a
+#[ -f /proc/net/tcp ] && cat /proc/net/tcp > proc-tcp
+#[ -f /proc/net/udp ] && cat /proc/net/udp > proc-udp
+[ -x /bin/netstat ] && {
+	# /bin/netstat -an > netstat-an
+	/bin/netstat -tlnp > netstat-tlnp
+}
+service network status > network-status 2>&1
+ifdev=$(service network status 2>&- | awk '(/Configured devices:/){x=1;next} (x==1){print;exit}')
+for d in `echo "${ifdev}"`
+do
+        [ -x /sbin/ethtool ] && {
+                /sbin/ethtool "${d}"  > ethtool-"${d}" 2>&1
+                /sbin/ethtool -i "${d}" > ethtool-i-"${d}" 2>&1
+        }   
+	[ -x /sbin/mii-tool ] && {
+		/sbin/mii-tool "${d}" > mii-tool-"${d}" 2>&1
+	}
+done
+
+[ -x /sbin/sysctl ] && /sbin/sysctl -A > sysctl-A
+
+# about dmesg
+[ -x /bin/dmesg ] && /bin/dmesg > dmesg
+
+# about library
+[ -x /sbin/lsmod ] && /sbin/lsmod > lsmod
+[ -x /sbin/ldconfig ] && /sbin/ldconfig -p > ldconfig-p
+
+# about release and dmidecode
+[ -x /usr/bin/lsb_release ] && /usr/bin/lsb_release -a > lsb_release-a
+[ -x /usr/sbin/dmidecode ] && /usr/sbin/dmidecode > dmidecode
+[ -x /bin/uname ] && /bin/uname -a > uname-a
+
+# about securety
+[ -x /usr/bin/last ] &&  /usr/bin/last > last
+[ -x /usr/bin/lastlog ] && /usr/bin/lastlog > lastlog
+[ -x /usr/bin/md5sum ] && {
+	/usr/bin/md5sum /usr/bin/dir /bin/ls /bin/ps /usr/sbin/lsof /usr/bin/md5sum /usr/bin/tty /bin/login /usr/sbin/sshd /usr/bin/passwd /usr/sbin/tcpd /usr/bin/du /usr/bin/find /bin/kill /usr/bin/killall /usr/bin/crontab /usr/bin/top /bin/netstat /sbin/ifconfig /sbin/ip /sbin/syslogd /sbin/route  > md5sum 2>&-
+}
+
+
+#######################
+###  collect files  ###
+#######################
+
+
+# system config files.
+[ -f /etc/issue.net ] && cat /etc/issue.net  > issue.net.etc
+[ -f /etc/issue ] && cat  /etc/issue > issue.etc
+[ -f /etc/redhat-release ] && cat /etc/redhat-release > redhat-release.etc
+[ -f /etc/rc.local ] && cat  /etc/rc.local  > rc.local
+[ -f /etc/passwd ] && cat /etc/passwd  > passwd.etc
+[ -f /etc/shadow ] && cat /etc/shadow > shadow.etc
+[ -f /etc/modprobe.conf ] && cat /etc/modprobe.conf > modprobe.conf.etc
+[ -f /etc/modules.conf ] && cat /etc/modules.conf > modules.conf.etc
+[ -f /etc/sysctl.conf ] && cat /etc/sysctl.conf > sysctl.conf.etc
+[ -f /etc/bashrc ] && cat /etc/bashrc > bashrc.etc
+[ -f /etc/profile ] && cat /etc/profile > profile.etc
+# [ -f /etc/rc.sysinit ] && cat /etc/rc.sysinit > rc.sysinit.etc
+[ -f /etc/crontab ] && cat /etc/crontab > crontab.etc
+[ -f /etc/mtab ] && cat /etc/mtab > mtab.etc
+[ -f /etc/exports ] && cat /etc/exports > exports.etc
+ls /etc/cron.{hourly,daily,weekly,monthly} > cron.list
+# [ -f /etc/init.d/functions ] && cat /etc/init.d/functions > functions.etc.init.d
+
+# system log files.
+[ -f /var/log/messages ] && tail -n 200 /var/log/messages > messages.var.log
+[ -f /var/log/spooler ] && tail -n 200 /var/log/spooler > spooler.var.log
+[ -f /var/log/secure ] && tail -n 200 /var/log/secure > secure.var.log
+[ -f /var/log/cron ] && tail -n 200 /var/log/cron > cron.var.log
+[ -f /var/log/yum.log ] && tail -n 200 /var/log/yum.log > yumlog.var.log
+[ -f /var/log/maillog ] && tail -n 200 /var/log/maillog > maillog.var.log
+
+# system /proc files.
+ls -d /proc/[0-9]*  > proc-psdir
+[ -f /proc/loadavg ] && cat /proc/loadavg  > proc-loadavg
+[ -f /proc/cpuinfo ] && cat /proc/cpuinfo > proc-cpuinfo
+[ -f /proc/meminfo ] && cat /proc/meminfo > proc-meminfo
+[ -f /proc/vmstat ] && cat /proc/vmstat > proc-vmstat
+[ -f /proc/uptime ] && cat /proc/uptime > proc-uptime
+[ -f /proc/modules ] && cat /proc/modules > proc-modules
+[ -f /proc/version ] && cat /proc/version > proc-version
+[ -f /proc/stat ] && cat /proc/stat > proc-stat
+[ -f /proc/diskstats ] && /proc/diskstats > proc-diskstats
+
+# eyou log files.
+[ -f /var/eyou/log/maillog ] && tail -n 200 /var/eyou/log/maillog > mailv4.maillog
+[ -f /var/emdg/log/maillog ] && tail -n 200 /var/emdg/log/maillog > emdg.maillog
+[ -f /usr/local/eyou/mail/log/init.out ] && tail -n 200 /usr/local/eyou/mail/log/init.out > mailv5.init.out
+[ -f /usr/local/eyou/mail/log/default.log ] && tail -n 200 /usr/local/eyou/mail/log/default.log > mailv5.default.log
+[ -f /usr/local/eyou/mail/log/mta.log ] && tail -n 200 /usr/local/eyou/mail/log/mta.log  > mailv5.mta.log
+[ -f /usr/local/eyou/mail/log/phpd.log ] && tail -n 200 /usr/local/eyou/mail/log/phpd.log > mailv5.phpd.log
+[ -f /usr/local/eyou/mail/log/innerapi.log ] && tail -n 200 /usr/local/eyou/mail/log/innerapi.log > mailv5.innerapi.log
+[ -f /var/eyou/mysql/var/$(hostname).err ] && tail -n 200 /var/eyou/mysql/var/$(hostname).err > mailv4.mysql.err
+[ -f /usr/local/eyou/mail/data/mysql/$(hostname).err ] && tail -n 200 /usr/local/eyou/mail/data/mysql/$(hostname).err > mailv5.mysql.err
+
+
+### be careful
+#[ -x /usr/local/eyou/mail/app/bin/em_mailq ] && /usr/local/eyou/mail/app/bin/em_mailq -qa > v5_em_mailq.list
+#[ -x /var/eyou/queue/bin/mailq ] && /var/eyou/queue/bin/mailq -qa > v4_mailq.list
+
+}
+
+### 1. take snapshot.
+write_log -f ${TAKESNAP_LOG} "[${from}]" "INFO: taking snapshot ..."
+take_snap 1>&- 2>&-
+write_log -f ${TAKESNAP_LOG} "[${from}]" "INFO: take snapshot done"
+
+### 2. make tarball and remove snapshot directory.
+cd "${SNAPSHOT_DIR}/${snap_day}/" 2>&-
+
+# only collect stderr output
+errstr=$( /bin/tar -czf "${snap_tarfile}" --remove-files "${snap_time}" 2>&1 1>/dev/null )
+if [ "$?" != "0" ]; then
+        write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"ERROR: tarball on [${snap_time}] error: [${errstr}]"
+else
+        write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: tarball on [${snap_time}] success"
+fi
+
+# only collect stderr output
+if [ -d "${snap_time}" ]; then
+	errstr=$( rmdir "${snap_time}" 2>&1 1>/dev/null )
+	if [ "$?" != "0" ]; then
+        	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+			"ERROR: remove [${snap_time}] error: [${errstr}]"
+	else
+        	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+			"INFO: remove [${snap_time}] success"
+	fi
+else	# tar 1.23 on centos-6 will auto remove directories.
+	write_log -f ${TAKESNAP_LOG} "[${from}]"\
+		"INFO: no need to remove [${snap_time}], maybe tar version >= 1.15.1"
+fi
+
+
+write_log -f ${TAKESNAP_LOG} "[${from}]"\
+	"INFO: end to take snapshot. path=[${snap_tarfile}]"
+write_log -f ${TAKESNAP_LOG} ""
+write_log -f ${TAKESNAP_LOG} ""
+
+### 3. output snap_tarfile path.
+echo "${snap_tarfile}"
+
+### END

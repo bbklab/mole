@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# esop - this script starts and stops the esop agent
+#
+# chkconfig:   - 85 15 
+# description: agent for esop
+# config:      /usr/local/esop/agent/etc/
+ 
+# Source function library.
+. /etc/rc.d/init.d/functions
+ 
+# Source networking configuration.
+. /etc/sysconfig/network
+ 
+# Check that networking is up.
+[ "$NETWORKING" = "no" ] && exit 0
+
+
+esop="/usr/local/esop/agent/app/sbin/esop"
+prog="$(basename ${esop})"
+
+
+start() {
+    [ -x $esop ] || exit 5
+    # daemon $esop start
+    $esop start
+    retval=$?
+    return $retval
+}
+ 
+stop() {
+    [ -x $esop ] || exit 5
+    $esop stop
+    retval=$?
+    return $retval
+}
+ 
+restart() {
+    stop
+    sleep 1
+    start
+}
+ 
+status() {
+    $esop status
+    retval=$?
+    return $retval
+}
+
+case "$1" in
+    (start|stop|restart|reload|status|list)
+        $1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|reload|list}"
+        exit 2
+esac
+
+#END Of esop.init

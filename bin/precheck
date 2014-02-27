@@ -1,0 +1,210 @@
+#!/bin/bash
+
+#
+# This Script Responsible for Previous Checking
+# Running at the start of mole
+#
+# Return Code: 0|1
+# 
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+
+export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin"
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_CRITICAL=1
+
+# Global Var: ok_num crit_num
+ok_num=0
+crit_num=0
+
+
+OK="$(echo_green "[$(gettext "OK")]")"
+CRIT="$(echo_red "[$(gettext "CRIT")]")"
+
+check_arch() {
+  local arch=$(/bin/uname 2>&- | tr '[A-Z]' '[a-z]')
+  if [ "${arch}" != "linux" ]; then
+	echo -e "${CRIT} : $(gettext "only platform linux allowed, nower platform") ${arch}"
+	((crit_num++))
+	return 1
+  else
+	echo -e "${OK} : $(gettext "platform linux all right")"
+	((ok_num++))
+	return 0
+  fi
+}
+
+
+check_root() {
+  local idn=$(/usr/bin/id -u 2>&-)
+  if [ "${idn}" != "0" ]; then
+	echo -e "${CRIT} : $(gettext "root privilege required, nower uid") ${idn}"
+	((crit_num++))
+	return 1
+  else
+	echo -e "${OK} : $(gettext "root privilege available")"
+	((ok_num++))
+	return 0
+  fi
+}
+
+check_tmp() {
+  if [ -d "/tmp" -a -r "/tmp" -a -w "/tmp" -a -x "/tmp" ]; then
+	echo -e "${OK} : $(gettext "directory /tmp accessable")"
+	((ok_num++))
+	return 0
+  else
+	echo -e "${CRIT} : $(gettext "directory /tmp not accessable")"
+	((crit_num++))
+	return 1
+  fi
+}
+
+check_cmd() {
+#
+## !!! use "local" to annon an array, and then use "=" to define it.
+##       do NOT use "local" to annon and define an array at once, as
+##       sometimes it will be regarded as string like "(...)"
+## wrong: local array_base_cmd=( ... )
+## right: local array_base_cmd=(); array_base_cmd=( ... )
+#
+array_base_cmd=(
+  "$(gettext "utils")"
+  /usr/bin/dirname
+  /bin/basename
+  /usr/bin/bc 
+  /bin/sed
+  /bin/awk
+  /bin/gawk
+  /bin/grep
+  /usr/bin/column
+  /bin/kill
+  /bin/date
+  /bin/cat
+  /bin/ps
+  /bin/mkdir
+  /bin/cut
+  /usr/bin/pstree
+  /usr/bin/tr
+  /usr/bin/tail
+  /bin/echo
+  /bin/uname
+  /bin/ln
+  /bin/unlink
+  /usr/bin/readlink
+  /usr/bin/stat
+  /bin/touch
+  /bin/rm
+  /bin/tar
+  /bin/gzip
+  /bin/chmod
+  /bin/gettext
+  /usr/bin/gettext.sh
+  /usr/bin/ngettext
+  /usr/bin/envsubst
+  /usr/bin/perl
+  /usr/bin/od
+  /usr/bin/tr
+  /usr/bin/curl
+  /usr/bin/find
+  /usr/bin/du
+  /usr/bin/nc
+  /sbin/blkid
+  /usr/bin/uuidgen
+  /usr/bin/cksum
+)
+
+local num=0 lacklist=
+for ((i=1;i<${#array_base_cmd[@]};i++))
+do
+	[ -f "${array_base_cmd[$i]}" -a -x "${array_base_cmd[$i]}" ] && {
+		continue
+	} || {
+		((num++))
+		lacklist="${lacklist} ${array_base_cmd[$i]}"
+	}
+done
+if [ "${num}" != "0" ]; then
+	echo -e "${CRIT}: ${num}/$((${#array_base_cmd[@]}-1)) ${array_base_cmd[0]}$(gettext "not prepared"): [$(echo_yellow "${lacklist}")]"
+	((crit_num++))
+	return 1
+else
+	echo -e "${OK} : $((${#array_base_cmd[@]}-1))/$((${#array_base_cmd[@]}-1)) ${array_base_cmd[0]}$(gettext "prepared")"
+	((ok_num++))
+	return 0
+fi
+
+}
+
+
+### Main Begin ...
+
+check_arch
+check_root
+check_tmp
+check_cmd
+
+[ "${crit_num}" != "0" ] && {
+	EXIT_STATUS=${STATE_CRITICAL}
+} || {
+	EXIT_STATUS=${STATE_OK}
+}
+
+
+echo -e "$(eval_gettext "Result: \${crit_num} Error, \${ok_num} OK")"
+exit ${EXIT_STATUS}

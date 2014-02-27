@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# hey, do you want to reboot your box here? 
+echo "I did nothing."

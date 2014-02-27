@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic check smtp_server/post_server connecting.
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        BASE_DIR=${BASE_DIR%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+post_server=$(read_mole_config postlog post_server)
+post_server_port=$(read_mole_config postlog post_server_port)
+post_timeout=$(read_mole_config postlog post_timeout)
+smtp_server=$(read_mole_config sendmail smtp_server)
+smtp_server_port=$(read_mole_config sendmail smtp_server_port)
+smtp_timeout=$(read_mole_config sendmail timeout)
+
+
+# if null or invalid set default.
+[ -z "${post_server_port}" -o ! -z "${post_server_port//[0-9]}" ] && {
+        post_server_port="8548"
+}
+[ -z "${post_timeout}" -o ! -z "${post_timeout//[0-9]}" ] && {
+        post_timeout="10"
+}
+[ -z "${smtp_server_port}" -o ! -z "${smtp_server_port//[0-9]}" ] && {
+	smtp_server_port="25"
+}
+[ -z "${smtp_timeout}" -o ! -z "$smtp_timeout//[0-9]}" ] && {
+	smtp_timeout="10"
+}
+
+# check function here
+check() {
+
+  local flag=0  now=  content=  posthost_content=  smtphost_content=
+
+  [ -f "/usr/bin/nc" -a -x "/usr/bin/nc" ] || {
+	flag=0		### unknown
+	now=$(date +%F_%T)
+	content="utilite [/usr/bin/nc] not prepared, nothing to do."
+	echo "${flag} ${now} ${content}" > ${POSTHOST_STATUS}
+	echo "${flag} ${now} ${content}" > ${SMTPHOST_STATUS}
+        EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="utilite [/usr/bin/nc] not prepared | Nothing to do."
+        return
+  }
+
+  if [ -z "${post_server}" -a -z "${smtp_server}" ]; then
+	flag=1
+	now=$(date +%F_%T)
+	posthost_content="post server not defined."
+	smtphost_content="smtp server not defined."
+	echo "${flag} ${now} ${posthost_content}" > ${POSTHOST_STATUS}
+	echo "${flag} ${now} ${smtphost_content}" > ${SMTPHOST_STATUS}
+	EXIT_STATUS=${STATE_CRITICAL};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT="post server and smtp server not defined | Nothing to do.";
+	return
+  fi
+
+  local result=  oknum=0 unknnum=0 warnnum=0 total=0
+  if [ -z "${post_server}" ]; then
+	flag=1		### failed
+	now=$(date +%F_%T)
+	content="post server not defined."
+	echo "${flag} ${now} ${content}" > ${POSTHOST_STATUS}
+	result="${result} ${content} ### "
+	((unknnum++))
+  else
+	rstr=$( /usr/bin/nc -w "${post_timeout}" -vz "${post_server}" "${post_server_port}" 2>&1|tr '\n' ' ' )
+	if [ "$(sub_str "${rstr}" "succeeded")" == "yes" ]; then
+		flag=0
+		((oknum++))
+	else
+		flag=1
+		((warnnum++))
+	fi
+	now=$(date +%F_%T)
+	content="detect [${post_server}:${post_server_port}] in ${post_timeout}s return [${rstr}]"	
+	echo "${flag} ${now} ${content}" > ${POSTHOST_STATUS}
+	result="${result} ${content} ### "
+  fi
+  ((total++))
+
+  if [ -z "${smtp_server}" ]; then
+	flag=1		### failed
+	now=$(date +%F_%T)
+	content="smtp server not defined."
+	echo "${flag} ${now} ${content}" > ${SMTPHOST_STATUS}
+	result="${result} ${content} ### "
+	((unknnum++))
+  else
+	rstr=$( /usr/bin/nc -w "${smtp_timeout}" -vz "${smtp_server}" "${smtp_server_port}" 2>&1|tr '\n' ' ' )
+	if [ "$(sub_str "${rstr}" "succeeded")" == "yes" ]; then
+		flag=0
+		((oknum++))
+	else
+		flag=1
+		((warnnum++))
+	fi
+	now=$(date +%F_%T)
+	content="detect [${smtp_server}:${smtp_server_port}] in ${smtp_timeout}s return [${rstr}]"
+	echo "${flag} ${now} ${content}" > ${SMTPHOST_STATUS}
+	result="${result} ${content} ### "
+  fi
+  ((total++))
+
+  if [ "${warnnum}" != "0" ]; then
+	EXIT_STATUS=${STATE_WARNING};
+	LEVEL="warn";
+	TYPE="str";
+	CONTENT="connection check failed | ${warnnum}/${total} connection check failed | ${result} ";
+  elif [ "${unknnum}" != "0" ]; then
+	EXIT_STATUS=${STATE_UNKNOWN};
+        LEVEL="unknown";
+        TYPE="str";
+        CONTENT="connectioin check unknown | ${unknnum}/${total} connection check unknown | ${result} ";
+  else
+	EXIT_STATUS=${STATE_OK};
+	LEVEL="ok";
+	TYPE="str";
+	CONTENT="connectioin check succeed | ${oknum}/${total} connection check succeed | ${result} ";
+  fi
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}  

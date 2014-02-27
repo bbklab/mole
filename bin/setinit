@@ -1,0 +1,313 @@
+#!/bin/bash
+
+#
+# This Script Responsible for Initialize Setting 
+# 
+# Running if mole_id is empty.
+#
+# Return Code: 0|1
+# 
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }   
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+# === check necessary utils
+# 
+[ -f "/usr/bin/cksum" -a -x "/usr/bin/cksum" ] || {
+	echo "error: /usr/bin/cksum not prepared"
+	exit 1
+}
+[ -f "/sbin/blkid" -a -x "/sbin/blkid" ] || {
+	echo "error: /sbin/blkid not prepared" 
+	exit 1
+}
+[ -f "/usr/bin/uuidgen" -a -x "/usr/bin/uuidgen" ] || {
+	echo "error: /usr/bin/uuidgen not prepared"
+	exit 1
+}
+
+# mode = rpminit
+mode="$1"
+
+OK="$(echo_green "$(gettext "[OK]")")"
+SKIP="$(echo_yellow "$(gettext "[SKIP]")")"
+FAIL="$(echo_red "$(gettext "[FAIL]")")"
+
+
+### Data Preparation...
+
+# try to search basic_domain
+v5_config="/usr/local/eyou/mail/etc/eyou_mail.ini"
+v4_config="/var/eyou/etc/eyou_smtpd_config"
+gw_config="/var/emdg/etc/domain.conf"
+if [ -f "${v5_config}" -a -s "${v5_config}" ]; then
+	base_domain=$(awk -F"=" '($1~/server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]' | sed -e 's/\x00//g;s/\x0D//g')
+elif [ -f "${v4_config}" -a -s "${v4_config}" ]; then
+	base_domain=$(awk '($1~/o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
+elif [ -f "${gw_config}" -a -s "${gw_config}" ]; then
+	base_domain=$(awk '{print $1;exit}' "${gw_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
+fi  
+base_domain="${base_domain//[ ]}"
+
+# try to search disk uuid
+disk_uuid=$(/sbin/blkid -s UUID -o value 2>&-|tr -d '\r\n')
+[ -z "${disk_uuid//[ ]}" ] && {
+	disk_uuid=$(/sbin/blkid -s UUID  2>&-|awk -F"=" '{print $2}'|tr -d '"'|tr -d '\r\n')
+}
+disk_uuid="${disk_uuid//[ ]}"
+
+# try to search imac uuid
+imac_uuid=$(/usr/bin/uuidgen -t 2>&-|tr -d '\r\n')
+imac_uuid="${imac_uuid##*-}"
+imac_uuid="${imac_uuid//[ ]}"
+
+# try to search kernel uuid  (random, not recommanded)
+kern_uuid=$(cat /proc/sys/kernel/random/uuid 2>&-|tr -d '\r\n')
+kern_uuid="${kern_uuid//[ ]}"
+
+# read mole global id
+mole_id=$(get_mole_id)
+
+# read mole parter id
+parter_id=$(get_parter_id)
+
+# read mole global name
+mole_name=$(get_global_name)
+
+# read default mail_receviers
+mail_receviers=$(get_mail_receviers default)
+
+
+### Main Body Begin...
+
+if [ "${mode}" == "rpminit" ]; then
+# 1. set mole_id
+if [ "${mole_id}" == "0000000000" ]; then
+	if [ ! -z "${disk_uuid//[ ]}" ]; then
+		setby="disk_uuid: ${disk_uuid}"
+		mole_id=$(echo -n "${disk_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+	elif [ ! -z "${imac_uuid//[ ]}" ]; then
+		setby="imac_uuid: ${imac_uuid}"
+		mole_id=$(echo -n "${imac_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+	elif [ ! -z "${kern_uuid//[ ]}" ]; then
+		setby="kern_uuid: ${kern_uuid}"
+		mole_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+	fi
+	echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
+	write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}] setby=[${setby}]"
+	update_mole_config force global id "${mole_id}"
+	rc=$?
+	case "${rc}" in
+	"0")	echo -e "${OK}" 	;;
+	"2")	echo -e "${SKIP}"	;;
+	"5")	add_mole_config force global id "${mole_id}"
+		rc=$?
+		case "${rc}" in
+		"0") echo -e "${OK}"	;;
+		"2") echo -e "${SKIP}"	;;
+		*)   echo -e "${FAIL}"  ;;
+		esac
+		;;
+	*)	echo -e "${FAIL}"
+	esac
+else
+	echo -en "$(gettext "mole_id already set"): [$(echo_green "${mole_id}")]";echo
+fi
+
+else
+# 2. set mole_name
+if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
+  	echo -en "\n\n$(gettext "Example:")  mysql-master,  web,  mta,  ldap,  memcache\n\n"
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		read -p "$(gettext "role name of this box"): " input_role
+		if [ -z "${input_role//[ ]}" ]; then
+			valid=0
+			continue
+		else
+			valid=1
+		fi
+	done
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		if [ -z "${base_domain}" ]; then
+			read -p "$(gettext "base domain of this box"): " input_domain
+		else
+			read -p "$(gettext "base domain of this box") [${base_domain}]: " input_domain
+			[ -z "${input_domain//[ ]}" ] && input_domain="${base_domain}" 
+		fi
+		if [ -z "${input_domain//[ ]}" ]; then
+			valid=0
+			continue
+		else
+			valid=1
+		fi
+	done
+	mole_name="${input_role}__${input_domain}"
+	echo -en "$(gettext "set mole_name as") [$(echo_green "${mole_name}")] ... "
+	write_log -f "${MOLE_LOG}" "SETINITX mole_name=[${mole_name}]"
+	update_mole_config force global name "${mole_name}"
+	rc=$?
+	case "${rc}" in
+	"0")    echo -e "${OK}"			;;
+	"2")    echo -e "${SKIP}"		;;
+	"5")    add_mole_config force global name "${mole_name}"
+		rc=$?
+		case "${rc}" in
+		"0") echo -e "${OK}"		;;
+		"2") echo -e "${SKIP}"		;;
+		*)   echo -e "${FAIL}"		;;
+		esac
+		;;
+	*)      echo -e "${FAIL}"		;;
+	esac
+else
+	echo -en "$(gettext "mole_name already set"): [$(echo_green "${mole_name}")]";echo
+fi
+
+# 3. set parter_id
+if [ "${parter_id}" == "0000000000" ]; then
+	echo -en "\n\n$(gettext "Example:")  123456789\n\n"
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		read -p "$(gettext "parter id of this box"): " input_parter_id
+		if [ -z "${input_parter_id//[ ]}" -o ! -z "${input_parter_id//[0-9]}" ]; then
+			valid=0
+			continue
+		else
+			valid=1
+		fi
+	done
+	parter_id="${input_parter_id}"
+	echo -en "$(gettext "set parter id as") [$(echo_green "${parter_id}")] ... "
+	write_log -f "${MOLE_LOG}" "SETINITX parter_id=[${parter_id}]"
+	update_mole_config force global parter_id "${parter_id}"
+        rc=$?
+        case "${rc}" in
+        "0")    echo -e "${OK}"			;;
+        "2")    echo -e "${SKIP}"		;;
+        "5")    add_mole_config force global parter_id "${parter_id}"
+                rc=$?
+                case "${rc}" in
+                "0") echo -e "${OK}"		;;
+                "2") echo -e "${SKIP}"		;;
+                *)   echo -e "${FAIL}"		;;
+                esac
+                ;;  
+        *)      echo -e "${FAIL}"		;;
+        esac
+	
+else
+	echo -en "$(gettext "parter id already set"): [$(echo_green "${parter_id}")]";echo
+fi
+
+# 4. set mail_receviers
+if [ "${mail_receviers}" == "root_bbk@126.com" ]; then
+	echo -en "\n\n$(gettext "Example:") abc@126.com  test@test.net\n\n"
+	valid=0
+	while [ "${valid}" == "0" ]
+	do
+		read -p "$(gettext "default mail receviers of this box"): " input_mail_receviers
+		if [ -z "${input_mail_receviers//[ ]}" ]; then
+			valid=0
+			continue
+		else
+			input_mail_receviers=$(echo "${input_mail_receviers}" | tr '[;, /]' ' ')
+		fi
+		invalid_email=
+		for m in `echo "${input_mail_receviers}"`
+		do
+			if [ "$(echo -e "${m}"|grep -E -o "\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*")" == "" ]; then
+				invalid_email="${invalid_email} ${m}"
+				continue
+			fi
+			if [ "$(echo -e "${m}"|awk -v RS="@" 'END{print --NR}')" != "1" ]; then
+				invalid_email="${invalid_email} ${m}"
+			fi
+		done
+		if [ ! -z "${invalid_email//[ ]}" ]; then
+			echo -en "$(echo_red "[${invalid_email}]") : $(gettext "not valid email address").";echo
+		else
+			valid=1
+		fi
+	done
+	mail_receviers="${input_mail_receviers}"
+	echo -en "$(gettext "set default mail_receviers as") [$(echo_green "${mail_receviers}")] ... "
+	write_log -f "${MOLE_LOG}" "SETINITX default_mail_receviers=[${mail_receviers}]"
+	update_mole_config default mail_receviers "${mail_receviers}"
+        rc=$?
+        case "${rc}" in
+        "0")    echo -e "${OK}"			;;
+        "2")    echo -e "${SKIP}"		;;
+        "5")    add_mole_config default mail_receviers "${mail_receviers}"
+                rc=$?
+                case "${rc}" in
+                "0") echo -e "${OK}"		;;
+                "2") echo -e "${SKIP}"		;;
+                *)   echo -e "${FAIL}"		;;
+                esac
+                ;;  
+        *)      echo -e "${FAIL}"		;;
+        esac
+	
+else
+	echo -en "$(gettext "default mail_receviers already set"): [$(echo_green "${mail_receviers}")]";echo
+fi
+
+fi
+# END

@@ -1,0 +1,413 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Sending Mails.
+# 
+#
+# Usage:     ./sendmail -f {plugin_name} -s {jobid} -i "${plugin_output_stuff}" -h "{handler_output_stuff}"
+#
+# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{warn}:{file}{ /etc/inittab /tmp/1M /tmp/4M }" -h ""
+# Example:   ./sendmail -f check_sysload -s AlFt5885 -i "{crit}:{str}:{System Load Check CRITICAL | Load Average: [19.3] >= UpLimit: [15] }"  -h "auto handler result here"
+#
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }   
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+# def help
+#
+show_usage(){
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "
+  exit 1
+}
+
+# def conv_output2mailbody
+# Convert plugin output to html mailbody
+# Output:       path of html mailbody
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}"
+# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
+#
+conv_output2mailbody() {
+  local content=$1  hd_content=$2
+  local level= title= summary= details= mailbody= rc=
+
+  if [ "${hd_content}" == "auto handle is disabled. Nothing to do" ]; then
+	hd_content="$(gettext "auto handle is disabled. Nothing to do")" 	# translate on fix string
+  fi
+
+  level=$(${PLUTIL} parted_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  title=$(${PLUTIL} parted_output 4 "${content}")
+  summary=$(${PLUTIL} parted_output 5 "${content}")
+  details=$(${PLUTIL} parted_output 6 "${content}")
+
+  mailbody="$(gen_tmpfile mailbody)"
+  {
+  echo "$(html_green "$(gettext "Notify_Type:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
+  echo "$(html_green "$(gettext "Title:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
+  echo "$(html_green "$(gettext "Summary:")") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
+  echo "$(html_green "$(gettext "Details:")") <br><br>"
+  echo "${details}" | sed -e 's/###/<br>\n/g';
+  echo "<br>------------------<br>"
+  echo "$(html_green "$(gettext "Auto Handle:")") <br><br>"
+  echo "${hd_content}" | sed -e 's/###/<br>\n/g'; 
+  } >> "${mailbody}" 2>&1
+  rc=$?
+  if [ "${rc}" == "0" ]; then
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: convert output to mailbody file success: [${mailbody}] "\
+                "[level=${level} title=${title} summary=${summary}]";
+  else
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"WARN: convert output to mailbody file error: [${mailbody}]";
+  fi
+
+  echo "${mailbody}"
+  return "${rc}"
+}
+
+
+### Main Body Begin...
+
+[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
+
+# read args
+while getopts f:s:i:h: opt
+do
+        case ${opt} in
+        "f")
+                plugin_name="${OPTARG}"   ;;
+        "s")
+                jobid="${OPTARG}"         ;;
+        "i")
+                content="${OPTARG}"       ;;
+	"h")
+		hd_content="${OPTARG}"	  ;;
+	*)	
+		show_usage		  ;;
+        esac
+done
+
+# check args 
+[ -z "${plugin_name}" -o -z "${jobid}" -o -z "${content}" ] && show_usage
+[ -z "${hd_content}" ] && hd_content="Nothing to do"
+from="${plugin_name}.${jobid}"
+level=$(${PLUTIL} parted_output 1 "${content}")
+
+
+write_log -f "${SENDMAIL_LOG}" ""
+write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
+
+# read global.name / read plugin comment / read plugin mail-receviers 
+gname=$(get_global_name)
+comment=$(get_comment "${plugin_name}")
+if [ "${level}" == "ovld" ]; then  
+	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while level="ovld"
+else
+	receviers=$(get_mail_receviers "${plugin_name}")
+fi
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
+
+# begin to check sendmail config
+smtp_server=$(read_mole_config sendmail smtp_server)
+auth_user=$(read_mole_config sendmail auth_user)
+auth_pass=$(read_mole_config sendmail auth_pass)
+[ -z "${smtp_server}" -o -z "${auth_user}" -o -z "${auth_pass}" ] && {
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"ERROR: configurations not complete:"\
+		"[smtp_server,auth_user,auth_pass can't be empty]. EXIT"
+	write_log -f "${SENDMAIL_LOG}" ""
+	write_log -f "${SENDMAIL_LOG}" ""
+	echo -en "${receviers}"         # output all receviers on configurations not complete 
+	exit 1
+}
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: set smtp_server=[${smtp_server}], auth_user=[${auth_user}], auth_pass=[XXXXXXXX]"
+
+charset=$(read_mole_config sendmail charset)
+[ -z "${charset}" ] && {
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"WARN: charset empty, set default charset=[utf-8]"
+	charset="utf-8"
+}
+
+time_out=$(read_mole_config sendmail timeout)
+[ -z "${time_out}" -o ! -z "${time_out//[0-9]}" ] && {
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+                "WARN: invalid timeout [$time_out], set time_out=[10]"
+        time_out="10"
+}
+
+smtp_server_port=$(read_mole_config sendmail smtp_server_port)
+[ -z "${smtp_server_port}" -o ! -z "${smtp_server_port//[0-9]}" ] && {
+        write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+                "WARN: invalid smtp_port [${smtp_server_port}], set smtp_server_port=[25]"
+        smtp_server_port="25"
+}
+
+
+faillst=
+succlst=
+# check smtp host status
+if [ -f "${SMTPHOST_STATUS}" -a -s "${SMTPHOST_STATUS}" ]; then
+	status=$(/bin/awk '{print $1;exit}' "${SMTPHOST_STATUS}" 2>&-)
+	conn_details=$(/bin/awk '{$1="";print;exit;}' "${SMTPHOST_STATUS}" 2>&-)
+	if [ "${status}" != "0" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"WARN: smtp host seems down, [${conn_details}], exit"
+		write_log -f "${SENDMAIL_LOG}" ""
+		write_log -f "${SENDMAIL_LOG}" ""
+		faillst="${receviers}"
+		echo -en "${succlst} ### ${faillst}"		# output all receviers on smtp host down
+		exit 2;
+	else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: smtp host seems online, continue."
+	fi
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: smtp host status file not exist or empty, continue."
+fi
+
+
+
+### attach_ini_mail 
+attach_ini_mail_args=
+attach_ini_mail=$(read_mole_config global attach_ini_mail)
+if [ "${attach_ini_mail}" == "yes" ]; then
+	if [ -f "${CONF_DIR}/${plugin_name}.ini" ]; then
+		attach_ini_mail_args=" -a ${CONF_DIR}/${plugin_name}.ini"
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: add attachment Plugin-Config-INI:[${CONF_DIR}/${plugin_name}.ini]"
+	else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"WARN: attachment Plugin-Config-INI:[${CONF_DIR}/${plugin_name}.ini] is not an exist file."
+	fi
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: no need to attach Plugin-Config-INI"
+fi
+
+### attch_snap_mail
+attsnap_mail_args=
+# Don't attach snapshot on following special case.  ovld/misform
+if [ "${level}" == "ovld" -o "${level}" == "misform" ]; then
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: level=[${level}], turn off attsnap_mail"
+	attsnap_mail="no"
+else
+	attsnap_mail=$(get_attsnap_mail "${plugin_name}")
+fi
+# Take snapshot as mail attach if enabled
+if [ "${attsnap_mail}" == "yes" ]; then
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: attach sanp mail enabled, now trying to take snapshot for sendmail"
+	snap_file=$( eval ${TAKESNAP_SH} -f "${plugin_name}" -s "${jobid}.sendmail" 2>&- )
+	if [ -f "${snap_file}" -a -s "${snap_file}" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: add attachment Snap-TAR-File:[${snap_file}]"
+		attsnap_mail_args=" -a "${snap_file}" "
+	else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"WARN: Snap-TAR-File:[${snap_file}] not exist or empty, maybe takesnap failed."
+	fi
+else
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"INFO: attach snap mail disabled, no need to take snapshot"
+fi
+
+### read mail_level and mail_type
+mail_level=$( echo -e "${level}" | tr '[a-z]' '[A-Z]')
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: mail_level: [${mail_level}]"
+
+mail_type=$(${PLUTIL} parted_output 2 "${content}" | tr '[A-Z]' '[a-z]')
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: mail_type: [${mail_type}]"
+
+
+### sendmail depend on different {mail_type}.
+vexit=0
+case "${mail_type}" in
+  "file")
+	### 1. process attach files list.
+	attach_file_list=$(${PLUTIL} parted_output 3 "${content}")
+	att_file_args=  t_num=0    t_size=0   
+	num_max=5   size_max=5120    ### set max files-number and max files-size.
+	for x in `echo "${attach_file_list}"|sed -e 's/###/ /g'`
+	do
+	    if [ -f "${x}" -a -s "${x}" ]; then  ### att file do exists.
+		size=$(/usr/bin/du -sk "${x}" 2>&- | awk '{print $1}')
+		[ -z "${size}" -o ! -z "${size//[0-9]}" ] && size=0
+		((t_size+=${size}))  ### exist file size +${size}
+		((t_num+=1))  ### exist file number +1
+
+		if (( ${t_num} > ${num_max} )); then  ### check max file number
+		    write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"WARN: total att_num [${t_num}] overlimit. file [${x}] DROPPED"
+		    break
+		fi
+
+		if (( ${t_size} > ${size_max} )); then  ### check max file size
+		    write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"WARN: total att_size [${t_size}K] overlimit. file [${x}] DROPPED";
+		    break
+		fi
+
+		if [ -z "${att_file_args}" ]; then
+			att_file_args=" ${x} " 
+			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"OK: add first att-file: [${x}]"\
+				"filesize=[${size}K] totalsize=[${t_size}K] totalnumber=[${t_num}] "
+		else
+			att_file_args=" ${att_file_args} -a ${x} "
+			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"OK: add ${t_num}th att-file: [${x}]"\
+				"filesize=[${size}K] totalsize=[${t_size}K] totalnumber=[${t_num}] "
+		fi
+
+	    else
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"WARN: att_file not exist or empty. [${x}] SKIP"
+	    fi
+	done
+	#echo "${att_file_args}"
+
+	### 2. send emails
+	if [ -z "${att_file_args}" ]; then
+	    write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"ERROR: all of att_file not exist or empty. EXIT"
+	else
+            n=0  t_s=0  t_e=0  result=		## total   total_succ   total_error   result
+	    t=$(echo -ne "${receviers}" | awk -v RS="@" 'END{print --NR}')
+	    if [ "$t" -le "0" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"ERROR: no invalid receviers [${receviers}]"
+	    else
+	    	for x in `echo "${receviers}"`
+	    	do
+			((n+=1))
+			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"INFO: [${n}/${t}], sending mail to [${x}] ..."
+			result=$( ${SENDEMAIL} -f "${auth_user}" -s "${smtp_server}:${smtp_server_port}" \
+			-xu "${auth_user}" -xp "${auth_pass}" \
+			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
+			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
+			-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -m "Refer to attachments for details." \
+			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
+			if [ "$?" == "0" ]; then
+				((t_s+=1)) 
+				succlst="${x} ${succlst}"
+			else
+				((t_e+=1))
+				vexit=1
+				faillst="${x} ${faillst}"
+			fi
+			write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+				"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"
+	    	done
+	    fi
+	fi
+	;;
+
+  "str")
+	### 1. convert plugin output to mailbody files.
+	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}")
+
+	### 2. send emails.
+	n=0  t_s=0   t_e=0  result=		## total   total_succ   total_error   result
+	t=$(echo -ne "${receviers}" | awk -v "RS=@" 'END{print --NR}')
+	if [ "$t" -le "0" ]; then
+		write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"ERROR: no invalid receviers [${receviers}]"
+	else 
+		for x in `echo "${receviers}"`
+		do
+	    	  ((n+=1))
+	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: [${n}/${t}], sending mail to [${x}] ..."
+	    	  result=$( ${SENDEMAIL} -f "${auth_user}" -s "${smtp_server}:${smtp_server_port}" \
+	    		-xu "${auth_user}" -xp "${auth_pass}" \
+	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
+			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
+	    		-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -o message-file="${mailbody_path}" \
+	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
+		  if [ "$?" == "0" ]; then
+			((t_s+=1))
+			succlst="${x} ${succlst}"
+		  else
+			((t_e+=1))
+			vexit=1
+			faillst="${x} ${faillst}"
+		  fi
+	    	  write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+			"INFO: [${n}/${t}], sending mail to [${x}] end. result: ${result}"
+		done
+	fi
+	;;
+  *)
+	write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+		"ERROR: mail type invalid: [${mail_type}], must be [file] or [str], EXIT"
+	;;
+esac
+
+
+write_log -f "${SENDMAIL_LOG}" "[${from}]"\
+	"INFO: end to sendmail. result: [total=${t}  success=${t_s}  fail=${t_e}]"
+write_log -f "${SENDMAIL_LOG}" ""
+write_log -f "${SENDMAIL_LOG}" ""
+echo -en "${succlst}  ###  ${faillst}"
+exit "${vexit}"
