@@ -41,23 +41,13 @@ CONTENT=        ### { strings | /path/to/result.file }
 check() {
   local result=  oknum=0 warnnum=0 total=0
 
-  status=$(/usr/local/mole/mole status 2>&1); rc=$?
-  if [ "${rc}" != "0" ]; then
-  	result="mole status check return [${rc}] [${status}] ###"
-	((warnnum++))
-  else
-	result="mole status check return [0] OK ###"
-	((oknum++))
-  fi
-  ((total++))
-
   precheck=$(${PRECHECK_SH} 2>&1); rc=$?
   precheck=$(echo -en "${precheck}" | sed -e 's/$/###/g' | tr -d '\r\n')
   if [ "${rc}" != "0" ]; then
-  	result="${result} mole precheck return [${rc}] ### ${precheck} ###"
+  	result="mole precheck return [${rc}] ### ${precheck} ###"
 	((warnnum++))
   else
-	result="${result} mole precheck return [0] OK ###"
+	result="mole precheck return [0] OK ###"
 	((oknum++))
   fi
   ((total++))
