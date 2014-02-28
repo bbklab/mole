@@ -8,18 +8,20 @@ PATH_RUN="$PATH_ESOP/run"
 PATH_OPT="$PATH_ESOP/opt"
 PATH_OPT_SBIN="$PATH_OPT/sbin"
 
+PATH_MOLE="${PATH_ESOP}/mole"
+PATH_MOLE_RUN="${PATH_MOLE}/run"
+
 PIDF_GMOND="$PATH_RUN/esop_gmond.pid"
 PIDF_PHPTD="$PATH_RUN/esop_phptd.pid"
-PIDF_MOLE="$PATH_RUN/esop_mole.pid"
+PIDF_MOLE="$PATH_MOLE_RUN/esop_mole.pid"
 
 ARRAY_COMPONENT=(
-    gmond 	"esop_gmond"
-    phptd 	"esop_phptd"
-    mole  	"esop_mole"
+    "gmond"	"esop_gmond"	"${PIDF_GMOND}"
+    "phptd" 	"esop_phptd"	"${PIDF_PHPTD}"
+    "mole"  	"esop_mole"	"${PIDF_MOLE}"
 )
 
 EXEC_USER="eyou"
-EXEC_GROUP="eyou"
 CMD_SUDO_EYOU="sudo -u $EXEC_USER"
 
 
@@ -27,6 +29,41 @@ CMD_SUDO_EYOU="sudo -u $EXEC_USER"
 ### Func Def
 #
 
+# Terminal color
+#
+echo_green() {
+  local content=$*
+  echo -e "\033[1;32m${content}\033[0m\c "
+}
+echo_yellow() {
+  local content=$*
+  echo -e "\033[1;33m${content}\033[0m\c "
+}
+echo_red() { 
+  local content=$* 
+  echo -e "\033[1;31m${content}\033[0m\c "
+}
+
+### Help
+##
+show_help(){
+cat << EOF
+
+   $(echo_green "Help:")
+	help
+	start
+	stop
+	status
+	restart
+	
+
+EOF
+exit 0
+}
+
+# $1 contains $2 or not
+# Usage:        sub_str "strings" "str"
+#
 sub_str() {  
   [ "${1#*$2*}" == "$1" ] && echo no || echo yes  
 }
@@ -42,21 +79,21 @@ get_pid(){
   if [ -f "${fpid}" -a -r "${fpid}" ]; then
 	pid=$(awk '{print $1;exit;}' "${fpid}" 2>&-)
 	[ -z "${pid}" -o ! -z "${pid//[0-9]}" ] && {
-		return 2	# pid invalid
+		return 2	# pidfile exists but pid invalid
 	} 
   else
 	return 1		# pidfile not exist
   fi
 
-  echo "${pid}"			# pid normal
+  echo "${pid}"			# pidfile exists and pid normal
   return 0
 }
 
 # get pid running status
-# usage:	is_ruuning  {pid_file} {pname}
-# return:	0 running,  1 dead,  2 fake?,  3 pidfie not exist,  4 dead with pidfile left
+# usage:	ps_status {pid_file} {pname}
+# return:	0 running | 1 dead | 2 dead with pidfile left | 3 fake?
 #
-is_running(){
+ps_status(){
   local fpid=$1 pname=$2
   local pid= rc=
   
@@ -68,15 +105,13 @@ is_running(){
 		if [ "$(sub_str "${cmdline}" "${pname}")" == "yes" ]; then
 			return 0	# running
 		else
-			return 2	# fake?
+			return 3	# fake?
 		fi
-  	else
- 		return 4		# dead with pidfile left
   	fi
   elif [ "$rc" == "1" ]; then
-	return 3
+	return 1			# dead
   elif [ "$rc" == "2" ]; then
-
+	return 2			# dead with pidfile left
   fi
 }
 
@@ -84,28 +119,100 @@ start_gmond(){
   $CMD_SUDO_EYOU $PATH_OPT_SBIN/gmond -p $PIDF_GMOND
 }
 
-start_phptd ()
-{
-    $CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD
+start_phptd(){
+  $CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD
 }
 
-stop_phptd ()
-{
-    kill `head -n 1 $PIDF_PHPTD`
+start_mole(){
+  ${PATH_MOLE}/mole start
 }
 
-stop_gmond ()
-{
-    kill `head -n 1 $PIDF_GMOND`
+stop_phptd(){
+  kill $(get_pid ${PIDF_PHPTD})
 }
 
+stop_gmond(){
+  kill $(get_pid ${PIDF_GMOND})
+}
+
+stop_mole(){
+  ${PATH_MOLE}/mole stop
+}
+
+
+start(){
+  local name=  disname=  fpid=
+
+  for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
+  do
+	if (($i%3 == 0)); then
+		name=${ARRAY_COMPONENT[$i]}
+	elif (($i%3 == 1)); then
+		disname=${ARRAY_COMPONENT[$i]}
+	elif (($i%3 == 2)); then
+		fpid=${ARRAY_COMPONENT[$i]}
+		start_${name}; wait
+		ps_status "${fpid}" "${name}"; wait
+	fi
+  done
+
+}
 
 #
 ### Main Body Begin
 #
 
-# check root privileges fist
+# check root privileges or not ?
 if [ "$(id -u)" != "0" ]; then
-    echo "root privilege required!"
-    exit 1
+  echo_red "root privilege required!";echo
+  exit 1
 fi
+
+# check sudo user exist or not ?
+if (id "${EXEC_USER}") >/dev/null 2>&1; then
+  :
+else
+  echo_red "user ${EXEC_USER} not exists!";echo
+  exit 1
+fi
+
+case "$#" in  
+"1")
+        arg1=$1;
+        case "$arg1" in
+        "help"|"h")
+                show_help    			;;
+	"start")
+		start				;;
+	"stop")
+		stop				;;
+	"status"|"s")
+		status				;;
+	"restart")
+		stop
+		sleep 1
+		start				;;
+	esac
+	;;
+"2")
+	arg1=$1; arg2=$2
+        [ -z "${arg2//[ ]}" ] && {
+                echo_yellow "need arguments"; echo
+                exit 1
+        }
+
+	case "$arg1" in
+	"start")
+						;;
+	"stop")
+						;;
+	"status"|"s")
+						;;
+	"restart")
+						;;
+	esac
+	;;
+*)
+	show_help
+	;;
+esac
