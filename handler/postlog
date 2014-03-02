@@ -240,7 +240,6 @@ foreach my $key (keys %post_server) {
 
 unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
   &log("ERROR: $logfrom configurations not complete: post_server not defined. EXIT");
-  print "post_server not defined.\n";
   exit 1;
 }
 
@@ -261,9 +260,6 @@ unless (exists $post_server{'post_timeout'} && $post_server{'post_timeout'} ne '
 } elsif ($post_server{'post_timeout'} =~ /\D/) {
   $post_server{'post_timeout'} = 10;
 }
-
-&log("INFO: $logfrom set post_server=[$post_server{'post_server'}], post_server_port=[$post_server{'post_server_port'}]");
-&log("INFO: $logfrom set post_port_type=[$post_server{'post_port_type'}], post_timeout=[$post_server{'post_timeout'}]");
 
 # post data
 my $sock=IO::Socket::INET->new(
@@ -576,10 +572,10 @@ sub genjson_plugin() {
 	'hname'		=> $hname,
 	'data'		=> '',
   );
-  &log("INFO: $logfrom set type=[plugin]");
-  &log("INFO: $logfrom set parter_id=[$parter_id]");
-  &log("INFO: $logfrom set hid=[$hid]");
-  &log("INFO: $logfrom set hname=[$hname]");
+  &log("INFO: $logfrom set type=[plugin]") if $debug;
+  &log("INFO: $logfrom set parter_id=[$parter_id]") if $debug;
+  &log("INFO: $logfrom set hid=[$hid]") if $debug;
+  &log("INFO: $logfrom set hname=[$hname]") if $debug;
 
   my @raw_data = ();
   my @array_plugins = ();
@@ -699,10 +695,10 @@ sub genjson_config() {
 	'data'			=> '',
   );
 
-  &log("INFO: $logfrom set type=[config]");
-  &log("INFO: $logfrom set parter_id=[$parter_id]");
-  &log("INFO: $logfrom set hid=[$hid]");
-  &log("INFO: $logfrom set hname=[$hname]");
+  &log("INFO: $logfrom set type=[config]") if $debug;
+  &log("INFO: $logfrom set parter_id=[$parter_id]") if $debug;
+  &log("INFO: $logfrom set hid=[$hid]") if $debug;
+  &log("INFO: $logfrom set hname=[$hname]") if $debug;
 
   my %raw_data = (
 	'global'		=> '',
@@ -1077,6 +1073,46 @@ sub genjson_config() {
 }
 
 sub genjson_heartbeat() {
-  my %result;
+  my %result = (
+        'type'                  => 'noop',
+        'parter_id'             => $parter_id,
+        'hid'                   => $hid,
+        'hname'                 => $hname,
+	'job'			=> '',
+        'data'                  => '',
+  );
+
+  &log("INFO: $logfrom set type=[noop]") if $debug;
+  &log("INFO: $logfrom set parter_id=[$parter_id]") if $debug;
+  &log("INFO: $logfrom set hid=[$hid]") if $debug;
+  &log("INFO: $logfrom set hname=[$hname]") if $debug;
+
+  # set job
+  my @raw_job = ('00000000000000000000000000000000',time());
+  $result{'job'} = \@raw_job;
+  &log("DEBUG: $logfrom set job=[[@raw_job]]") if $debug;
+
+  # set data
+  my %raw_data = (
+        'interval'                => '120',
+  );
+  open my $fh, "$mole view mole_iam_alive frequency 2>&- | ";
+  if($fh){
+	while(<$fh>){
+		chomp; 
+		if(m/\A\s*(\d+)min/i){
+			$raw_data{'interval'} = $1*60;
+		}elsif(m/\A\s*(\d+)sec/i){
+			$raw_data{'interval'} = $1;
+		}elsif(m/\A\s*(\d+)hour/i){
+			$raw_data{'interval'} = $1*3600;
+		}else{
+			$raw_data{'interval'} = 120;
+		}
+		last;
+	}
+  }
+  $result{'data'} = \%raw_data;
+
   return %result;
 }
