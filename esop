@@ -9,14 +9,12 @@ PATH_OPT="$PATH_ESOP/opt"
 PATH_OPT_SBIN="$PATH_OPT/sbin"
 
 PATH_MOLE="${PATH_ESOP}/mole"
-PATH_MOLE_RUN="${PATH_MOLE}/run"
+PATH_MOLE_RUN="${PATH_MOLE}/tmp/run"
 
-PIDF_GMOND="$PATH_RUN/esop_gmond.pid"
 PIDF_PHPTD="$PATH_RUN/esop_phptd.pid"
 PIDF_MOLE="$PATH_MOLE_RUN/esop_mole.pid"
 
 ARRAY_COMPONENT=(
-    "gmond"	"esop_gmond"	"${PIDF_GMOND}"
     "phptd" 	"esop_phptd"	"${PIDF_PHPTD}"
     "mole"  	"esop_mole"	"${PIDF_MOLE}"
 )
@@ -51,11 +49,17 @@ cat << EOF
 
    $(echo_green "Help:")
 	help
-	start
-	stop
-	status
+	start		[proc]
+	stop		[proc]
+	status		[proc]
 	restart
-	
+
+   $(echo_green "Example:")
+	help
+	start 		[phptd|mole]
+	stop		[phptd|mole]
+	status		[phptd|mole]
+	restart
 
 EOF
 exit 0
@@ -90,10 +94,10 @@ get_pid(){
 }
 
 # get pid running status
-# usage:	ps_status {pid_file} {pname}
+# usage:	is_running {pid_file} {pname}
 # return:	0 running | 1 dead | 2 dead with pidfile left | 3 fake?
 #
-ps_status(){
+is_running(){
   local fpid=$1 pname=$2
   local pid= rc=
   
@@ -107,16 +111,14 @@ ps_status(){
 		else
 			return 3	# fake?
 		fi
+	else
+		return	2		# dead with pidfile left
   	fi
   elif [ "$rc" == "1" ]; then
 	return 1			# dead
   elif [ "$rc" == "2" ]; then
 	return 2			# dead with pidfile left
   fi
-}
-
-start_gmond(){
-  $CMD_SUDO_EYOU $PATH_OPT_SBIN/gmond -p $PIDF_GMOND
 }
 
 start_phptd(){
@@ -128,11 +130,11 @@ start_mole(){
 }
 
 stop_phptd(){
-  kill $(get_pid ${PIDF_PHPTD})
-}
-
-stop_gmond(){
-  kill $(get_pid ${PIDF_GMOND})
+  local pid=$(get_pid ${PIDF_PHPTD})
+  if [ ! -z "${pid}" ]; then
+  	kill ${pid}
+  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD}
+  fi
 }
 
 stop_mole(){
@@ -141,22 +143,78 @@ stop_mole(){
 
 
 start(){
-  local name=  disname=  fpid=
-
   for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
   do
 	if (($i%3 == 0)); then
-		name=${ARRAY_COMPONENT[$i]}
-	elif (($i%3 == 1)); then
-		disname=${ARRAY_COMPONENT[$i]}
-	elif (($i%3 == 2)); then
-		fpid=${ARRAY_COMPONENT[$i]}
-		start_${name}; wait
-		ps_status "${fpid}" "${name}"; wait
+		start_${ARRAY_COMPONENT[$i]}; wait
 	fi
   done
-
 }
+
+stop(){
+  for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
+  do
+	if (($i%3 == 0)); then
+		stop_${ARRAY_COMPONENT[$i]}; wait
+	fi
+  done
+}
+
+# get daemon status
+# useage:	status 	[pname]
+#
+status(){
+
+  single(){
+  	local fpid=$1 pname=$2 disname=$3
+	local rc=  result=
+	
+	[ -z "${fpid}" -o -z "${pname}" -o -z "${disname}" ] && return 4
+
+  	is_running "${fpid}" "${pname}"
+  	rc=$?
+  	if [ "$rc" == "0" ]; then
+		result="$(echo_green "${disname} running")"
+  	elif [ "$rc" == "1" ]; then
+		result="$(echo_red "${disname} dead")"
+  	elif [ "$rc" == "2" ]; then
+		result="$(echo_yellow "${disname} dead, but pidfile left")"
+  	elif [ "$rc" == "3" ]; then
+		result="$(echo_yellow "${disname} fake?")"
+  	fi
+
+	echo -e "${result}"
+	return $rc
+  }
+
+  if [ "$#" == "0" ]; then
+  	local _pname= _disname=  _fpid=
+  	for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
+  	do
+		if (($i%3 == 0)); then
+			_pname=${ARRAY_COMPONENT[$i]}
+		elif (($i%3 == 1)); then
+			_disname=${ARRAY_COMPONENT[$i]}
+		elif (($i%3 == 2)); then
+			_fpid=${ARRAY_COMPONENT[$i]}
+			single "${_fpid}" "${_pname}" "${_disname}"
+		fi
+  	done
+  else
+  	local pname=$1
+	local fpid= disname=
+	for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
+	do
+		if [ "${ARRAY_COMPONENT[$i]}" == "${pname}" ]; then
+			disname="${ARRAY_COMPONENT[$i+1]}"
+			fpid="${ARRAY_COMPONENT[$i+2]}"
+			break
+		fi
+	done
+	single "${fpid}" "${pname}" "${disname}"
+  fi
+}
+
 
 #
 ### Main Body Begin
@@ -203,12 +261,13 @@ case "$#" in
 
 	case "$arg1" in
 	"start")
+		start_${arg2}
 						;;
 	"stop")
+		stop_${arg2}
 						;;
 	"status"|"s")
-						;;
-	"restart")
+		status "${arg2}"
 						;;
 	esac
 	;;
