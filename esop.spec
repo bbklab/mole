@@ -122,6 +122,12 @@ fi
 # create symbolic link for esop,mole
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /bin/%{name} >/dev/null 2>&1
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /bin/mole >/dev/null 2>&1
+if [ -L /usr/bin/mole ]; then
+	rm -f /usr/bin/mole 2>&-
+fi
+if [ -L /usr/bin/%{name} ]; then
+	rm -f /usr/bin/%{name} 2>&-
+fi
 :
 
 %preun
@@ -155,11 +161,11 @@ fi
 * Wed Mar 19 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-beta1 版本
 - 新增: 重启proxy时增加em_dynamic_config刷新配置的动作
-- 新增: 首次启动mole初始化的时候, 限制用户输入的parter_id必须为小写字母/数字, 长度32
+- 新增: 首次启动mole初始化的时候, 对用户输入的服务器角色, 客户ID做合法性检查
 - 新增: 对插件返回结果进行安全性过滤, 过滤部分有安全风险的HTML字符
 - 新增: 添加"恢复"(recovery)事件的响应, 包括发信,上报,快照,自动响应处理等配置
-- 新增: 基础插件disk_fs增加参数exclude, 允许跳过某些设备的文件系统状态检查和某些挂载点的读写测试
-- 修正: mole的DAEMON启动流程
+- 新增: 基础插件disk_fs增加参数exclude, 允许跳过某些设备或挂载点的检查或测试
+- 修正: mole的DAEMON启动流程标准化
 - 调整: mole发送的信件套用HTML模板来生成
 * Mon Mar  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-rc1 版本
