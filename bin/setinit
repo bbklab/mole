@@ -170,11 +170,18 @@ else
 # 2. set mole_name
 if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
   	echo -en "\n\n$(gettext "Example:")  mysql-master,  web,  mta,  ldap,  memcache\n\n"
-	valid=0
+	echo -en "$(gettext "allowed [0-9a-zA-Z.-], max length 15")\n\n"
+	valid=0  maxlen=15
 	while [ "${valid}" == "0" ]
 	do
 		read -p "$(gettext "role name of this box"): " input_role
-		if [ -z "${input_role//[ ]}" ]; then
+		length=${#input_role}
+		if [ ${length} -gt ${maxlen} ]; then
+			echo -en "$(echo_red "$(eval_gettext "length exceed: \$length")")\n"
+			valid=0
+			continue
+		elif [ -z "${input_role//[ ]}" -o ! -z "${input_role//[0-9a-zA-Z.-]}" ]; then
+			echo -en "$(echo_red "$(gettext "input invalid")")\n"
 			valid=0
 			continue
 		else

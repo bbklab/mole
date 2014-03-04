@@ -546,6 +546,15 @@ msgstr "实例ID已设定"
 msgid "role name of this box"
 msgstr "角色名"
 
+msgid "allowed [0-9a-zA-Z.-], max length 15"
+msgstr "只允许数字,大小写字母,点号,减号, 共计不超过15个字符"
+
+msgid "length exceed: $length"
+msgstr "长度超限: $length"
+
+msgid "input invalid"
+msgstr "输入非法"
+
 msgid "base domain of this box"
 msgstr "基础域名"
 
