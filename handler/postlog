@@ -583,10 +583,18 @@ sub genjson_plugin() {
   if($fh){
 	while(<$fh>){
 		chomp;
+		next if m/\A\s*\Z/;
 		push @array_plugins, $_;
 	}
   }
-  &log("DEBUG: $logfrom plugin array=[@array_plugins]") if $debug;
+
+  unless(@array_plugins) {
+	&log("DEBUG: $logfrom plugin list is empty") if $debug;
+  	$result{'data'} = \@raw_data;
+  	return %result;
+  } else {
+  	&log("DEBUG: $logfrom plugin array=[@array_plugins]") if $debug;
+  }
 
   foreach my $plugin (@array_plugins) {
   	my %single_plugin = (
