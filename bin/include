@@ -105,6 +105,46 @@ ARRAY_BASE_CONFIG=(
   debug
 )
 
+
+### PLACE HOLDER STRING
+PLACE_HOLDER="_PLUGIN_"
+
+### CONIFG METHOD MAPS
+ARRAY_CONF_GET_MAPS=(
+  # config		# method
+
+  # global config
+  "g_parter_id"		"get_parter_id"
+  "g_mole_id"		"get_mole_id"
+  "g_global_name"	"get_global_name"
+  "g_scan_interval"	"get_scan_interval"
+  "g_attach_ini_mail"	"get_attach_ini_mail"
+  "g_sysload_uplimit"	"get_sysload_uplimit"
+  "g_max_kidsnum"	"get_max_kidsnum"
+  "g_plugin_maxlen"	"get_plugin_maxlen"
+  "g_handler_maxlen"	"get_handler_maxlen"
+  "g_notify_onmisform"  "get_notify_onmisform"
+  "g_locale"		"get_global_locale"
+
+  # plugin config	# replace ${PLACE_HOLDER} as real plugin
+  "p_enable"		"get_enable ${PLACE_HOLDER}"
+  "p_comment"		"get_comment ${PLACE_HOLDER}"
+  "p_frequency"		"get_frequency ${PLACE_HOLDER}"
+  "p_exec_tmout"	"get_exec_tmout ${PLACE_HOLDER}"
+  "p_maxerr_times"	"get_maxerr_times ${PLACE_HOLDER}"
+  "p_take_snapshot"	"get_action_type ${PLACE_HOLDER} take_snapshot"
+  "p_mail_notify"	"get_action_type ${PLACE_HOLDER} mail_notify"
+  "p_sms_notify"	"get_action_type ${PLACE_HOLDER} sms_notify"
+  "p_post_notify"	"get_action_type ${PLACE_HOLDER} post_notify"
+  "p_auto_handle"	"get_action_type ${PLACE_HOLDER} auto_handle"
+  "p_mail_receviers"	"get_mail_receviers ${PLACE_HOLDER}"
+  "p_sms_receviers"	"get_sms_receviers ${PLACE_HOLDER}"
+  "p_attsnap_mail"	"get_attsnap_mail ${PLACE_HOLDER}"
+  "p_auto_handler"	"get_auto_handler ${PLACE_HOLDER}"
+  "p_locale"		"get_locale ${PLACE_HOLDER}"
+  "p_debug"		"get_debug ${PLACE_HOLDER}"
+)
+
 ### PLUGIN RETRUN CODE MAPS
 ARRAY_RCSTATUS_MAPS=(
   0 succ
@@ -120,6 +160,8 @@ ARRAY_RCSTATUS_MAPS=(
 # default = crit warn unkn notify tmout
 # none	  = none
 VALID_ACTION_CONFIG="crit warn unkn succ notify tmout all default none"
+
+
 
 
 ####################################
@@ -780,11 +822,141 @@ del_mole_config() {
   fi
 }
 
-# Get plugin status    config-name:  enable
+
+# Get global name		config-name:  name
+# Note: if returned config-value is empty. return "mole__ops.eyou.net"
+#
+get_global_name() {
+  local result=  default="mole__ops.eyou.net"
+  result=$(read_mole_config global name)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get mole id			config-name:  id
+# Note: if returned config-value is empty. return "0000000000"
+#
+get_mole_id() {
+  local result=  default="0000000000"
+  result=$(read_mole_config global id)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get parter id			config-name:  parter_id
+# Note: if returned config-value is empty. return "0000000000"
+#
+get_parter_id() {
+  local result=  default="0000000000"
+  result=$(read_mole_config global parter_id)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get scan interval		config-name:  scan_interval
+# Note: if returned config-vlaue is invalid, return 5
+# Note: scan interval can't smaller than 5
+#
+get_scan_interval() {
+  local result= default=5 min=5
+  result=$(read_mole_config global scan_interval)
+  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+	result=${default}
+  else
+	[ ${result} -lt ${min} ] && result=${min}
+  fi
+  echo "${result}"
+}
+
+# Get attach ini mail                   config-name:  attach_ini_mail
+# Note: if returned config-value is empty. return "yes"
+#
+get_attach_ini_mail() {
+  local result= default="yes"
+  result=$(read_mole_config global attach_ini_mail)
+  [ -z "${result}" ] && result="${default}"
+  echo "${result}"
+}
+
+# Get sysload uplimit			config-name:  sysload_uplimit
+# Note: if returned config-value is invalid, return 30
+#
+get_sysload_uplimit() {
+  local result= default=30
+  result=$(read_mole_config global sysload_uplimit)
+  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+	 result=${default}
+  fi
+  echo "${result}"
+}
+
+# Get max kids number 			config-name:  max_kidsnum
+# Note: if returned config-value is invalid, return 50
+#
+get_max_kidsnum() {
+  local result= default=50
+  result=$(read_mole_config global max_kidsnum)
+  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+	 result=${default}
+  fi
+  echo "${result}"
+}
+
+# Get plugin output max length 			config-name:  plugin_maxlen
+# Note: if returned config-value is invalid, return 65536
+# Note: plugin_maxlen can't larger than 65536
+#
+get_plugin_maxlen() {
+  local result= default=65536 max=65536
+  result=$(read_mole_config global plugin_maxlen)
+  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+	 result=${default}
+  else
+	[ ${result} -gt ${max} ] && result=${max}
+  fi
+  echo "${result}"
+}
+
+# Get handler output max length 			config-name:  handler_maxlen 
+# Note: if returned config-value is invalid, return 32768
+# Note: handler_maxlen can't larger than 32768
+#
+get_handler_maxlen() {
+  local result= default=32768 max=32768
+  result=$(read_mole_config global handler_maxlen)
+  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+	 result=${default}
+  else
+	[ ${result} -gt ${max} ] && result=${max}
+  fi
+  echo "${result}"
+}
+
+# Get plugin notify on misform				config-name:  notify_onmisform
+# Note: if returned config-value is invalid, return yes
+#
+get_notify_onmisform() {
+  local result= default="yes"
+  result=$(read_mole_config global notify_onmisform)
+  [ -z "${result}" ] && result=${default}
+  echo "${result}"
+}
+
+# Get global locale					config-name:  notify_onmisform
+# Note: if returned config-value is invalid, return zh_CN.UTF-8
+#
+get_global_locale() {
+  local result= default="zh_CN.UTF-8"
+  result=$(read_mole_config global locale)
+  [ -z "${result}" ] && result=${default}
+  echo "${result}"
+}
+
+# Get plugin enable status		config-name:  enable
 # Note: if returned config-value is invalid, return no
 #
 get_enable() {
-  local plugin_name=$1  result=
+  local plugin_name=$1  default="no" result=
   [ -z "${plugin_name}" ] && {
 	write_log -f "${MOLE_LOG}" "E0000000 get_enable error: missing plugin name";
 	return 1
@@ -794,9 +966,9 @@ get_enable() {
 
   # check valid or not
   [ -z "${result}" ] && {
-	result="no"
+	result="${default}"
   } || {
-  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="no"
+  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
   }
   echo "${result}"
 }
@@ -805,7 +977,7 @@ get_enable() {
 # Note: if returned config-value is invalid, return yes
 #
 get_debug() {
-  local plugin_name=$1  result=
+  local plugin_name=$1  default="yes" result=
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_debug error: missing plugin name";
         return 1
@@ -815,9 +987,9 @@ get_debug() {
  
   # check valid or not
   [ -z "${result}" ] && {
-        result="yes"
+        result="${default}"
   } || {
-        [ "${result}" != "yes" -a "${result}" != "no" ] && result="yes"
+        [ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
   }
   echo "${result}"
 }
@@ -827,7 +999,7 @@ get_debug() {
 # Note: if returned config-value null or invalid, return no
 #
 get_attsnap_mail() {
-  local plugin_name=$1  result=
+  local plugin_name=$1  default="no" result=
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_attsnap_mail error: missing plugin name";
         return 1
@@ -837,9 +1009,9 @@ get_attsnap_mail() {
   [ -z "${result}" ] && result=$(read_mole_config default attsnap_mail)
   # check null or invalid or not
   [ -z "${result}" ] && {
- 	result="no"
+ 	result="${default}"
   } || {
-  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="no"
+  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
   }
   echo "${result}"
 }
@@ -848,7 +1020,7 @@ get_attsnap_mail() {
 # Note: if returned config-value is invalid, return 30min
 #
 get_frequency() {
-  local plugin_name=$1  result=  value=   min=30
+  local plugin_name=$1  result=  value=   default="30min"  min=30
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_frequency error: missing plugin name";
         return 1
@@ -861,14 +1033,14 @@ get_frequency() {
   if [ "${value}" == "invalid" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 get_frequency on"\
 		"[${plugin_name}]: return is invalid:"\
-		"[${result}] ==> auto set to 30min.";
-	result="30min"
+		"[${result}] ==> auto set to ${default}.";
+	result="${default}"
   elif [ ! -z "${value}" -a -z "${value//[0-9]}" ]; then
 	[ "$(echo "${value} < ${min}" | bc 2>&-)" == "1" ] && {
 		write_log -f "${MOLE_LOG}" "E0000000 get_frequency on"\
 			"[${plugin_name}]: return [${result}] is smaller than minimum"\
-			"==> auto set to 30sec";
-		result="30sec"
+			"==> auto set to ${min}sec";
+		result="${min}sec"
 	}
   fi
   echo "${result}"
@@ -878,7 +1050,7 @@ get_frequency() {
 # Note: if returned config-value is invalid. return 10min
 # 
 get_exec_tmout() {
-  local plugin_name=$1  result=  value=
+  local plugin_name=$1  result=  value=  default="10min"
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_exec_tmout error: missing plugin name";
         return 1
@@ -891,8 +1063,8 @@ get_exec_tmout() {
   [ "${value}" == "invalid" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_exec_tmout on [${plugin_name}]:"\
 		"return is invalid: [${result}]"\
-		"==>auto set to 10min.";
-        result="10min"
+		"==>auto set to ${default}.";
+        result="${default}"
   }
   echo "${result}"
 }
@@ -902,7 +1074,7 @@ get_exec_tmout() {
 # Note: if returned email address is empty. return "root_bbk@126.com"
 #
 get_mail_receviers() {
-  local plugin_name=$1  result=
+  local plugin_name=$1  result=	 default="root_bbk@126.com"
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_mail_receviers error: missing plugin name";
         return 1
@@ -915,7 +1087,7 @@ get_mail_receviers() {
   elif [ -f "${BASE_DIR}/${result##*file:}" -a -s "${BASE_DIR}/${result##*file:}" ]; then
         result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "${BASE_DIR}/${result##*file:}")
   else
-        [ -z "${result}" ] && result="root_bbk@126.com"  ### set default whatever.
+        [ -z "${result}" ] && result="${default}"  ### set default whatever.
   fi
   echo -en "${result}"
 }
@@ -985,42 +1157,11 @@ get_locale() {
   echo "${result}"
 }
 
-# Get global name		config-name:  name
-# Note: if returned config-value is empty. return "mole__ops.eyou.net"
-#
-get_global_name() {
-  local result=  default="mole__ops.eyou.net"
-  result=$(read_mole_config global name)
-  [ -z "${result}" ] && result="${default}"
-  echo "${result}"
-}
-
-# Get mole id			config-name:  id
-# Note: if returned config-value is empty. return "0000000000"
-#
-get_mole_id() {
-  local result=  default="0000000000"
-  result=$(read_mole_config global id)
-  [ -z "${result}" ] && result="${default}"
-  echo "${result}"
-}
-
-# Get parter id			config-name:  parter_id
-# Note: if returned config-value is empty. return "0000000000"
-#
-get_parter_id() {
-  local result=  default="0000000000"
-  result=$(read_mole_config global parter_id)
-  [ -z "${result}" ] && result="${default}"
-  echo "${result}"
-}
-
-
 # Get plugin max repeat errtimes	config-name:  maxerr_times
 # Note: if returned config-value is invalid. return 1
 #
 get_maxerr_times() {
-  local plugin_name=$1  result=
+  local plugin_name=$1  result=	 default=1
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_maxerr_times error: missing plugin name";
         return 1
@@ -1029,7 +1170,7 @@ get_maxerr_times() {
   [ -z "${result}" ] && result=$(read_mole_config default maxerr_times)
 
   # check valid or not ==> ( 0 is invalid )
-  [ -z "${result}" -o ! -z "${result//[1-9]}" ] && result=1  # set default whatever.
+  [ -z "${result}" -o ! -z "${result//[1-9]}" ] && result=${default}  # set default whatever.
   echo "${result}"
 }
 
@@ -1133,7 +1274,7 @@ take_action_ornot() {
 
 # Convert timelong to seconds
 # Output:	seconds	| invalid
-# Example:	conv_time2sec  30sec | 30seconds | 30min | 1hour | 1day | 2week | 3month | 4year | 2day5hour54sec
+# Example:	conv_time2sec  30sec | 30seconds | 1hour | 1day | 2week | 3month | 4year | 2day5hour54sec
 #
 conv_time2sec(){
   local timelong=$1 result=
@@ -2219,8 +2360,7 @@ process_plugin() {
   [ "${debug}" == "yes" ] && export _DEBUG="1" || export _DEBUG="0"
 
   # Step 2.1: check current overloaded or not,  yes ==> process_sysoverload ==> return
-  SYSLOAD_UPLIMIT=$( read_mole_config global sysload_uplimit )
-  [ -z "${SYSLOAD_UPLIMIT}" -o ! -z "${SYSLOAD_UPLIMIT//[0-9]}" ] && SYSLOAD_UPLIMIT=30
+  local SYSLOAD_UPLIMIT=$(get_sysload_uplimit)
   local sysload=$( cut -d" " -f1 /proc/loadavg 2>&- )
   if [ "$(echo  "${sysload} > $SYSLOAD_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
 	write_log "${jid} ${plugin_name} system overloaded,"\
@@ -2236,8 +2376,7 @@ process_plugin() {
   fi
 
   # Step 2.2: check current mole kids exceed or not,  yes ==> process_kidsexceed ==> return
-  KIDSNUM_UPLIMIT=$( read_mole_config global max_kidsnum )
-  [ -z "${KIDSNUM_UPLIMIT}" -o ! -z "${KIDSNUM_UPLIMIT//[0-9]}" ] && KIDSNUM_UPLIMIT=30
+  local KIDSNUM_UPLIMIT=$(get_max_kidsnum)
   if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
  	read empid < "${PID_FILE}"
   	local kidsnum=$( get_kidsnum "${empid}" )
@@ -2325,8 +2464,7 @@ process_plugin() {
 	"return code: [${rc}]  return string: [${output}]. CONTINUE";
 
   # Step 6.1: check plugin output max length
-  PLUGIN_MAXLEN=$( read_mole_config global plugin_maxlen )
-  [ -z "${PLUGIN_MAXLEN}" -o ! -z "${PLUGIN_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=65536
+  local PLUGIN_MAXLEN=$(get_plugin_maxlen)
   local plugin_output_length="${#output}"
   if [ "$(echo  "${plugin_output_length} > $PLUGIN_MAXLEN" | bc 2>&-)" == "1" ]; then      ### truncate and plugin continue.
 	write_log "${jid} ${plugin_name} plugin output length exceed,"\
@@ -2525,8 +2663,7 @@ process_plugin() {
 		hd_rc=$?
 		write_log ${jid} ${plugin_name} "auto handler execution completed."\
 			"return code:[${hd_rc}] return string: [${hd_output}] CONTINUE";
-		HANDLER_MAXLEN=$( read_mole_config global handler_maxlen )
-		[ -z "${HANDLER_MAXLEN}" -o ! -z "${HANDLER_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=32768
+		local HANDLER_MAXLEN=$(get_handler_maxlen)
 		local handler_output_length="${#hd_output}"
   		if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
         		write_log "${jid} ${plugin_name} handler output length exceed,"\
@@ -2696,8 +2833,7 @@ process_plugin_timeout() {
 		hd_rc=$?
                 write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 			"auto handle execution completed, return code:[${hd_rc}] return string: [${hd_output}], CONTINUE"
-                HANDLER_MAXLEN=$( read_mole_config global handler_maxlen )
-                [ -z "${HANDLER_MAXLEN}" -o ! -z "${HANDLER_MAXLEN//[0-9]}" ] && PLUGIN_MAXLEN=32768
+                local HANDLER_MAXLEN=$(get_handler_maxlen)
                 local handler_output_length="${#hd_output}"
                 if [ "$(echo  "${handler_output_length} > $HANDLER_MAXLEN" | bc 2>&-)" == "1" ]; then  ### truncate it
                         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
@@ -2919,8 +3055,7 @@ process_plugin_misform() {
   update_lastrun_and_nextrun "${plugin_name}" "${jid}"
 
   # Step 2: send misforma notify-mail or not ?
-  local notify_onmisform=$(read_mole_config global notify_onmisform)
-  [ -z "${notify_onmisform}" ] && notify_onmisform="yes"
+  local notify_onmisform=$(get_notify_onmisform)
   local result_emllst=  result_smslst=  snapfile=" no ### "
   if [ "${notify_onmisform}" == "yes" ]; then
   	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
@@ -2953,8 +3088,3 @@ process_plugin_misform() {
 
 #################  Debug Area  #####################
 
-
-
-# read_mole_config check_v5_mailq notify_alert
-# read_mole_config default notify_alert
-# read_mole_config global name

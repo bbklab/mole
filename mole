@@ -68,7 +68,7 @@ fi
 
 # === SET GLOBAL LOCALE
 #
-glocale=$(read_mole_config global locale)
+glocale=$(get_global_locale)
 if [ -z "${glocale}" ]; then
 	export LANG="zh_CN.UTF-8"
 elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
@@ -107,9 +107,14 @@ cat << EOF
 	view		plugin [key]		$(gettext "print config->value, [all] for every plugin")
 	udef		plugin			$(gettext "print config->value for plugin user-defined config")
 	printdef	{VAR}			$(gettext "print the value of variable name")
+	iget		{gkey}			$(gettext "print global config-value through inner function")
+	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
 	config					$(gettext "help stuff about mole config-*")
 	config-help				$(gettext "help stuff about mole config-* (same as above)")
 	?					$(gettext "help stuff about short args")
+
+	gkey:	g_{global_config_name}
+	pkey:	p_{plugin_config_name}
 EOF
 }
 
@@ -132,12 +137,12 @@ show_example() {
 cat << EOF
 
   $(echo_green "$(gettext "Example:")")
-	mole help
-	mole version
-	mole basedir
-	mole precheck
-	mole checkconf [-v]
-	mole makedir  [-c]
+	mole  help
+	mole  version
+	mole  basedir
+	mole  precheck
+	mole  checkconf [-v]
+	mole  makedir  [-c]
 	mole  takesnap
 	mole  reload
 	mole  start | stop | status | restart | list
@@ -146,11 +151,13 @@ cat << EOF
 	mole  report   	sysload
 	mole  enable   	sysload
 	mole  disable  	sysload
-	mole  run		sysload
-	mole  view		sysload
-	mole  view		sysload enable
-	mole  udef		sysload
+	mole  run	sysload
+	mole  view	sysload
+	mole  view	sysload   enable
+	mole  udef	sysload
 	mole  printdef	CONF_DIR
+	mole  iget	g_mole_id_
+	mole  iget	sysload   p_debug
 	mole  config
 	mole  config-help
 
@@ -419,12 +426,7 @@ else
 		done
 
 		### sleep for a while.
-		INTERVAL=$( read_mole_config global scan_interval )
-		if [ -z "${INTERVAL}" -o ! -z "${INTERVAL//[0-9]}" ]; then
-			INTERVAL=5
-		else
-			[ ${INTERVAL} -lt 5 ] && INTERVAL=5
-		fi
+		INTERVAL=$( get_scan_interval )
 		sleep ${INTERVAL}
 
 	done 
@@ -752,7 +754,18 @@ case "$#" in
 		fi
 			;;
 	"printdef")
-			eval "echo "\${${2}}""
+			eval "echo "\${${arg2}}""
+			;;
+	"iget")
+			cmd=
+			for ((i=0;i<${#ARRAY_CONF_GET_MAPS[*]};i++))
+			do
+				if [ "${arg2}" == "${ARRAY_CONF_GET_MAPS[$i]}" ]; then
+					cmd="${ARRAY_CONF_GET_MAPS[${i}+1]}"
+					break
+				fi
+			done
+			eval "${cmd} 2>&-"
 			;;
 	"report"|"R")
 		if [ "$arg2" == "all" -o "$arg2" == "a" ]; then
@@ -814,6 +827,23 @@ case "$#" in
                         exit 9;
                 fi
                         ;;
+	"iget")
+                if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then        ### must be plugin
+			cmd=
+			for ((i=0;i<${#ARRAY_CONF_GET_MAPS[*]};i++))
+			do
+				if [ "${arg3}" == "${ARRAY_CONF_GET_MAPS[$i]}" ]; then
+					cmd="${ARRAY_CONF_GET_MAPS[${i}+1]}"
+					cmd="$(echo -e "${cmd}" | sed -e 's/'"${PLACE_HOLDER}"'/'"${arg2}"'/g' 2>&-)"
+					break
+				fi
+			done
+			eval "${cmd} 2>&-"
+                else
+                        echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+                        exit 9;
+                fi  
+			;;
 	"config-del")
 		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			del_mole_config "$arg2" "$arg3"

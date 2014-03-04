@@ -220,7 +220,7 @@ fi
 
 ### attach_ini_mail 
 attach_ini_mail_args=
-attach_ini_mail=$(read_mole_config global attach_ini_mail)
+attach_ini_mail=$(get_attach_ini_mail)
 if [ "${attach_ini_mail}" == "yes" ]; then
 	if [ -f "${CONF_DIR}/${plugin_name}.ini" ]; then
 		attach_ini_mail_args=" -a ${CONF_DIR}/${plugin_name}.ini"

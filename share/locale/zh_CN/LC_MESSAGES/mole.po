@@ -286,6 +286,12 @@ msgstr "查看某个插件的所有自定义配置项所设定的值"
 msgid "print the value of variable name"
 msgstr "打印出某个全局变量的值 (供其他程序调用)"
 
+msgid "print global config-value through inner function"
+msgstr "打印全局配置的值(通过内部函数)"
+
+msgid "print plugin config-value through inner function"
+msgstr "打印插件配置的值(通过内部函数)"
+
 msgid "add config and set value for plugin"
 msgstr "添加插件的一个配置参数并赋值"
 
