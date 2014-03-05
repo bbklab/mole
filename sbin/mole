@@ -156,7 +156,7 @@ cat << EOF
 	mole  view	sysload   enable
 	mole  udef	sysload
 	mole  printdef	CONF_DIR
-	mole  iget	g_mole_id_
+	mole  iget	g_mole_id
 	mole  iget	sysload   p_debug
 	mole  config
 	mole  config-help

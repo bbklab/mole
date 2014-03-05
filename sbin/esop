@@ -9,19 +9,24 @@ PATH_OPT="$PATH_ESOP/opt"
 PATH_OPT_SBIN="$PATH_OPT/sbin"
 
 PATH_MOLE="${PATH_ESOP}/mole"
+PATH_MOLE_SBIN="${PATH_MOLE}/sbin"
 PATH_MOLE_RUN="${PATH_MOLE}/tmp/run"
 
 PIDF_PHPTD="$PATH_RUN/esop_phptd.pid"
 PIDF_MOLE="$PATH_MOLE_RUN/esop_mole.pid"
 
 ARRAY_COMPONENT=(
-    "phptd" 	"esop_phptd"	"${PIDF_PHPTD}"
-    "mole"  	"esop_mole"	"${PIDF_MOLE}"
+    # proc_name(fake check)     	# display_name		# pid_file
+    "phptd" 				"phptd"			"${PIDF_PHPTD}"
+    "mole"  				"mole"			"${PIDF_MOLE}"
 )
 
 EXEC_USER="eyou"
 CMD_SUDO_EYOU="sudo -u $EXEC_USER"
 
+LINE="---------------------"
+
+PRINTF_MAXLEN="15"
 
 #
 ### Func Def
@@ -42,9 +47,19 @@ echo_red() {
   echo -e "\033[1;31m${content}\033[0m\c "
 }
 
+# Line
+#
+echo_line() {
+  if test "${1}" ; then
+  	echo -en "\n\n${1}\n${LINE}\n"
+  else
+	echo -en "${LINE}\n"
+  fi
+}
+
 ### Help
 ##
-show_help(){
+show_help() {
 cat << EOF
 
    $(echo_green "Help:")
@@ -53,6 +68,8 @@ cat << EOF
 	stop		[proc]
 	status		[proc]
 	restart		[proc]
+	mole		mole arguments
+	?		show alias
 
    $(echo_green "Example:")
 	help
@@ -60,9 +77,29 @@ cat << EOF
 	stop		[phptd|mole]
 	status		[phptd|mole]
 	restart		[phptd|mole]
+	mole
 
 EOF
 exit 0
+}
+
+show_alias() {
+cat << EOF
+
+   $(echo_green "Alias:")
+	start	=> 	a
+	stop	=> 	z, kill, k
+	status	=>	s, watch, w
+	restart	=>	r
+	mole	=> 	m
+
+   $(echo_green "Example:")
+	a		[phptd|1|mole|2]
+	z,k		[phptd|1|mole|2]
+	s,w		[phptd|1|mole|2]
+	r		[phptd|1|mole|2]
+	m
+EOF
 }
 
 # $1 contains $2 or not
@@ -70,6 +107,20 @@ exit 0
 #
 sub_str() {  
   [ "${1#*$2*}" == "$1" ] && echo no || echo yes  
+}
+
+# $1 is comp or not
+# Usage:	is_comp phptd 
+#
+is_comp() {
+  for((i=0;i<${#ARRAY_COMPONENT[*]};i+=2))
+  do
+	if [ "$1" == "${ARRAY_COMPONENT[$i]}" ]; then
+		return 0
+		break
+	fi
+  done
+  return 1
 }
 
 # get pid from pidfile
@@ -122,23 +173,54 @@ is_running(){
 }
 
 start_phptd(){
-  $CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD
-}
-
-start_mole(){
-  ${PATH_MOLE}/mole start
+  echo -en "Starting phptd ... "
+  if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+	echo -en "$(echo_yellow "SKIP")"
+  else
+  	$CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD >/dev/null 2>&1
+	wait; sleep 1
+	if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+		echo -en "$(echo_green "OK")"
+	else
+		echo -en "$(echo_red "FAIL")"
+	fi
+  fi
+  echo -en "\n"
 }
 
 stop_phptd(){
-  local pid=$(get_pid ${PIDF_PHPTD})
-  if [ ! -z "${pid}" ]; then
-  	kill ${pid}
-  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD}
+  echo -en "Stoping phptd ... "
+  if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+  	local pid=$(get_pid ${PIDF_PHPTD})
+  	[ ! -z "${pid}" ] && kill ${pid} >/dev/null 2>&1
+  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD} >/dev/null 2>&1
+	wait; sleep 1
+	if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+		echo -en "$(echo_red "FAIL")"
+	else
+		echo -en "$(echo_green "OK")"
+	fi
+  else
+	echo -en "$(echo_yellow "SKIP")"
+  fi
+  echo -en "\n"
+}
+
+
+start_mole(){
+  echo -e "Starting mole ... "
+  ${PATH_MOLE_SBIN}/mole start
+  wait; sleep 1
+  if is_running "${PIDF_MOLE}" "mole" >/dev/null 2>&1; then
+	echo -en "$(echo_green "OK")"
+  else
+	echo -en "$(echo_red "FAIL")"
   fi
 }
 
 stop_mole(){
-  ${PATH_MOLE}/mole stop
+  echo -e "Stoping mole ... "
+  ${PATH_MOLE_SBIN}/mole stop
 }
 
 
@@ -167,28 +249,33 @@ status(){
 
   single(){
   	local fpid=$1 pname=$2 disname=$3
-	local rc=  result=
+	local plen=${#pname}
+	local rc=
 	
 	[ -z "${fpid}" -o -z "${pname}" -o -z "${disname}" ] && return 4
+
+ 	local len=$(($PRINTF_MAXLEN-$plen))
 
   	is_running "${fpid}" "${pname}"
   	rc=$?
   	if [ "$rc" == "0" ]; then
-		result="$(echo_green "${disname} running")"
+		local pid=$(get_pid "${fpid}")
+		local pstree=$(pstree "${pid}")
+		printf "${disname} %-${len}s $(echo_green "running") ${pid} ${pstree}"
   	elif [ "$rc" == "1" ]; then
-		result="$(echo_red "${disname} dead")"
+		printf "${disname} %-${len}s $(echo_red "dead")"
   	elif [ "$rc" == "2" ]; then
-		result="$(echo_yellow "${disname} dead, but pidfile left")"
+		printf "${disname} %-${len}s $(echo_yellow "dead, but pidfile left")"
   	elif [ "$rc" == "3" ]; then
-		result="$(echo_yellow "${disname} fake?")"
+		printf "${disname} %-${len}s $(echo_yellow "fake?")"
   	fi
+	printf "\n"
 
-	echo -e "${result}"
 	return $rc
   }
 
   if [ "$#" == "0" ]; then
-  	local _pname= _disname=  _fpid=
+  	local _pname= _disname= _fpid=
   	for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
   	do
 		if (($i%3 == 0)); then
@@ -201,8 +288,7 @@ status(){
 		fi
   	done
   else
-  	local pname=$1
-	local fpid= disname=
+  	local pname=$1 disname= fpid=
 	for ((i=0;i<${#ARRAY_COMPONENT[*]};i++))
 	do
 		if [ "${ARRAY_COMPONENT[$i]}" == "${pname}" ]; then
@@ -220,13 +306,14 @@ status(){
 ### Main Body Begin
 
 
-# check root privileges or not ?
+# 0. check root privileges or not ?
 if [ "$(id -u)" != "0" ]; then
   echo_red "root privilege required!";echo
   exit 1
 fi
 
-# check sudo user exist or not ?
+
+# 1. check sudo user exist or not ?
 if (id "${EXEC_USER}") >/dev/null 2>&1; then
   :
 else
@@ -234,23 +321,53 @@ else
   exit 1
 fi
 
-# process args
+
+# 2. process args
+
+# 2.1   pass ${*} to mole
+if [ "${1}" == "mole" -o "${1}" == "m" ]; then
+  shift; args=$(echo -e "${@}" | sed -e 's/"/\"/g')
+  ${PATH_MOLE_SBIN}/mole ${args}
+  exit $?
+fi
+
+# 2.2   process esop args
 case "$#" in  
 "1")
         arg1=$1;
         case "$arg1" in
-        "help"|"h"|"?"|"/?")
+        "help"|"h")
                 show_help    			;;
+	"?"|"/?")
+		show_alias			;;
 	"start"|"a")
-		start				;;
-	"stop"|"dead"|"d"|"z")
-		stop				;;
+		start
+		wait
+		echo_line "Status:"
+		status
+		echo_line
+						;;
+	"stop"|"kill"|"k"|"z")
+		stop
+		wait
+		echo_line "Status:"
+		status
+		echo_line
+						;;
 	"status"|"watch"|"s"|"w")
-		status				;;
-	"restart"|"rr")
+		echo_line "Status:"
+		status				
+		echo_line			;;
+	"restart"|"r")
 		stop
 		sleep 1
-		start				;;
+		start
+		echo_line "Status:"
+		status
+		echo_line
+						;;
+	*)
+		show_help			;;
 	esac
 	;;
 "2")
@@ -259,22 +376,32 @@ case "$#" in
                 echo_yellow "need arguments"; echo
                 exit 1
         }
+	
+	[ "${arg2}" == "1" ] && arg2="phptd"
+	[ "${arg2}" == "2" ] && arg2="mole"
+
+	if ! is_comp "${arg2}" >/dev/null 2>&1; then
+		echo "$(echo_yellow "${arg2}") not component"
+		exit 1
+	fi
 
 	case "$arg1" in
 	"start"|"a")
 		start_${arg2}
 						;;
-	"stop"|"dead"|"d"|"z")
+	"stop"|"kill"|"k"|"z")
 		stop_${arg2}
 						;;
 	"status"|"watch"|"s"|"w")
 		status "${arg2}"
 						;;
-	"restart"|"rr")
+	"restart"|"r")
 		stop_${arg2}
 		sleep 1
 		start_${arg2}
 						;;
+	*)
+		show_help			;;
 	esac
 	;;
 *)
