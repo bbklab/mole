@@ -19,8 +19,10 @@ BEGIN {
   	$pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
   	# rhel6 32bit
   	$pllib_dir.'/lib/perl5/',
+  	$pllib_dir.'/share/perl5/',
   	# rhel6 64bit
   	$pllib_dir.'/lib64/perl5/',
+  	$pllib_dir.'/share/perl5/',
   );
 
   push @INC, @incs;
