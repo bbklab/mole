@@ -17,7 +17,7 @@ PIDF_MOLE="$PATH_MOLE_RUN/esop_mole.pid"
 
 ARRAY_COMPONENT=(
     # proc_name(fake check)     	# display_name		# pid_file
-    "phptd" 				"phptd"			"${PIDF_PHPTD}"
+    "phptd" 				"proxy"			"${PIDF_PHPTD}"
     "mole"  				"mole"			"${PIDF_MOLE}"
 )
 
@@ -73,10 +73,10 @@ cat << EOF
 
    $(echo_green "Example:")
 	help
-	start 		[phptd|mole]
-	stop		[phptd|mole]
-	status		[phptd|mole]
-	restart		[phptd|mole]
+	start 		[proxy|mole]
+	stop		[proxy|mole]
+	status		[proxy|mole]
+	restart		[proxy|mole]
 	mole
 
 EOF
@@ -94,10 +94,10 @@ cat << EOF
 	mole	=> 	m
 
    $(echo_green "Example:")
-	a		[phptd|1|mole|2]
-	z,k		[phptd|1|mole|2]
-	s,w		[phptd|1|mole|2]
-	r		[phptd|1|mole|2]
+	a		[proxy|1|mole|2]
+	z,k		[proxy|1|mole|2]
+	s,w		[proxy|1|mole|2]
+	r		[proxy|1|mole|2]
 	m
 EOF
 }
@@ -173,7 +173,7 @@ is_running(){
 }
 
 start_phptd(){
-  echo -en "Starting phptd ... "
+  echo -en "Starting proxy ... "
   if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
 	echo -en "$(echo_yellow "SKIP")"
   else
@@ -189,7 +189,7 @@ start_phptd(){
 }
 
 stop_phptd(){
-  echo -en "Stoping phptd ... "
+  echo -en "Stoping proxy ... "
   if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
   	local pid=$(get_pid ${PIDF_PHPTD})
   	[ ! -z "${pid}" ] && kill ${pid} >/dev/null 2>&1
@@ -355,7 +355,8 @@ case "$#" in
 		echo_line
 						;;
 	"status"|"watch"|"s"|"w")
-		echo_line "Status:"
+		echo "Status:"
+		echo_line
 		status				
 		echo_line			;;
 	"restart"|"r")
