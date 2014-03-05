@@ -65,6 +65,7 @@ fi
 ### Directories DEF
 array_directories=( 
 	${BIN_DIR} 
+	${SBIN_DIR}
 	${CONF_DIR} 
 	${HANDLER_DIR} 
 	${OPT_DIR} 
@@ -81,9 +82,10 @@ array_directories=(
 ### SHs DEF
 array_shs=(
 	${INCLUDE_FILE}
+	${MOLE_FILE}
 	${PLUTIL}
 	${PRECHECK_SH}
-	# ${UPDATE_SH}
+	#${UPDATE_SH}
 	${REPORT_SH}
 	${CHECKCONF_SH}
 	${POSTLOG_SH}

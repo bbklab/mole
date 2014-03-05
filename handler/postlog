@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 our $basedir = '/usr/local/esop/agent/mole';
-our $mole = "$basedir/mole";
+our $mole = "$basedir/sbin/mole";
 
 BEGIN {
   my $basedir = '/usr/local/esop/agent/mole';
@@ -314,9 +314,12 @@ sub log {
   my $time = time;
   my ($sec,$min,$hour,$day,$mon,$year) = localtime(time);
   my $localtime = sprintf("%d-%d-%d_%d:%d:%d",$year+1900,$mon+1,$day,$hour,$min,$sec);
-  open FH, ">>", $postlog || return;
-  print FH "$time $localtime $message\n";
-  close FH;
+  if(open my $fhlog, ">>", $postlog) {
+  	print $fhlog "$time $localtime $message\n";
+  	close $fhlog if $fhlog;
+  }else {
+	return;
+  }
 }
 
 sub parted_output {

@@ -29,6 +29,7 @@ MOLE_VERSION="1.0-beta1"
 
 # DIR DEF
 BIN_DIR="${BASE_DIR}/bin"
+SBIN_DIR="${BASE_DIR}/sbin"
 CONF_DIR="${BASE_DIR}/conf"
 HANDLER_DIR="${BASE_DIR}/handler"
 OPT_DIR="${BASE_DIR}/opt"
@@ -73,6 +74,9 @@ CONFIG_FILE="${CONF_DIR}/.mole.ini"
 
 # INC DEF
 INCLUDE_FILE="${BIN_DIR}/include"
+
+# MOLE DEF
+MOLE_FILE="${SBIN_DIR}/mole"
 
 # PID DEF
 PID_FILE="${RUN_DIR}/esop_mole.pid"
