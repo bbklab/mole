@@ -592,11 +592,11 @@ sub genjson_plugin() {
   }
 
   unless(@array_plugins) {
-	&log("DEBUG: $logfrom plugin list is empty") if $debug;
+	&log("INFO: $logfrom plugin list is empty") if $debug;
   	$result{'data'} = \@raw_data;
   	return %result;
   } else {
-  	&log("DEBUG: $logfrom plugin array=[@array_plugins]") if $debug;
+  	&log("INFO: $logfrom plugin array=[@array_plugins]") if $debug;
   }
 
   foreach my $plugin (@array_plugins) {
