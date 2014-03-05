@@ -91,6 +91,8 @@ if($fh){
 	last;
   }
 }
+$hid =~ s/\D+//;
+$hid = '0000000000' if (!$hid || $hid eq '');
 
 our $hname = '0000000000__mole__ops.eyou.net';
 open $fh, "$mole view global name 2>&- | ";
@@ -101,7 +103,9 @@ if($fh){
   }
 }
 close $fh if ($fh);
-
+unless ($hname =~ m/__.+__/) {
+  $hname = '0000000000__mole__ops.eyou.net';
+}
 
 
 
@@ -215,8 +219,16 @@ if ($type eq 'post') {
 } 
 
 $json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
-&log("INFO: $logfrom json result: [$json_result]") if ($debug && $json_result);
-&log("INFO: $logfrom json result length: [".length($json_result)."]") if ($debug && $json_result);
+
+our $post_length = 0;
+if ($json_result) {
+  $post_length = length($json_result);
+  &log("INFO: $logfrom json result: [$json_result]") if $debug;
+  &log("INFO: $logfrom json length: [$post_length]") if $debug;
+} else {
+  &log("CRIT: $logfrom json result empty, exit") if $debug;
+  exit 1;
+}
 ### %json_data
 ### $json_result
 
@@ -227,6 +239,7 @@ our %post_server = (
   'post_server_port'	=> '',
   'post_port_type'	=> '',
   'post_timeout'	=> '',
+  'post_max_length'	=> 50000,
 );
 foreach my $key (keys %post_server) {
   open my $fh, "$mole view postlog $key 2>&- |";
@@ -236,6 +249,11 @@ foreach my $key (keys %post_server) {
 		last;
 	}
   }
+}
+
+unless ($post_length <= $post_server{'post_max_length'}) {
+  &log("CRIT: $logfrom json length exceed, only $post_server{'post_max_length'} allowed, exit") if $debug;
+  exit 1;
 }
 
 unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
