@@ -52,14 +52,14 @@ cat << EOF
 	start		[proc]
 	stop		[proc]
 	status		[proc]
-	restart
+	restart		[proc]
 
    $(echo_green "Example:")
 	help
 	start 		[phptd|mole]
 	stop		[phptd|mole]
 	status		[phptd|mole]
-	restart
+	restart		[phptd|mole]
 
 EOF
 exit 0
@@ -83,13 +83,13 @@ get_pid(){
   if [ -f "${fpid}" -a -r "${fpid}" ]; then
 	pid=$(awk '{print $1;exit;}' "${fpid}" 2>&-)
 	[ -z "${pid}" -o ! -z "${pid//[0-9]}" ] && {
-		return 2	# pidfile exists but pid invalid
+		return 2	## pidfile exists but pid invalid
 	} 
   else
-	return 1		# pidfile not exist
+	return 1		## pidfile not exist
   fi
 
-  echo "${pid}"			# pidfile exists and pid normal
+  echo "${pid}"			## pidfile exists and pid normal
   return 0
 }
 
@@ -115,7 +115,7 @@ is_running(){
 		return	2		# dead with pidfile left
   	fi
   elif [ "$rc" == "1" ]; then
-	return 1			# dead
+	return 1			# dead (pidfile not exist)
   elif [ "$rc" == "2" ]; then
 	return 2			# dead with pidfile left
   fi
@@ -216,9 +216,9 @@ status(){
 }
 
 
-#
+
 ### Main Body Begin
-#
+
 
 # check root privileges or not ?
 if [ "$(id -u)" != "0" ]; then
@@ -234,19 +234,20 @@ else
   exit 1
 fi
 
+# process args
 case "$#" in  
 "1")
         arg1=$1;
         case "$arg1" in
-        "help"|"h")
+        "help"|"h"|"?"|"/?")
                 show_help    			;;
-	"start")
+	"start"|"a")
 		start				;;
-	"stop")
+	"stop"|"dead"|"d"|"z")
 		stop				;;
-	"status"|"s")
+	"status"|"watch"|"s"|"w")
 		status				;;
-	"restart")
+	"restart"|"rr")
 		stop
 		sleep 1
 		start				;;
@@ -260,14 +261,19 @@ case "$#" in
         }
 
 	case "$arg1" in
-	"start")
+	"start"|"a")
 		start_${arg2}
 						;;
-	"stop")
+	"stop"|"dead"|"d"|"z")
 		stop_${arg2}
 						;;
-	"status"|"s")
+	"status"|"watch"|"s"|"w")
 		status "${arg2}"
+						;;
+	"restart"|"rr")
+		stop_${arg2}
+		sleep 1
+		start_${arg2}
 						;;
 	esac
 	;;
