@@ -38,7 +38,7 @@ source0=$(awk -F: '($1~/Source0/){print $2}' "${basedir}"/mole.spec 2>&-|tr -d '
 source1=$(awk -F: '($1~/Source1/){print $2}' "${basedir}"/mole.spec 2>&-|tr -d ' \t')
 
 mkdir -p "${path}"/SOURCES/${name}-${version}
-cp -a "${basedir}"/{bin,conf,docs,mole,handler,log,opt,plugin,share,tmp} "${path}"/SOURCES/${name}-${version}/
+cp -a "${basedir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,share,tmp} "${path}"/SOURCES/${name}-${version}/
 cd "${path}"/SOURCES/
 tar -czf "${source0}" ${name}-${version}
 rm -rf "${path}"/SOURCES/${name}-${version}
