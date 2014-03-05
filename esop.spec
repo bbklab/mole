@@ -62,9 +62,7 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 #%config(noreplace)
 %config
 /usr/local/%{name}/agent/etc/etm_agent.ini
-/usr/local/%{name}/agent/etc/etm_monitor.xml
 /usr/local/%{name}/agent/etc/etm_phptd.ini
-/usr/local/%{name}/agent/etc/ganglia/gmond.conf
 /usr/local/%{name}/agent/mole/conf/.mole.ini
 
 %doc
