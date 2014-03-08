@@ -3,8 +3,7 @@
 scp_client="/usr/bin/scp"
 
 build_server=(
-  #comment	#address		#port
-  "rhel6"	"124.202.153.134"	"3712"
-  "rhel5"	"172.16.100.110"	"22"
+  #comment	#address		#port	#user
+  "rhel6_64"	"124.202.153.133"	"1237"	"zgz"
 )
 
