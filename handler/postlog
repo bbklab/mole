@@ -297,7 +297,7 @@ unless (defined $sock) {
   exit 2;
 } else {
   &log("INFO: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] succeed!");
-  print $sock "$json_result\n\r";
+  print $sock "$json_result\r\n";
   my $sock_response = <$sock>;
   unless ($sock_response) {
 	$sock_response = '';
