@@ -1,9 +1,42 @@
 #!/bin/bash
 
+basedir="$(cd $(dirname $0);pwd)"
+autorpm="${basedir}/rpm_build/autorpm"
+args="tarball"
 scp_client="/usr/bin/scp"
-
 build_server=(
-  #comment	#address		#port	#user
-  "rhel6_64"	"124.202.153.133"	"1237"	"zgz"
+  #comment	#address		#port	#user	#path
+  "rhel5_64"	"172.16.103.210"	"22"	"zgz"	"/databuild/esop_codes/"
 )
 
+
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*}"
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*}"; exit 1
+  fi
+}
+
+filename=$( eval "${autorpm} ${args}" )
+check_rc "make rpm"
+
+ls "${filename}" >/dev/null 2>&1
+check_rc "check path: ${filename}"
+
+for((i=0;i<${#build_server[*]};i++))
+do
+	if (( $i%5 == 0 )); then
+		server=${build_server[$i]}
+	elif (( $i%5 == 1 )); then
+		ssh_host=${build_server[$i]}
+	elif (( $i%5 == 2 )); then
+		ssh_port=${build_server[$i]}
+	elif (( $i%5 == 3 )); then
+		ssh_user=${build_server[$i]}
+	elif (( $i%5 == 4 )); then
+		ssh_path=${build_server[$i]}
+		$scp_client -P ${ssh_port} ${filename} ${ssh_user}@${ssh_host}:${ssh_path}/${filename##*/}
+		check_rc "scp on: ${filename}"
+	fi
+done
