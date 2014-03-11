@@ -127,7 +127,7 @@ $logfrom = 'AGENT.CHECK';
 
 # check arg [type] first
 unless (defined $type && $type ne '') {
-  &log("ERROR: $logfrom type required. EXIT");
+  &log("CRIT: $logfrom type required. exit");
   print "type required.\n";
   &help;
   exit 1;
@@ -136,7 +136,7 @@ if ($type ne 'post'
 	&& $type ne 'plugin'
 	&& $type ne 'config'
         && $type ne 'heartbeat') {
-  &log("ERROR: $logfrom type $type invalid. EXIT");
+  &log("CRIT: $logfrom type $type invalid. exit");
   print "type $type invalid.\n";
   &help;
   exit 1;
@@ -144,7 +144,7 @@ if ($type ne 'post'
 # reset [logfrom] [houtput]
 if ($type eq 'post') {
   unless (defined $plugin && defined $jobid && defined $output){
-        &log("ERROR: $logfrom plugin or jobid or plugin_output required on type=post. EXIT");
+        &log("CRIT: $logfrom plugin or jobid or plugin_output required on type=post. exit");
         print "plugin or jobid or plugin_output required on type=post\n";
         &help;
         exit 1;
@@ -166,8 +166,6 @@ if ($type eq 'post') {
   $logfrom = 'AGENT.HEARTBEAT';
 }
 
-&log("");
-&log("");
 &log("INFO: $logfrom script postlog start ...");
 
 if(!defined $debug || $debug eq ''){
@@ -227,9 +225,9 @@ our $post_length = 0;
 if ($json_result) {
   $post_length = length($json_result);
   &log("INFO: $logfrom json result: [$json_result]") if $debug;
-  &log("INFO: $logfrom json length: [$post_length]") if $debug;
+  &log("INFO: $logfrom json length: [$post_length]");
 } else {
-  &log("CRIT: $logfrom json result empty, exit") if $debug;
+  &log("CRIT: $logfrom json result empty, exit");
   exit 1;
 }
 ### %json_data
@@ -255,12 +253,12 @@ foreach my $key (keys %post_server) {
 }
 
 unless ($post_length <= $post_server{'post_max_length'}) {
-  &log("CRIT: $logfrom json length exceed, only $post_server{'post_max_length'} allowed, exit") if $debug;
+  &log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
   exit 1;
 }
 
 unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
-  &log("ERROR: $logfrom configurations not complete: post_server not defined. EXIT");
+  &log("CRIT: $logfrom post server address not defined. exit");
   exit 1;
 }
 
@@ -294,10 +292,10 @@ unless (defined $sock) {
   if ($@) {
 	( $response = $@ ) =~ s/[\r\n]//g;
   }
-  &log("ERROR: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] error, response: [$response] EXIT");
+  &log("CRIT: $logfrom connect $post_server{'post_server'}, $post_server{'post_port_type'}:$post_server{'post_server_port'} error, response: [$response] exit");
   exit 2;
 } else {
-  &log("INFO: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] succeed!");
+  &log("INFO: $logfrom connect $post_server{'post_server'}, $post_server{'post_port_type'}:$post_server{'post_server_port'} succeed!");
 
   my $sock_response = 0;
   if (print $sock "$json_result\r\n") {
@@ -312,9 +310,11 @@ unless (defined $sock) {
   	&log("INFO: $logfrom post action got response: [$sock_response]");
   	&log("INFO: $logfrom post action maybe denied.") if ($sock_response eq '');
   } else {
-	&log("ERROR: $logfrom post action failed.");
+	&log("CRIT: $logfrom post action failed.");
   }
   &log("INFO: $logfrom script postlog finished.");
+  &log("");
+  &log("");
 
   if ($sock_response =~ /\A\d+\Z/) {
   	exit $sock_response;
@@ -484,12 +484,12 @@ sub genjson_post {
 	if ($ret eq 'str' || $ret eq 'file') {
   		$raw_data{'ret'} = $ret;
 	} else {
-		&log("ERROR: $logfrom data.level must be str or file. RETURN") if $debug;
+		&log("CRIT: $logfrom data.level must be str or file. RETURN") if $debug;
 		$result{'data'} = \%raw_data;
 		return %result;
 	}
   } else {
-	&log("ERROR: $logfrom data.level not defined. RETURN") if $debug;
+	&log("CRIT: $logfrom data.level not defined. RETURN") if $debug;
 	$result{'data'} = \%raw_data;
 	return %result;
   }
