@@ -1,6 +1,9 @@
 #!/bin/bash
 
 basedir="$(cd $(dirname $0);pwd)"
+specfile="${basedir}/esop.spec"
+initfile="${basedir}/esop.init"
+destdir="/data/esop_codes/"
 autorpm="${basedir}/rpm_build/autorpm"
 args="tarball"
 scp_client="/usr/bin/scp"
@@ -23,6 +26,18 @@ check_rc "make rpm"
 
 ls "${filename}" >/dev/null 2>&1
 check_rc "check path: ${filename}"
+
+
+/bin/cp -f "${filename}" "${destdir}/"
+check_rc "copy to ${destdir}/${filename##*/}"
+
+/bin/cp -f "${specfile}" "${destdir}/"
+check_rc "copy to ${destdir}/${specfile##*/}"
+
+/bin/cp -f "${initfile}" "${destdir}/"
+check_rc "copy to ${destdir}/${initfile##*/}"
+exit;
+
 
 for((i=0;i<${#build_server[*]};i++))
 do
