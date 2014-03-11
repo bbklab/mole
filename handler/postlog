@@ -221,6 +221,7 @@ if ($type eq 'post') {
 } 
 
 $json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
+$json_result =~ s/[\r\n]//g;
 
 our $post_length = 0;
 if ($json_result) {
@@ -297,16 +298,24 @@ unless (defined $sock) {
   exit 2;
 } else {
   &log("INFO: $logfrom connect post server [$post_server{'post_server'}] on port [$post_server{'post_port_type'}:$post_server{'post_server_port'}] succeed!");
-  print $sock "$json_result\r\n";
-  my $sock_response = <$sock>;
-  unless ($sock_response) {
-	$sock_response = '';
+
+  my $sock_response = 0;
+  if (print $sock "$json_result\r\n") {
+	&log("INFO: $logfrom post action succeed.");
+  	$sock_response = <$sock>;
+  	unless ($sock_response) {
+		$sock_response = '';
+  	} else {
+		chomp $sock_response;
+		$sock_response =~ s/[\r\n ]//g;
+  	}
+  	&log("INFO: $logfrom post action got response: [$sock_response]");
+  	&log("INFO: $logfrom post action maybe denied.") if ($sock_response eq '');
   } else {
-	chomp $sock_response;
-	$sock_response =~ s/[\r\n ]//g;
+	&log("ERROR: $logfrom post action failed.");
   }
-  &log("INFO: $logfrom post json data to post server response: [$sock_response]");
   &log("INFO: $logfrom script postlog finished.");
+
   if ($sock_response =~ /\A\d+\Z/) {
   	exit $sock_response;
   } else {
