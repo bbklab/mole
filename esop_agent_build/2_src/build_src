@@ -1,0 +1,188 @@
+#!/bin/bash
+#
+# Create directory {app,etc,implements,log,mole,run} under /usr/local/esop/agent/
+#
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### Global Vars Def
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOG_DIR="${BASE_DIR}/logs"
+LOGFILE="${BASE_DIR}/logs/${0##*/}.log"
+
+PATH_TARBALL="${BASE_DIR}/opt/balls"
+PATH_TARBALL_PLOPT="${PATH_TARBALL}/plopt"
+PATH_EXTRACT="${BASE_DIR}/opt/extract"
+
+PATH_ESOP="/usr/local/esop/agent"
+PATH_MOLE="${PATH_ESOP}/mole"
+PATH_INSTALL="${PATH_MOLE}/opt/plmods"
+
+
+# Command Def
+CMD_UNTAR="tar -xf"
+CMD_UNTAR_BZ2="tar -jxf"
+CMD_UNTAR_GZ="tar -zxf"
+CMD_MAKE="make"
+
+
+# Perl Modules Def
+PL_MODS=(
+  	"JSON-2.90.tar.gz" 			"JSON-2.90"
+  	"libintl-perl-1.23.tar.gz"  		"libintl-perl-1.23"
+  	"Time-HiRes-1.9726.tar.gz"		"Time-HiRes-1.9726"
+)
+
+# MOLE Def	< our dev codes >
+MOLE=(
+	"mole-1.0-beta1.tgz"			"mole-1.0"
+	"mole-plugin-0.1-beta1.tgz"		"mole-plugin-0.1"
+	"proxy-1.0-beta1.tgz"			"proxy-1.0-beta1"
+)
+
+# Func Def
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+build_plmod(){
+  local filename="${1}"  dirname="${2}"
+
+  ls $PATH_TARBALL_PLOPT/$filename
+  check_rc "check path $filename"
+  
+  $CMD_UNTAR_GZ $PATH_TARBALL_PLOPT/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+	perl Makefile.PL PREFIX=$PATH_INSTALL \
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "install $filename"
+}
+
+build_mole(){
+  local filename="${1}"  dirname="${2}"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+
+  if (echo "${filename}" | grep -E "mole-plugin") >/dev/null 2>&1; then
+	cd $PATH_EXTRACT/$dirname
+	for p in `ls`
+	do
+		cp -a ${p}/${p}          $PATH_MOLE/plugin/
+  		check_rc "install ${p}"
+
+		cp -a ${p}/conf/${p}.ini $PATH_MOLE/conf
+  		check_rc "install ${p}.ini"
+
+		cp -a ${p}/handler/      $PATH_MOLE/
+  		check_rc "install ${p} handler"
+
+		cp -a ${p}/opt/          $PATH_MOLE/
+  		check_rc "install ${p} opt"
+
+		cp -a ${p}/share/        $PATH_MOLE/
+  		check_rc "install ${p} share"
+
+  		[ -f "${p}/docs/cn/readme" ] && {
+			cp -a ${p}/docs/cn/readme  $PATH_MOLE/docs/cn/${p}.readme
+  			check_rc "install ${p} cn readme"
+		}
+
+  		[ -f "${p}/docs/en/readme" ] && {
+			cp -a ${p}/docs/en/readme  $PATH_MOLE/docs/en/${p}.readme
+  			check_rc "install ${p} en readme"
+		}
+	done
+  else
+  	cp -a $PATH_EXTRACT/$dirname/* $PATH_MOLE
+  	check_rc "install $filename"
+  fi
+}
+
+build_proxy(){
+  local filename="${1}"  dirname="${2}"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+
+  cp -a $PATH_EXTRACT/$dirname/* $PATH_ESOP
+  check_rc "install $filename"
+
+  cd $PATH_ESOP/app/sbin/
+  check_rc "change into $PATH_ESOP/app/sbin/"
+
+  ln -sv ../../mole/sbin/esop .
+  check_rc "create link for esop ctl script"
+}
+
+### Main Body Begin ...
+
+
+
+[ "$1" == "clean" ] && {
+   rm -rf "${PATH_EXTRACT}"
+   exit 0
+}
+
+echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
+
+if [ -d "${PATH_MOLE}" ]; then
+  rm -rf "${PATH_MOLE}"
+  check_rc "remove ${PATH_MOLE}"
+fi
+
+for d in app etc implements log mole run
+do
+  if [ -d "${PATH_ESOP}/${d}" ]; then
+   	rm -rf "${PATH_ESOP}/${d}"
+  	check_rc "remove ${PATH_ESOP}/${d}"
+  fi
+done
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
+mkdir -p "${LOG_DIR}" "${PATH_TARBALL_PLOPT}" "${PATH_EXTRACT}"
+
+
+i=0 file= dir=
+for pm in ${PL_MODS[*]} ${MOLE[*]}
+do
+	((i++))
+	if [ $(($i%2)) == 1 ]; then
+		file=${pm}
+	else
+		dir=${pm}
+		if (echo -e "${file}" | grep -E "^mole-") >/dev/null 2>&1; then
+			build_mole ${file} ${dir}
+		elif (echo -e "${file}" | grep -E "^proxy-") >/dev/null 2>&1; then
+			build_proxy ${file} ${dir}
+		else
+			build_plmod ${file} ${dir}
+		fi
+	fi
+
+done
+
+echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE

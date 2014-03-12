@@ -1,0 +1,58 @@
+#!/bin/bash
+
+path=$(cd $(dirname $0) && pwd)
+basedir=${path%/*}
+specfile="${path}/esop.spec"
+
+
+clean(){
+  rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+  mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+}
+clean
+[ "$1" == "clean" ] && exit 0
+
+[ -f "/usr/bin/rpmbuild" -a -x "/usr/bin/rpmbuild" ] || {
+        echo "/usr/bin/rpmbuild not prepared"
+        exit 1
+}
+
+if [ -f "${specfile}" -a -s "${specfile}" ]; then
+  name="$(awk '($1~/^Name:/){print $2}' ${specfile} 2>&-)"
+  version="$(awk '($1~/^Version:/){print $2}' ${specfile} 2>&-)"
+  release="$(awk '($1~/^Release:/){print $2}' ${specfile} 2>&-)"
+  tgzname="${name}-${version}-${release}.tgz"
+else
+  echo "${specfile} not prepared."
+  exit 1
+fi
+
+esop_dir="/usr/local/esop"
+if [ -d "${esop_dir}" ]; then
+	cp -a "${esop_dir}" "${path}/SOURCES/${name}-${version}"
+	cd "${path}/SOURCES/"
+	tar -czf "${path}/SOURCES/$tgzname" "${name}-${version}"
+	rm -rf "${path}/SOURCES/${name}-${version}"
+else
+	echo "${esop_dir} not prepared, mkrpm exit."
+	exit  1
+fi
+
+cat > ~/.rpmmacros <<EOF
+%_topdir ${path}/
+%debug_package %{nil}
+EOF
+
+cp "${path}/${name}.spec" "${path}"/SPECS/
+if [ ! -f "${path}/SPECS/${name}.spec" ]; then
+	echo "${name}.spec file not ready. exit"
+	exit 1
+fi
+cp "${path}/${name}.init" "${path}"/SOURCES/
+if [ ! -f "${path}/SOURCES/${name}.init" ]; then
+	echo "${name}.init file not ready. exit"
+	exit 1
+fi
+
+/usr/bin/rpmbuild -bb "${path}"/SPECS/${name}.spec >/dev/null 2>&1
+find "${path}"/RPMS/ -type f -iname "*.rpm" -print

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+basedir="$(cd $(dirname $0); pwd)"
+
+sh1="$basedir/1_opt/build_opt"
+sh2="$basedir/2_src/build_src"
+sh3="$basedir/3_rpm/auto"
+
+clean(){
+	${sh1} clean; ${sh2} clean; ${sh3} clean
+	[ -d "/usr/local/esop/" ] && rm -rf "/usr/local/esop/"
+}
+
+if [ "$(id -u)" != "0" ]; then
+  echo "root privilege required!"
+  exit 1
+fi
+
+if [ -f $sh1 -a -x $sh1 -a -f $sh2 -a -x $sh2 -a -f $sh3 -a -x $sh3 ]; then
+	clean
+	[ "$1" == "clean" ] && exit 0
+
+	${sh1} && ${sh2} && ${sh3}
+else
+	echo $sh1,$sh2,$sh3 not prepared.
+	exit 1
+fi

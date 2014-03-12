@@ -1,0 +1,386 @@
+#!/bin/bash
+#
+# Create directory {opt} under /usr/local/esop/agent/
+#
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### Global Vars Def
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOG_DIR="${BASE_DIR}/logs"
+LOGFILE="${BASE_DIR}/logs/${0##*/}.log"
+
+PATH_TARBALL="${BASE_DIR}/opt/balls"
+PATH_TARBALL_PECL="${PATH_TARBALL}/pecl"
+PATH_EXTRACT="${BASE_DIR}/opt/extract"
+PATH_EXTRACT_PECL="${PATH_EXTRACT}/pecl"
+
+PATH_ESOP="/usr/local/esop/agent"
+PATH_ESOP_ETC="${PATH_ESOP}/etc"
+
+PATH_INSTALL="${PATH_ESOP}/opt"
+PATH_BIN="$PATH_INSTALL/bin"
+PATH_SBIN="$PATH_INSTALL/sbin"
+PATH_LIB="$PATH_INSTALL/lib"
+PATH_LIB64="$PATH_INSTALL/lib64"
+PATH_INCLUDE="$PATH_INSTALL/include"
+PATH_ETC="$PATH_INSTALL/etc"
+PATH_LOGS="$PATH_INSTALL/logs"
+PATH_SHARE="$PATH_INSTALL/share"
+PATH_TMP="$PATH_INSTALL/tmp"
+
+PATH_PHP="$PATH_INSTALL/php"
+PATH_PHP_BIN="$PATH_PHP/bin"
+PATH_PHP_LIB="$PATH_PHP/lib"
+PATH_PHP_LIBPHP="$PATH_PHP_LIB/php"
+PATH_PHP_INCLUDE="$PATH_PHP/include/php"
+
+
+# Command Def
+
+CMD_UNTAR="tar -xf"
+CMD_UNTAR_BZ2="tar -jxf"
+CMD_UNTAR_GZ="tar -zxf"
+CMD_MAKE="make"
+CMD_MAKE_J="make -j 2"
+
+
+if [ -z "$1" ]; then
+  OS_BIT=$(getconf LONG_BIT 2>&-)
+elif [ "$1" == "32" -o "$1" == "64" ]; then
+  OS_BIT="$1"
+else
+  OS_BIT=$(getconf LONG_BIT 2>&-)
+  [ -z "${OS_BIT}" -o ! -z "${OS_BIT//[0-9]}" ] && OS_BIT="32"
+fi
+
+
+
+# Global Func Def
+
+# - check_rc
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+
+# Build Func Def
+
+
+# -- build_libiconv
+build_libiconv() {      # by:  php54
+  local filename="libiconv-1.14.tar.gz"  dirname="libiconv-1.14"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+        CFLAGS='-I$PATH_INCLUDE' \
+        CPPFLAGS='-I$PATH_INCLUDE' \
+        LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+        ./configure \
+        --prefix=$PATH_INSTALL \
+	--enable-shared \
+  "
+
+  if [ "$OS_BIT" == "64" ]; then
+        CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
+  fi
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+# -- build_curl
+build_curl() {		# by php54
+  local filename="curl-7.19.5.tar.gz"  dirname="curl-7.19.5"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+        CFLAGS='-I$PATH_INCLUDE' \
+        CPPFLAGS='-I$PATH_INCLUDE' \
+        LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+        ./configure \
+        --prefix=$PATH_INSTALL \
+        --disable-ldap \
+        --disable-ldaps \
+  "
+
+  if [ "$OS_BIT" == "64" ]; then
+        CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
+  fi
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+# -- build_libevent
+build_libevent() {	# by pecl_event
+  # local filename="libevent-2.0.12-stable.tar.gz"  dirname="libevent-2.0.12-stable"
+  # local filename="libevent-2.0.21-stable.tar.gz"  dirname="libevent-2.0.21-stable"
+  local filename="libevent-2.0.21-stable-eyoumod.tgz"  dirname="libevent-2.0.21-stable-eyoumod"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+        CFLAGS='-I$PATH_INCLUDE' \
+        CPPFLAGS='-I$PATH_INCLUDE' \
+        LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+        ./configure \
+        --prefix=$PATH_INSTALL
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+# -- build_php54
+build_php54() {
+  local filename="php-5.4.20.tar.gz"  dirname="php-5.4.20"
+
+  rm -rf $PATH_INSTALL/php/
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  # 1. first build pecl exts
+  # local php_build_path="$PATH_EXTRACT/$dirname"
+  # build_pecl_embase "${php_build_path}"
+
+  # 2. build php
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --prefix=$PATH_PHP \
+    --with-config-file-path=$PATH_ESOP_ETC/php \
+    --with-openssl \
+    --with-zlib \
+    --with-zlib-dir \
+    --without-iconv \
+    --with-freetype-dir \
+    --with-gettext \
+    --enable-mbstring \
+    --with-curl=$PATH_INSTALL \
+    --with-iconv=$PATH_INSTALL \
+    --with-iconv-dir=$PATH_INSTALL \
+    --with-kerberos \
+    --with-gmp \
+    --enable-zip \
+    --enable-pcntl \
+    --enable-shmop \
+    --enable-bcmath \
+    --enable-soap \
+  "
+    # --enable-embase \			-- build as so
+    # --enable-dio  \			-- build as so
+  # "
+
+  # May Lead to:  configure error: Please reinstall the iconv library.
+  # if [ "$OS_BIT" == "64" ]; then
+        # CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
+  # fi
+
+  echo $CMD_CONFIG
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+
+  # create etc/php
+  mkdir -p $PATH_ESOP_ETC/php
+  cp php.ini-development $PATH_ESOP_ETC/php/php.ini
+  check_rc "cp php.ini for $filename"
+
+  # link php
+  rm -f $PATH_BIN/php
+  ln -s $PATH_PHP_BIN/php $PATH_BIN/php
+  check_rc "create php link for $filename"
+}
+
+# - build_pecl_event
+build_pecl_event() {
+  local filename="pecl/event-1.9.0.tgz"  dirname="event-1.9.0"
+  local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  $PATH_PHP_BIN/phpize
+  check_rc "phpize for $filename"
+
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --with-php-config=$PATH_PHP_BIN/php-config \
+    --disable-event-sockets \
+    --with-event-core \
+    --with-event-extra \
+    --with-event-openssl \
+    --with-event-libevent-dir=$PATH_INSTALL \
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+# - build_pecl_embase
+build_pecl_embase() {
+  local filename="pecl/embase.tgz"  dirname="embase"
+  local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  $PATH_PHP_BIN/phpize
+  check_rc "phpize for $filename"
+
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --with-php-config=$PATH_PHP_BIN/php-config \
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+# - build_pecl_dio
+build_pecl_dio() {
+  local filename="pecl/dio-0.0.7.tgz"  dirname="dio-0.0.7"
+  local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  $PATH_PHP_BIN/phpize
+  check_rc "phpize for $filename"
+
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --with-php-config=$PATH_PHP_BIN/php-config \
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
+
+### Main Body Begin ...
+
+if [ "$1" == "clean" ]; then
+   [ -d "${PATH_EXTRACT}" ] && rm -rf "${PATH_EXTRACT}"
+   exit 0
+fi
+
+
+
+echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
+echo -e " -- $(date +%F_%T)  set OSBIT=${OS_BIT} " | tee -a $LOGFILE
+
+if [ -d "${PATH_INSTALL}" ]; then
+  rm -rf "${PATH_INSTALL}"
+  check_rc "remove ${PATH_INSTALL}"
+fi
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
+mkdir -p "${PATH_TARBALL_PECL}" "${PATH_EXTRACT_PECL}" "${LOG_DIR}"
+
+
+build_libiconv
+build_curl
+build_libevent
+
+build_php54
+build_pecl_event
+build_pecl_embase
+build_pecl_dio
+cat << EOF >> $PATH_ESOP_ETC/php/php.ini
+extension=event.so
+extension=embase.so
+extension=dio.so
+EOF
+
+[ -d $PATH_ESOP_ETC ] && rm -rf $PATH_ESOP_ETC
+
+echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
