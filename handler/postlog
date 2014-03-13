@@ -151,7 +151,7 @@ if ($type eq 'post') {
   } else {
 	# reset logfrom
         $logfrom = $plugin.'.'.$jobid;
-        &log("INFO: $logfrom type is post, set logfrom=[$logfrom]");
+        &log("INFO: $logfrom type is [post]");
   }
   if (!defined $houtput || $houtput eq ''){ 
 	# reset houtput
@@ -301,6 +301,7 @@ unless (defined $sock) {
   if (print $sock "$json_result\r\n") {
 	&log("INFO: $logfrom post action succeed.");
   	$sock_response = <$sock>;
+	$sock->close() if $sock;
   	unless ($sock_response) {
 		$sock_response = '';
   	} else {
