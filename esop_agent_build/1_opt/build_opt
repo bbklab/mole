@@ -142,8 +142,8 @@ build_curl() {		# by php54
 # -- build_libevent
 build_libevent() {	# by pecl_event
   # local filename="libevent-2.0.12-stable.tar.gz"  dirname="libevent-2.0.12-stable"
-  # local filename="libevent-2.0.21-stable.tar.gz"  dirname="libevent-2.0.21-stable"
-  local filename="libevent-2.0.21-stable-eyoumod.tgz"  dirname="libevent-2.0.21-stable-eyoumod"
+  local filename="libevent-2.0.21-stable.tar.gz"  dirname="libevent-2.0.21-stable"
+  # local filename="libevent-2.0.21-stable-eyoumod.tgz"  dirname="libevent-2.0.21-stable-eyoumod"
 
   ls $PATH_TARBALL/$filename
   check_rc "check path $filename"
