@@ -15,7 +15,8 @@
         BASE_DIR=${path%/*}
 }
 
-BASE_DIR="/usr/local/esop/agent/mole"
+# for debug
+# BASE_DIR="/usr/local/esop/agent/mole"
 
 
 
