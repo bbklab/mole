@@ -524,7 +524,7 @@ read_mole_config(){
 			awk -F "=" '\
 				($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
 				( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
-				( k==1 && x==1 && $1~/^"'${key}'"\>/ ){$1="";print;exit}' 2>&- |\
+				( k==1 && x==1 && $1~/^'${key}'\>/ ){$1="";print;exit}' 2>&- |\
 			 sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
 		if [ -n "${value}" ]; then
 			echo "${value}" && return 0 
