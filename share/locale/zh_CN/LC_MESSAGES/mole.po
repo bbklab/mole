@@ -523,6 +523,9 @@ msgstr "用户自定义自动处理程序被禁止, 什么都没做"
 msgid "Notify_Type:"
 msgstr "通知类型:"
 
+msgid "Event_ID:"
+msgstr "事件编号:"
+
 msgid "Title:"
 msgstr "标题:"
 

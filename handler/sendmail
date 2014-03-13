@@ -71,11 +71,11 @@ show_usage(){
 # def conv_output2mailbody
 # Convert plugin output to html mailbody
 # Output:       path of html mailbody
-# Usage:        conv_output2mailbody  "${content}" "{hd_content}"
-# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }"
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}"
+# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid"
 #
 conv_output2mailbody() {
-  local content=$1  hd_content=$2
+  local content=$1  hd_content=$2  jobid=$3
   local level= title= summary= details= mailbody= rc=
 
   if [ "${hd_content}" == "auto handle is disabled. Nothing to do" ]; then
@@ -90,6 +90,7 @@ conv_output2mailbody() {
   mailbody="$(gen_tmpfile mailbody)"
   {
   echo "$(html_green "$(gettext "Notify_Type:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
+  echo "$(html_green "$(gettext "Event_ID:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${jobid} <br><br>"
   echo "$(html_green "$(gettext "Title:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
   echo "$(html_green "$(gettext "Summary:")") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
   echo "$(html_green "$(gettext "Details:")") <br><br>"
@@ -359,7 +360,7 @@ case "${mail_type}" in
 
   "str")
 	### 1. convert plugin output to mailbody files.
-	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}")
+	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}")
 
 	### 2. send emails.
 	n=0  t_s=0   t_e=0  result=		## total   total_succ   total_error   result
