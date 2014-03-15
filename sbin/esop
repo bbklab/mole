@@ -223,11 +223,19 @@ start_mole(){
   else
 	echo -en "$(echo_red "FAIL")"
   fi
+  echo -en "\n"
 }
 
 stop_mole(){
-  echo -e "Stoping mole ... "
-  ${PATH_MOLE_SBIN}/mole stop
+  echo -en "Stoping mole ... "
+  ${PATH_MOLE_SBIN}/mole stop >/dev/null 2>&1
+  wait; sleep 1
+  if is_running "${PIDF_MOLE}" "mole" >/dev/null 2>&1; then
+	echo -en "$(echo_red "FAIL")"
+  else
+	echo -en "$(echo_green "OK")"
+  fi
+  echo -en "\n"
 }
 
 

@@ -1953,7 +1953,7 @@ stopps_by_pid() {
 	fi
   else					# skip stop pid
 	write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating pid:"\
-		"/proc/${pid} not exist, maybe [${pid} already exit, nothing to do";
+		"/proc/${pid} not exist, maybe [${pid}] already exit, nothing to do";
 	return 1
   fi
 }
