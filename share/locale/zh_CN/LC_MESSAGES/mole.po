@@ -373,7 +373,7 @@ msgid "plugin output level unrecognized: [${reason_value}], only [succ,warn,crit
 msgstr "插件输出级别[${reason_value}]不可识别, 只允许[succ,warn,crit,unkn,noop,notify]"
 
 msgid "plugin output level mismatch: [${reason_value}], only matched level <=> rc allowed"
-msgstr "插件输出级别和返回值不匹配(${reason_value}), 只允许想对应的级别和返回值"
+msgstr "插件输出级别和返回值不匹配(${reason_value}), 只允许相对应的级别和返回值"
 
 msgid "plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
 msgstr "插件输出类型[${reason_value}]不可识别, 只允许[file,str]"
