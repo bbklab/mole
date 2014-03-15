@@ -4,6 +4,7 @@
 PATH_ESOP="/usr/local/esop/agent"
 PATH_APP="$PATH_ESOP/app"
 PATH_BIN="$PATH_APP/bin"
+PATH_SBIN="$PATH_APP/sbin"
 PATH_RUN="$PATH_ESOP/run"
 PATH_OPT="$PATH_ESOP/opt"
 PATH_OPT_SBIN="$PATH_OPT/sbin"
@@ -177,6 +178,12 @@ start_phptd(){
   if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
 	echo -en "$(echo_yellow "SKIP")"
   else
+	$CMD_SUDO_EYOU $PATH_SBIN/em_dynamic_config all   >/dev/null 2>&1
+	if [ "$?" != "0" ]; then
+		echo -en "$(echo_red "Re-Generate dynamic config FAIL")"
+		echo -en "\n"
+		return 1
+	fi
   	$CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD >/dev/null 2>&1
 	wait; sleep 1
 	if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
