@@ -83,6 +83,7 @@ conv_output2mailbody() {
   fi
 
   level=$(${PLUTIL} parted_output 1 "${content}" | tr '[a-z]' '[A-Z]')
+  level="$(eval " gettext "${level}" ")"
   title=$(${PLUTIL} parted_output 4 "${content}")
   summary=$(${PLUTIL} parted_output 5 "${content}")
   details=$(${PLUTIL} parted_output 6 "${content}")
@@ -141,20 +142,18 @@ done
 from="${plugin_name}.${jobid}"
 level=$(${PLUTIL} parted_output 1 "${content}")
 
-
 write_log -f "${SENDMAIL_LOG}" ""
 write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
 
-# read global.name / read plugin comment / read plugin mail-receviers 
+# read global.name / read plugin mail-receviers 
 gname=$(get_global_name)
-comment=$(get_comment "${plugin_name}")
 if [ "${level}" == "ovld" ]; then  
 	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while level="ovld"
 else
 	receviers=$(get_mail_receviers "${plugin_name}")
 fi
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-	"INFO: set name=[${gname}], comment=[${comment}], receviers=[${receviers}]. CONTINUE"
+	"INFO: set name=[${gname}], receviers=[${receviers}]. CONTINUE"
 
 # begin to check sendmail config
 smtp_server=$(read_mole_config sendmail smtp_server)
@@ -268,6 +267,7 @@ fi
 mail_level=$( echo -e "${level}" | tr '[a-z]' '[A-Z]')
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: mail_level: [${mail_level}]"
+mail_level="$(eval " gettext "${mail_level}" ")"
 
 mail_type=$(${PLUTIL} parted_output 2 "${content}" | tr '[A-Z]' '[a-z]')
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
@@ -278,6 +278,10 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 vexit=0
 case "${mail_type}" in
   "file")
+	### 0. set subject
+	title="$(get_comment "${plugin_name}")"
+	subject="${mail_level}: ${gname} | ${title}"
+
 	### 1. process attach files list.
 	attach_file_list=$(${PLUTIL} parted_output 3 "${content}")
 	att_file_args=  t_num=0    t_size=0   
@@ -341,7 +345,7 @@ case "${mail_type}" in
 			-xu "${auth_user}" -xp "${auth_pass}" \
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
-			-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -m "Refer to attachments for details." \
+			-t "${x}" -u "${subject}" -m "Refer to attachments for details." \
 			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			if [ "$?" == "0" ]; then
 				((t_s+=1)) 
@@ -359,6 +363,10 @@ case "${mail_type}" in
 	;;
 
   "str")
+	### 0. set subject
+	title="$(${PLUTIL} parted_output 4 "${content}")"
+	subject="${mail_level}: ${gname} | ${title}"
+
 	### 1. convert plugin output to mailbody files.
 	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}")
 
@@ -378,7 +386,7 @@ case "${mail_type}" in
 	    		-xu "${auth_user}" -xp "${auth_pass}" \
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
-	    		-t "${x}" -u "${gname} | ${comment} | ${mail_level} Mail" -o message-file="${mailbody_path}" \
+	    		-t "${x}" -u "${subject}" -o message-file="${mailbody_path}" \
 	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 		  if [ "$?" == "0" ]; then
 			((t_s+=1))

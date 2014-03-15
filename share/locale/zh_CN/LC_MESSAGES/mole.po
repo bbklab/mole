@@ -374,10 +374,7 @@ msgstr "${type1} 类型检查返回 ${rc1}; ${type2} 类型检查返回 ${rc2}"
 msgid "OK"
 msgstr "正常"
 
-msgid "WARN"
-msgstr "警告"
-
-msgid "CRIT"
+msgid "FAIL"
 msgstr "错误"
 
 msgid "NOT contains blank section"
@@ -518,7 +515,37 @@ msgstr "输出格式不可识别, 只允许插件返回类型 file 和 str"
 ### handler/sendmail
 
 msgid "auto handle is disabled. Nothing to do"
-msgstr "用户自定义自动处理程序被禁止, 什么都没做"
+msgstr "此事件暂无自动处理程序响应"
+
+msgid "SUCC"
+msgstr "正常"
+
+msgid "WARN"
+msgstr "警告"
+
+msgid "CRIT"
+msgstr "故障"
+
+msgid "UNKN"
+msgstr "未知"
+
+msgid "NOTIFY"
+msgstr "通知"
+
+msgid "RECOVERY"
+msgstr "恢复"
+
+msgid "TMOUT"
+msgstr "超时"
+
+msgid "OVLD"
+msgstr "过载"
+
+msgid "KIDS"
+msgstr "进程过多"
+
+msgid "MISFORM"
+msgstr "不合规范"
 
 msgid "Notify_Type:"
 msgstr "通知类型:"

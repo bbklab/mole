@@ -3090,7 +3090,7 @@ process_plugin_misform() {
 	reason="plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
 	;;
   esac
-  local output="{${level}}:{str}:{ Misforma Plugin Output"\
+  local output="{${level}}:{str}:{ Misforma Output for Plugin ${plugin_name}"\
 "| ${plugin_name} has been cancled at $(date +%F_%T)"\
 "| plugin ${plugin_name} output misforma on [${reason_type}] ### "\
 "$(html_red "${reason}") ### }";

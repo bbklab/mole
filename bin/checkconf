@@ -7,7 +7,7 @@
 #
 # Example:   ./checkconf
 #
-# Return Code:  0|1|2|3   ==>  (OK|WARN|CRIT|UNKN)
+# Return Code:  0|1|2|3   ==>  (OK|WARN|FAIL|UNKN)
 #
 
 
@@ -69,7 +69,7 @@ fi
 # Set Return Codes
 STATE_OK=0
 STATE_WARN=1
-STATE_CRIT=2
+STATE_FAIL=2
 STATE_UNKN=3
 
 # Set VERBOSE
@@ -200,7 +200,7 @@ check_type_emls(){
 	done
 	[ "${errnum}" != "0" ] && {
 		result="$(eval_gettext "\${errnum}/\${total} invalid email address.") ${result}"
-		rc=${STATE_CRIT}
+		rc=${STATE_FAIL}
 	} || {
 		rc=${STATE_OK}
 	}
@@ -221,22 +221,22 @@ check_type_int(){
 
   [ -z "${min}" -o ! -z "${min//[0-9]}" -o -z "${max}" -o ! -z "${max//[0-9]}" ] && {
 	echo "$(eval_gettext "rule=[\${rule}], min=[\${min}] or max=[\${max}] is not interger")"
-	return ${STATE_CRIT}
+	return ${STATE_FAIL}
   }
 
   [ -z "${input//[ ]}" ] && {
 	result="$(gettext "NULL")"
-	rc=${STATE_CRIT}
+	rc=${STATE_FAIL}
   } || {
 	[ ! -z "${input//[0-9]}" ] && {
 		result="$(gettext "must be interger")"
-		rc=${STATE_CRIT}
+		rc=${STATE_FAIL}
 	} || {
 		[ "$(echo "${input}>=${min}" | bc 2>&-)" == "1" -a "$(echo "${input}<=${max}" | bc 2>&1)" == "1" ] && {
 			rc=${STATE_OK}
 		} || {
 			result="$(eval_gettext "must between \${min}-\${max}")"
-			rc=${STATE_CRIT}
+			rc=${STATE_FAIL}
 		}
 	}
   }
@@ -254,7 +254,7 @@ check_type_set(){
   local result=  flag= rc=
   [ -z "${input//[ ]}" ] && {
         result="$(gettext "NULL")"
-        rc=${STATE_CRIT}
+        rc=${STATE_FAIL}
   } || {
   	for s in `echo -e "${sets}"`
   	do
@@ -266,7 +266,7 @@ check_type_set(){
   	done
 	[ -z "${flag}" ] && {
 		result="[${input}] $(gettext "not belongs in") [${sets}]"
-		rc=${STATE_CRIT}
+		rc=${STATE_FAIL}
 	}
   }
   echo -e "${result}"
@@ -282,7 +282,7 @@ check_type_cbset(){
   local result=  rc=
   [ -z "${input//[ ]}" ] && {
         result="$(gettext "NULL")"
-        rc=${STATE_CRIT}
+        rc=${STATE_FAIL}
   } || {
 	local errnum=0  oknum=0  total=0
 	for i in `echo -e "${input}"`
@@ -305,7 +305,7 @@ check_type_cbset(){
 	done
 	[ "${errnum}" != "0" ] && {
 		result="$(eval_gettext "\${errnum}/\${total} invalid, allowed"): [${sets}], ${result}"
-		rc=${STATE_CRIT}
+		rc=${STATE_FAIL}
 	} || {
 		rc=${STATE_OK}
 	}
@@ -324,7 +324,7 @@ check_type_file(){
   local result=  rc=
   [ -z "${input//[ ]}" ] && {
         result="$(gettext "NULL")"
-        rc=${STATE_CRIT}
+        rc=${STATE_FAIL}
   } || {
 	local errnum=0 oknum=0 total=0
 	for file in `echo -e "${filelst}"`
@@ -343,7 +343,7 @@ check_type_file(){
 	done
 	[ "${errnum}" != "0" ] && {
                 result="$(eval_gettext "\${errnum}/\${total} file check failed"), ${result}"
-                rc=${STATE_CRIT}
+                rc=${STATE_FAIL}
         } || {
                 rc=${STATE_OK}
         }
@@ -360,12 +360,12 @@ check_type_time(){
   local result=  rc=
   [ -z "${input//[ ]}" ] && {
         result="$(gettext "NULL")"
-        rc=${STATE_CRIT}
+        rc=${STATE_FAIL}
   } || {
 	local seconds=$( conv_time2sec "${input}" )
 	[ "${seconds}" == "invalid" ] && {
 		result="$(gettext "time format invalid")"
-		rc=${STATE_CRIT}
+		rc=${STATE_FAIL}
 	} || {
 		rc=${STATE_OK}
 	}
@@ -410,7 +410,7 @@ oknum=0 warnnum=0 critnum=0 totalnum=0
 
 OK="$(echo_green "[$(gettext "OK")]")"
 WARN="$(echo_yellow "[$(gettext "WARN")]")"
-CRIT="$(echo_red "[$(gettext "CRIT")]")"
+FAIL="$(echo_red "[$(gettext "FAIL")]")"
 
 
 # 1. check config file by ARRAY_CONFIG_RULES
@@ -444,7 +444,7 @@ do
 	"1") echo -e "${WARN} : ${section}->${key} = ${value}  | ${result}"
 	     ((warnnum++))
   	     ;;
-	"2") echo -e "${CRIT} : ${section}->${key} = ${value}  | ${result}"
+	"2") echo -e "${FAIL} : ${section}->${key} = ${value}  | ${result}"
 	     ((critnum++))
 	     ;;
 	esac
@@ -463,7 +463,7 @@ if [ -z "${blankline//[ ]}" ]; then
 else
 	((critnum++))
 	((totalnum++))
-	echo -e "${CRIT} : [${CONFIG_FILE##*/}] $(gettext "contains blank section in") ${blankline}"
+	echo -e "${FAIL} : [${CONFIG_FILE##*/}] $(gettext "contains blank section in") ${blankline}"
 fi
 
 # 3. check config file contains duplicated section name or not ?
@@ -477,7 +477,7 @@ if [ -z "${duplsection//[ ]}" ]; then
 else
 	((critnum++))
 	duplsection=$(echo -e "${duplsection}" | awk '{printf "%s %s, ",$1,$2}')
-	echo -e "${CRIT} : [${CONFIG_FILE##*/}] $(gettext "contains duplicated section:") ${duplsection}"
+	echo -e "${FAIL} : [${CONFIG_FILE##*/}] $(gettext "contains duplicated section:") ${duplsection}"
 fi
 ((totalnum++))
 
@@ -491,7 +491,7 @@ do
 	else
 		((critnum++))
 		duplkey=$(echo -e "${duplkey}" | awk '{printf "%s %s, ",$1,$2}')
-		echo -e "${CRIT} : [${section}] $(gettext "contains duplicated key:") ${duplkey}"
+		echo -e "${FAIL} : [${section}] $(gettext "contains duplicated key:") ${duplkey}"
 	fi
 	((totalnum++))
 done
@@ -516,7 +516,7 @@ done
 mole_id=$(get_mole_id)
 if [ "${mole_id}" == "0000000000" ]; then
 	((critnum++))
-	echo -e "${CRIT} : $(gettext "[mole_id] is empty. try") ${SETINIT_SH} rpminit"
+	echo -e "${FAIL} : $(gettext "[mole_id] is empty. try") ${SETINIT_SH} rpminit"
 else
 	((oknum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[mole_id] =") [${mole_id}]."
@@ -526,7 +526,7 @@ fi
 parter_id=$(get_parter_id)
 if [ "${parter_id}" == "0000000000" ]; then
 	((critnum++))
-	echo -e "${CRIT} : $(gettext "[parter_id] is empty. try") ${SETINIT_SH}"
+	echo -e "${FAIL} : $(gettext "[parter_id] is empty. try") ${SETINIT_SH}"
 else
 	((oknum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[parter_id] =") [${parter_id}]."
@@ -560,7 +560,7 @@ echo "$(eval_gettext "Result: [total=\${totalnum} succ=\${oknum} warn=\${warnnum
 
 # exit
 if [ "${critnum}" != "0" ]; then
-	exit ${STATE_CRIT}
+	exit ${STATE_FAIL}
 elif [ "${warnnum}" != "0" ]; then
 	exit ${STATE_WARN}
 elif [ "${oknum}" == "${totalnum}" ]; then
