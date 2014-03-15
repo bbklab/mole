@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use Digest::MD5 qw(md5_hex);
+use MIME::Base64 qw(encode_base64);
 # use Smart::Comments;
 
 my $action = shift;
@@ -9,6 +10,7 @@ my $action = shift;
 &unique_digest(@ARGV)		   if $action eq 'unique_digest';
 &parted_output(@ARGV)		   if $action eq 'parted_output';
 &format_toterm(@ARGV)		   if $action eq 'format_toterm';
+&base64_encode(@ARGV)		   if $action eq 'base64_encode';
 
 
 # Sub Def
@@ -19,6 +21,7 @@ Example:
   unique_digest 
   parted_output  {1-6}  {allof-plugin-output}
   format_toterm  {output-contain-htmlcode-htmlcolor}
+  base64_encode  {strings-to-be-encode}
 EOF
 ;
 exit(1);
@@ -98,4 +101,17 @@ sub format_toterm {
 		}
 	  }
 	close $fh;
+}
+
+# Base64 Encode Strings
+#
+sub base64_encode {
+	my $content = shift;
+	exit(1) if !defined $content;
+	exit(1) if $content =~ m/\A\s*\Z/;
+	my $output = encode_base64($content,'');	# trim '\n', empty eof
+	if ($output) {
+		chomp $output;
+		printf $output;
+	}
 }

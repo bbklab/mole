@@ -274,6 +274,8 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: mail_type: [${mail_type}]"
 
 
+header_priority="X-Priority: 1"
+header_eventid="Event_ID: ${jobid}"
 ### sendmail depend on different {mail_type}.
 vexit=0
 case "${mail_type}" in
@@ -281,6 +283,9 @@ case "${mail_type}" in
 	### 0. set subject
 	title="$(get_comment "${plugin_name}")"
 	subject="${mail_level}: ${gname} | ${title}"
+	header_subject="$(${PLUTIL} base64_encode "${subject}" 2>&-)"
+	[ -z "${header_subject}" ] && header_subject="No Subject"
+	header_subject="Subject: =?UTF-8?B?${header_subject}?="
 
 	### 1. process attach files list.
 	attach_file_list=$(${PLUTIL} parted_output 3 "${content}")
@@ -345,7 +350,10 @@ case "${mail_type}" in
 			-xu "${auth_user}" -xp "${auth_pass}" \
 			-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
-			-t "${x}" -u "${subject}" -m "Refer to attachments for details." \
+			-t "${x}" -m "Refer to attachments for details." \
+                        -o message-header="${header_subject}" \
+                        -o message-header="${header_priority}" \
+                        -o message-header="${header_eventid}" \
 			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			if [ "$?" == "0" ]; then
 				((t_s+=1)) 
@@ -366,6 +374,9 @@ case "${mail_type}" in
 	### 0. set subject
 	title="$(${PLUTIL} parted_output 4 "${content}")"
 	subject="${mail_level}: ${gname} | ${title}"
+        header_subject="$(${PLUTIL} base64_encode "${subject}" 2>&-)"
+        [ -z "${header_subject}" ] && header_subject="No Subject"
+        header_subject="Subject: =?UTF-8?B?${header_subject}?="
 
 	### 1. convert plugin output to mailbody files.
 	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}")
@@ -386,7 +397,10 @@ case "${mail_type}" in
 	    		-xu "${auth_user}" -xp "${auth_pass}" \
 	    		-o timeout="${time_out}" -o message-charset="${charset}" -o message-content-type=html \
 			-o tls=no -o reply-to="no-reply@esop.eyou.net" \
-	    		-t "${x}" -u "${subject}" -o message-file="${mailbody_path}" \
+	    		-t "${x}" -o message-file="${mailbody_path}" \
+			-o message-header="${header_subject}" \
+			-o message-header="${header_priority}" \
+			-o message-header="${header_eventid}" \
 	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 		  if [ "$?" == "0" ]; then
 			((t_s+=1))
