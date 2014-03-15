@@ -2832,9 +2832,9 @@ process_plugin_timeout() {
   # local jid=$3          # can't inherit jobid from caller, will set a new jid
   local jid=$( ${PLUTIL} unique_digest )      ### set a new jid
   local level="tmout"
-  local output="{${level}}:{str}:{ Plugin Execution TimeOut"\
-"| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| $(html_red "Plugin: [${plugin_name}] execution timeout, has been terminated.") ### }";
+  local output="{${level}}:{str}:{ $(eval_gettext "Plugin \${plugin_name} Execution TimeOut")"\
+"| $(date +%F_%T): $(eval_gettext "\${plugin_name} has been terminated")"\
+"| $(html_red "$(eval_gettext "Plugin: [\${plugin_name}] execution timeout, has been terminated.")") ### }";
 
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name} running timeout"\
 	"has been running for ${durationtime} seconds"
@@ -2961,11 +2961,11 @@ process_sysoverload() {
   local plugin_name=$1  sysload_now=$2  sysload_limit=$3
   local jid=$4          # inherit jobid
   local level="ovld"
-  local output="{${level}}:{str}:{ System OverLoad"\
-"| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| $(html_red "Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]") ### "\
-"Plugin: [${plugin_name}] has been cancled ### }";
-  local hd_output="System OverLoaded, Nothing to do"
+  local output="{${level}}:{str}:{ $(gettext "System OverLoad")"\
+"| $(date +%F_%T): $(eval_gettext "\${plugin_name} has been cancled")"\
+"| $(html_red "$(eval_gettext "Sysload: [\${sysload_now}] over than Uplimit: [\${sysload_limit}]")") ### "\
+"$(eval_gettext "Plugin: [\${plugin_name}] has been cancled") ### }";
+  local hd_output="$(gettext "System OverLoaded, Nothing to do")"
 
   write_log -f "${MOLE_LOG}" "$jid MOLE sysload overloaded:"\
 	"${sysload_now} >= ${sysload_limit}"
@@ -3015,11 +3015,11 @@ process_kidsexceed() {
   local plugin_name=$1  kidsnum_now=$2  kidsnum_limit=$3
   local jid=$4          # inherit jobid
   local level="kids"
-  local output="{${level}}:{str}:{ Too Many Agent Kid Processes"\
-"| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| $(html_red "Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]") ### "\
-"Plugin: [${plugin_name}] has been cancled ### }";
-  local hd_output="Kid Processes Number Exceed, Nothing to do"
+  local output="{${level}}:{str}:{ $(gettext "Too Many Agent Kid Processes")"\
+"| $(date +%F_%T): $(eval_gettext "\${plugin_name} has been cancled")"\
+"| $(html_red "$(eval_gettext "Kids Running: [\${kidsnum_now}] over than Uplimit: [\${kidsnum_limit}]")") ### "\
+"$(eval_gettext "Plugin: [\${plugin_name}] has been cancled") ### }";
+  local hd_output="$(gettext "Kid Processes Number Exceed, Nothing to do")"
 
   write_log -f "${MOLE_LOG}" "$jid MOLE kidsnum exceed:"\
 	"${kidsnum_now} >= ${kidsnum_limit}"
@@ -3072,29 +3072,29 @@ process_plugin_misform() {
   local reason=
   case "${reason_type}" in
   "rc") 
-	reason="plugin return code invalid: [${reason_value}], only 0-4 allowed"
+	reason="$(eval_gettext "plugin return code invalid: [\${reason_value}], only 0-5 allowed")"
 	;;
   "lines")
-	reason="plugin output lines number invalid: [${reason_value}], only one-line allowed"
+	reason="$(eval_gettext "plugin output lines number invalid: [\${reason_value}], only one-line allowed")"
 	;;
   "format")
-	reason="plugin output format unrecognized: [${reason_value}], only {a}:{b}:{c} allowed"
+	reason="$(eval_gettext "plugin output format unrecognized: [\${reason_value}], only {a}:{b}:{c} allowed")"
 	;;
   "level")
-	reason="plugin output level unrecognized: [${reason_value}], only [succ,warn,crit,unkn,noop,notify] allowed"
+	reason="$(eval_gettext "plugin output level unrecognized: [\${reason_value}], only [succ,warn,crit,unkn,noop,notify] allowed")"
 	;;
   "mismatch")
-	reason="plugin output level mismatch: [${reason_value}], only matched level <=> rc allowed"
+	reason="$(eval_gettext "plugin output level mismatch: [\${reason_value}], only matched level <=> rc allowed")"
 	;;
   "type")
-	reason="plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
+	reason="$(eval_gettext "plugin output type unrecognized: [\${reason_value}], only [file,str] allowed")"
 	;;
   esac
-  local output="{${level}}:{str}:{ Misforma Output for Plugin ${plugin_name}"\
-"| ${plugin_name} has been cancled at $(date +%F_%T)"\
-"| plugin ${plugin_name} output misforma on [${reason_type}] ### "\
+  local output="{${level}}:{str}:{ $(eval_gettext "Misforma Output for Plugin \${plugin_name}")"\
+"| $(date +%F_%T): $(eval_gettext "\${plugin_name} has been cancled")"\
+"| $(eval_gettext "plugin \${plugin_name} output misforma on [\${reason_type}]") ### "\
 "$(html_red "${reason}") ### }";
-  local hd_output="Plugin Output Misform, Nothing to do"
+  local hd_output="$(gettext "Plugin Output Misform, Nothing to do")"
 
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name} output misforma:"\
 	"${reason}"

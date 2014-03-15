@@ -327,6 +327,67 @@ msgstr "查看插件基础配置出错: 未指定插件名"
 msgid "view_extra_config error: please specify plugin_name."
 msgstr "插件插件其他配置出错: 未指定插件名"
 
+msgid "Plugin ${plugin_name} Execution TimeOut"
+msgstr "插件 ${plugin_name} 执行超时"
+
+msgid "${plugin_name} has been terminated"
+msgstr "插件 ${plugin_name} 已经被终止"
+
+msgid "Plugin: [${plugin_name}] execution timeout, has been terminated."
+msgstr "插件 [${plugin_name}] 执行超时, 已经被终止."
+
+msgid "System OverLoad"
+msgstr "系统过载"
+
+msgid "${plugin_name} has been cancled"
+msgstr "插件 ${plugin_name} 已经取消执行"
+
+msgid "Sysload: [${sysload_now}] over than Uplimit: [${sysload_limit}]"
+msgstr "当前系统负载 [${sysload_now}] 已经超过预设定的最高上限 [${sysload_limit}]"
+
+msgid "Plugin: [${plugin_name}] has been cancled"
+msgstr "插件 ${plugin_name} 已经取消执行"
+
+msgid "Too Many Agent Kid Processes"
+msgstr "子进程数量过多"
+
+msgid "Kids Running: [${kidsnum_now}] over than Uplimit: [${kidsnum_limit}]"
+msgstr "当前子进程数量 [${kidsnum_now}] 已经超过预设定的最高上限 [${kidsnum_limit}]"
+
+msgid "Misforma Output for Plugin ${plugin_name}"
+msgstr "插件 ${plugin_name} 输出不符合规定"
+
+msgid "plugin ${plugin_name} output misforma on [${reason_type}]"
+msgstr "插件 ${plugin_name} 输出不合规定标记: ${reason_type}"
+
+msgid "plugin return code invalid: [${reason_value}], only 0-5 allowed"
+msgstr "插件返回值[${reason_value}]不合规定, 只允许0-5"
+
+msgid "plugin output lines number invalid: [${reason_value}], only one-line allowed"
+msgstr "插件共输出[${reason_value}]行, 只允许1行"
+
+msgid "plugin output format unrecognized: [${reason_value}], only {a}:{b}:{c} allowed"
+msgstr "插件输出格式不可识别, 只允许格式{a}:{b}:{c}"
+
+msgid "plugin output level unrecognized: [${reason_value}], only [succ,warn,crit,unkn,noop,notify] allowed"
+msgstr "插件输出级别[${reason_value}]不可识别, 只允许[succ,warn,crit,unkn,noop,notify]"
+
+msgid "plugin output level mismatch: [${reason_value}], only matched level <=> rc allowed"
+msgstr "插件输出级别和返回值不匹配(${reason_value}), 只允许想对应的级别和返回值"
+
+msgid "plugin output type unrecognized: [${reason_value}], only [file,str] allowed"
+msgstr "插件输出类型[${reason_value}]不可识别, 只允许[file,str]"
+
+msgid "System OverLoaded, Nothing to do"
+msgstr "系统过载, 无自动处理"
+
+msgid "Kid Processes Number Exceed, Nothing to do"
+msgstr "子进程过多, 无自动处理"
+
+msgid "Plugin Output Misform, Nothing to do"
+msgstr "插件输出不合规范, 无自动处理"
+
+
 ### bin/checkconf
 
 msgid "NULL, set default"
