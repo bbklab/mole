@@ -374,9 +374,10 @@ else
 
 	{ 
 
-	exec 0>&-
-	exec 1>&-
-	exec 2>&-
+	# lead to nothing to be posted up on type = postlog, expect heartbeat,config,plugin
+	#exec 0>&-
+	#exec 1>&-
+	#exec 2>&-
 
 	while : ; do
 		
