@@ -614,6 +614,9 @@ msgstr "通知类型:"
 msgid "Event_ID:"
 msgstr "事件编号:"
 
+msgid "Plugin:"
+msgstr "插件:"
+
 msgid "Title:"
 msgstr "标题:"
 

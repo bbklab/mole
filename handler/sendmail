@@ -71,11 +71,11 @@ show_usage(){
 # def conv_output2mailbody
 # Convert plugin output to html mailbody
 # Output:       path of html mailbody
-# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}"
-# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid"
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}" "${plugin}"
+# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid" "disk_fs"
 #
 conv_output2mailbody() {
-  local content=$1  hd_content=$2  jobid=$3
+  local content=$1  hd_content=$2  jobid=$3  plugin=$4
   local level= title= summary= details= mailbody= rc=
 
   if [ "${hd_content}" == "auto handle is disabled. Nothing to do" ]; then
@@ -84,24 +84,33 @@ conv_output2mailbody() {
 
   level=$(${PLUTIL} parted_output 1 "${content}" | tr '[a-z]' '[A-Z]')
   level="$(eval " gettext "${level}" ")"
-  title=$(${PLUTIL} parted_output 4 "${content}")
-  summary=$(${PLUTIL} parted_output 5 "${content}")
-  details=$(${PLUTIL} parted_output 6 "${content}")
 
   mailbody="$(gen_tmpfile mailbody)"
-  {
-  echo "$(html_green "$(gettext "Notify_Type:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
-  echo "$(html_green "$(gettext "Event_ID:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${jobid} <br><br>"
-  echo "$(html_green "$(gettext "Title:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
-  echo "$(html_green "$(gettext "Summary:")") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
-  echo "$(html_green "$(gettext "Details:")") <br><br>"
-  echo "${details}" | sed -e 's/###/<br>\n/g';
-  echo "<br>------------------<br>"
-  echo "$(html_green "$(gettext "Auto Handle:")") <br><br>"
-  echo "${hd_content}" | sed -e 's/###/<br>\n/g'; 
-  } >> "${mailbody}" 2>&1
+  if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
+	{
+	${PLUTIL} "create_mailct" "${plugin}" "${TPL_MAIL}" "${content}" "${hd_content}"
+	} >> "${mailbody}" 2>&1
+  else
+  	title=$(${PLUTIL} parted_output 4 "${content}")
+  	summary=$(${PLUTIL} parted_output 5 "${content}")
+  	details=$(${PLUTIL} parted_output 6 "${content}")
+
+  	{
+  	echo "$(html_green "$(gettext "Notify_Type:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
+  	echo "$(html_green "$(gettext "Event_ID:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${jobid} <br><br>"
+  	echo "$(html_green "$(gettext "Plugin:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${plugin} <br><br>"
+  	echo "$(html_green "$(gettext "Title:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${title} <br><br>"
+  	echo "$(html_green "$(gettext "Summary:")") &nbsp;&nbsp;&nbsp;&nbsp; ${summary} <br><br>"
+  	echo "$(html_green "$(gettext "Details:")") <br><br>"
+  	echo "${details}" | sed -e 's/###/<br>\n/g';
+  	echo "<br>------------------<br>"
+  	echo "$(html_green "$(gettext "Auto Handle:")") <br><br>"
+  	echo "${hd_content}" | sed -e 's/###/<br>\n/g'; 
+  	} >> "${mailbody}" 2>&1
+  fi
+
   rc=$?
-  if [ "${rc}" == "0" ]; then
+  if [ "${rc}" == "0" -a -s "${mailbody}" ]; then
         write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 		"INFO: convert output to mailbody file success: [${mailbody}] "\
                 "[level=${level} title=${title} summary=${summary}]";
@@ -379,7 +388,7 @@ case "${mail_type}" in
         header_subject="Subject: =?UTF-8?B?${header_subject}?="
 
 	### 1. convert plugin output to mailbody files.
-	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}")
+	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}" "${plugin_name}")
 
 	### 2. send emails.
 	n=0  t_s=0   t_e=0  result=		## total   total_succ   total_error   result

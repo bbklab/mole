@@ -1,20 +1,76 @@
 #!/usr/bin/env perl
+
+our $basedir = '/usr/local/esop/agent/mole';
+our $mole = "$basedir/sbin/mole";
+
+BEGIN {
+  my $basedir = '/usr/local/esop/agent/mole';
+  my $pllib_dir = "$basedir/opt/plmods";
+  my @incs = (    # set additional path
+        # rhel5 32bit
+        $pllib_dir.'/lib/perl5/',
+        $pllib_dir.'/lib/perl5/5.8.8/',
+        $pllib_dir.'/lib/perl5/site_perl/',
+        $pllib_dir.'/lib/perl5/site_perl/5.8.8/',
+        # rhel5 64bit
+        $pllib_dir.'/lib64/perl5/',
+        $pllib_dir.'/lib64/perl5/5.8.8/',
+        $pllib_dir.'/lib64/perl5/site_perl/',
+        $pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
+        # rhel6 32bit
+        $pllib_dir.'/lib/perl5/',
+        $pllib_dir.'/share/perl5/',
+        # rhel6 64bit
+        $pllib_dir.'/lib64/perl5/',
+        $pllib_dir.'/share/perl5/',
+  );
+
+  push @INC, @incs;
+};
+
+
 use strict;
 use warnings;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
-# use Smart::Comments;
+use Smart::Comments;
+use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
+binmode(STDIN, ":encoding(utf8)");
+binmode(STDOUT, ":encoding(utf8)");
+binmode(STDERR, ":encoding(utf8)");
+binmode STDOUT, ':raw';
 
+
+# set locale, bind textdomain
+our $localdir = "$basedir/share/locale/";
+our $locale = 'zh_CN.UTF-8';
+our $domain = "mole";
+nl_putenv("LANGUAGE=$locale");
+textdomain "$domain";
+bindtextdomain "$domain", "$localdir";
+
+### process_args
+
+# process args
 my $action = shift;
 &help if (!$action || $action =~ m/\A\s*\Z/ || $action eq 'help');
 &unique_digest(@ARGV)		   if $action eq 'unique_digest';
 &parted_output(@ARGV)		   if $action eq 'parted_output';
 &format_toterm(@ARGV)		   if $action eq 'format_toterm';
 &base64_encode(@ARGV)		   if $action eq 'base64_encode';
+&create_mailct(@ARGV)		   if $action eq 'create_mailct';
 
 
+#
 # Sub Def
+#
 
+# _ 
+#
+sub _ ($) { &gettext; }
+
+# Show Help
+#
 sub help {
 print <<EOF
 Example:
@@ -22,11 +78,14 @@ Example:
   parted_output  {1-6}  {allof-plugin-output}
   format_toterm  {output-contain-htmlcode-htmlcolor}
   base64_encode  {strings-to-be-encode}
+  create_mailct	 {tpl_path} {plugin_name} {plugin_output} {handler_output}
 EOF
 ;
 exit(1);
 }
 
+# Create Unique MD5 Digest
+#
 sub unique_digest {
 	my @chars = (0..9,'a'..'z','A'..'Z','#','(',')','=','-','+','_','@');
 	my $rand = join "", map{ $chars[int rand @chars] } 0..14;
@@ -113,5 +172,74 @@ sub base64_encode {
 	if ($output) {
 		chomp $output;
 		printf $output;
+	}
+}
+
+# Create Mail Content by Template
+# Usage:   create_mailct {tpl_path} {plugin} {plugin_output} {handler_output}
+# Example: create_mailct "notify_mail.tpl" "disk_fs" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
+#
+sub create_mailct {
+	### @ARGV
+	my ($tpl_path,$plugin,$content,$hd_content) = @ARGV;
+	exit(1) unless (defined $tpl_path && defined $plugin && defined $content && defined $hd_content);
+	exit(1) unless (-f $tpl_path && -r $tpl_path);
+	exit(1) if ( $plugin =~ m/\A\s*\Z/ || $content =~ m/\A\s*\Z/ || $hd_content =~ m/\A\s*\Z/ );
+	### $tpl_path
+	### $plugin
+	### $content
+	### $hd_content
+
+	my $level = &parted_output(1,$content,'perl') || 'level';
+	$level = uc $level;
+	$level = sprintf(_"$level");
+	### $level
+
+	my $type  = &parted_output(2,$content,'perl') || 'type';
+	### $type
+
+	my $title = &parted_output(4,$content,'perl') || 'title';
+	### $title
+
+	my $summary = &parted_output(5,$content,'perl') || 'summary';
+	### $summary
+
+	my $details = &parted_output(6,$content,'perl') || 'details';
+	$details =~ s/###/<br>\n/g;
+	### $details
+
+	my ($sec,$min,$hour,$day,$mon,$year) = localtime(time);
+	my $time = sprintf("%d-%d-%d_%d:%d:%d",$year+1900,$mon+1,$day,$hour,$min,$sec);
+	### $time
+
+	$hd_content =~ s/###/<br>\n/g;
+	### $hd_content
+
+	if (open my $fh, "<", $tpl_path) {
+		while(<$fh>){
+			if (m/\${MOLE-NOTIFY-MAIL_LEVEL}/){
+				s/\${MOLE-NOTIFY-MAIL_LEVEL}/$level/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_PLUGIN}/){
+				s/\${MOLE-NOTIFY-MAIL_PLUGIN}/$plugin/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_TIME}/){
+				s/\${MOLE-NOTIFY-MAIL_TIME}/$time/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_TITLE}/){
+				s/\${MOLE-NOTIFY-MAIL_TITLE}/$title/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_SUMMARY}/){
+				s/\${MOLE-NOTIFY-MAIL_SUMMARY}/$summary/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_DETAILS}/){
+				s/\${MOLE-NOTIFY-MAIL_DETAILS}/$details/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_AUTOHANDLE}/){
+				s/\${MOLE-NOTIFY-MAIL_AUTOHANDLE}/$hd_content/;
+			}
+			print "$_";
+		}
+		close $fh if $fh;
 	}
 }
