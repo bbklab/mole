@@ -4,7 +4,12 @@
 </head>
 <body style="font-size:14px;color:#2E2E2E;font-family:'\5FAE\8F6F\96C5\9ED1'">
 	<div style="width:1000px;margin:0 auto;border:2px dashed #9FC5F8;border-radius:4px;padding:30px 0 0 40px;">
-			<div style="height:47px;padding-bottom:49px;"><img src="logo.png" style="float:left;"/><a style="height:24px;width:35px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a></div>
+			<div style="height:47px;padding-bottom:49px;">
+				<a href="http://esop.eyou.net">
+					<img src="http://esop.eyou.net/images/logo.png" style="float:left;"/>
+				</a>
+				<a style="height:24px;width:35px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
+			</div>
 			<br clear="both"/>
 			<div style="width:960px;">
 				<p style="width:49%;float:left;padding:0;margin:10px 0;">
@@ -33,8 +38,8 @@
 </i>
 				</p>
 				<p style="width:49%;float:left;padding:0;margin:10px 0;">
-					<span style="width:100px;display:inline-block;color:#797979;">自动处理</span>
-					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_AUTOHANDLE}</i>
+					<span style="width:100px;display:inline-block;color:#797979;">自动处理：</span><br><br>
+					<i style="font-style:normal">${MOLE-NOTIFY-MAIL_AUTOHANDLE}</i>
 				</p>
 
 				
