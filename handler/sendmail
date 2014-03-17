@@ -88,7 +88,7 @@ conv_output2mailbody() {
   mailbody="$(gen_tmpfile mailbody)"
   if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
 	{
-	${PLUTIL} "create_mailct" "${plugin}" "${TPL_MAIL}" "${content}" "${hd_content}"
+	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${plugin}" "${content}" "${hd_content}"
 	} >> "${mailbody}" 2>&1
   else
   	title=$(${PLUTIL} parted_output 4 "${content}")
@@ -112,8 +112,7 @@ conv_output2mailbody() {
   rc=$?
   if [ "${rc}" == "0" -a -s "${mailbody}" ]; then
         write_log -f "${SENDMAIL_LOG}" "[${from}]"\
-		"INFO: convert output to mailbody file success: [${mailbody}] "\
-                "[level=${level} title=${title} summary=${summary}]";
+		"INFO: convert output to mailbody file success: [${mailbody}]";
   else
         write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 		"WARN: convert output to mailbody file error: [${mailbody}]";
