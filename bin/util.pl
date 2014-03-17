@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
-use Smart::Comments;
+# use Smart::Comments;
 use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
