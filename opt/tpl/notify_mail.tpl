@@ -7,7 +7,7 @@
 				<a href="http://esop.eyou.net">
 					<img src="http://esop.eyou.net/images/logo.png" style="float:left;"/>
 				</a>
-				<a style="height:24px;width:35px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
+				<a style="height:24px;width:55px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
 			</div>
 			<br clear="both"/>
 			<div style="width:960px;">
