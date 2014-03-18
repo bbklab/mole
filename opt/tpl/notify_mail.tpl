@@ -1,6 +1,5 @@
 <head>
 	<meta charset="UTF-8">
-	<title>email</title>
 </head>
 <body style="font-size:14px;color:#2E2E2E;font-family:'\5FAE\8F6F\96C5\9ED1'">
 	<div style="width:1000px;margin:0 auto;border:2px dashed #9FC5F8;border-radius:4px;padding:30px 0 0 40px;">
