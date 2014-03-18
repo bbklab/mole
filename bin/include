@@ -169,7 +169,7 @@ ARRAY_RCSTATUS_MAPS=(
 # all     = crit warn unkn succ notify tmout
 # default = crit warn unkn notify tmout
 # none	  = none
-VALID_ACTION_CONFIG="crit warn unkn succ notify tmout all default none"
+VALID_ACTION_CONFIG="crit warn unkn succ notify recovery tmout all default none "
 
 
 
@@ -1217,9 +1217,9 @@ get_action_type() {
 	if [ "$(echo -e "${VALID_ACTION_CONFIG}"|grep -E -o -w "${item}")" == "${item}" ]; then  ### item valid
 		case "${item}" in
 		"all")
-			output="${output} crit warn unkn succ notify tmout "	;;
+			output="${output} crit warn unkn succ notify recovery tmout "	;;
 		"default")
-			output="${output} crit warn unkn notify tmout"		;;
+			output="${output} crit warn unkn notify recovery tmout"		;;
 		"none")
 			output="none"  ### break while "none"
 			break						;;
@@ -1237,7 +1237,7 @@ get_action_type() {
 # Take action or not
 # Argument 1:  plugin-name
 # Argument 2:  action_type => take_snapshot mail_notify sms_notify post_notify auto_handle
-# Argument 3:  event	=> 0 1 2 3 4 5 tmout
+# Argument 3:  event	=> 0 1 2 3 4 5 tmout recovery
 # Example:	take_action_ornot  check_sysload mail_notify 3
 # Example:	take_action_ornot  check_v4_ps post_notify 0
 # Example:	take_action_ornot  check_cpu_usage take_snapshot tmout
@@ -1257,6 +1257,12 @@ take_action_ornot() {
   ### 2. event in actinon_type or not ? 
   local status=
   if [ "${event}" == "tmout" ]; then  ### 2.1 process event: tmout 
+	[ "$(echo -e "${action_type_config}"|grep -E -o -w "${event}")" == "${event}" ] && {
+		result="yes"
+	} || {
+		result="no"
+	}
+  elif [ "${event}" == "recovery" ]; then	### 2.1 process event: recovery
 	[ "$(echo -e "${action_type_config}"|grep -E -o -w "${event}")" == "${event}" ] && {
 		result="yes"
 	} || {
@@ -2641,8 +2647,9 @@ process_plugin() {
 		"return status: [SUCC], will check nower errcount. CONTINUE";
 	local _now_errcount=$(get_repeat_errcount "${plugin_name}")
 	if [ "$(echo "${_now_errcount} > 0" | bc 2>&-)" == "1" ]; then
-		local new_part1="recovery";
+		local new_part1="recovery"
 		output="{${new_part1}}:{${part2}}:{${part3}}"  # reset {output}
+		rc="${new_part1}"			       # reset {rc}
 		write_log ${jid} ${plugin_name}\
 			"nower errcount [${_now_errcount}], reset level from ${part1} to ${new_part1}. CONTINUE"
 	fi
