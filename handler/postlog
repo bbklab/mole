@@ -299,7 +299,7 @@ unless (defined $sock) {
 
   my $sock_response = 0;
   if (print $sock "$json_result\r\n") {
-	&log("INFO: $logfrom post action succeed.");
+	&log("INFO: $logfrom send data to socket succeed.");
   	$sock_response = <$sock>;
 	$sock->close() if $sock;
   	unless ($sock_response) {
@@ -308,10 +308,10 @@ unless (defined $sock) {
 		chomp $sock_response;
 		$sock_response =~ s/[\r\n ]//g;
   	}
-  	&log("INFO: $logfrom post action got response: [$sock_response]");
-  	&log("INFO: $logfrom post action maybe denied.") if ($sock_response eq '');
+  	&log("INFO: $logfrom socket return response: [$sock_response]");
+  	&log("INFO: $logfrom socket maybe denied my request.") if ($sock_response eq '');
   } else {
-	&log("CRIT: $logfrom post action failed.");
+	&log("CRIT: $logfrom send data to socket failed.");
   }
   &log("INFO: $logfrom script postlog finished.");
   &log("");
