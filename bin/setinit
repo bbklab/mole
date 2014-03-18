@@ -228,12 +228,15 @@ fi
 
 # 3. set parter_id
 if [ "${parter_id}" == "0000000000" ]; then
-	echo -en "\n\n$(gettext "Example:")  123456789\n\n"
+	echo -en "\n\n$(gettext "Example:")  202cb962ac59075b964b07152d234b70\n\n"
 	valid=0
 	while [ "${valid}" == "0" ]
 	do
 		read -p "$(gettext "parter id of this box"): " input_parter_id
-		if [ -z "${input_parter_id//[ ]}" -o ! -z "${input_parter_id//[0-9]}" ]; then
+		if [ -z "${input_parter_id//[ ]}" -o ! -z "${input_parter_id//[a-z0-9]}" ]; then
+			valid=0
+			continue
+		elif [ "${#input_parter_id}" != "32" ]; then
 			valid=0
 			continue
 		else
