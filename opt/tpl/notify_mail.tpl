@@ -4,8 +4,8 @@
 <body style="font-size:14px;color:#2E2E2E;font-family:'\5FAE\8F6F\96C5\9ED1'">
 	<div style="width:1000px;margin:0 auto;border:2px dashed #9FC5F8;border-radius:4px;padding:30px 0 0 40px;">
 			<div style="height:47px;padding-bottom:49px;">
-				<a href="http://esop.eyou.net">
-					<img src="http://esop.eyou.net/images/logo.png" style="float:left;"/>
+				<a href="http://esop.eyou.net" style="border:0 none;">
+					<img src="http://esop.eyou.net/images/logo.png" style="float:left;border:0 none;"/>
 				</a>
 				<a style="height:24px;width:55px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
 			</div>
