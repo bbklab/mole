@@ -370,8 +370,26 @@ sub parted_output {
   return ($result);
 }
 
+sub filter_html {
+        my $content = shift || return;
+        ### before_filter: $content
+        $content =~ s/href\s*=\s*.+?script\s*://gi;
+        $content =~ s/src\s*=\s*.+?script\s*://gi;
+        $content =~ s/src\s*=\s*.+?\.(js|vbs|asp|aspx|php|php4|php5|jsp)//gi;
+        $content =~ s/<script.+<\/script([^>])*>//gi;
+        $content =~ s/<iframe.+<\/iframe([^>])*>//gi;
+        $content =~ s/<frameset.+<\/frameset([^>])*>//gi;
+        $content =~ s/on(blur|c(hange|lick)|dblclick|focus|keypress)//gi;
+        $content =~ s/on((key|mouse)(down|up)|(un)?load|mouse(move|o(ut|ver))|reset|s(elect|ubmit))//gi;
+        ### after_filter: $content
+	return $content;
+}
+
 sub genjson_post {
   my ($plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat) = @_;
+
+  $output = &filter_html($output);
+  $houtput = &filter_html($houtput);
 
   my %result = (
 	'type'		=> 'post',
