@@ -33,7 +33,7 @@ use strict;
 use warnings;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
-# use Smart::Comments;
+use Smart::Comments;
 use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
@@ -49,7 +49,6 @@ nl_putenv("LANGUAGE=$locale");
 textdomain "$domain";
 bindtextdomain "$domain", "$localdir";
 
-### process_args
 
 # process args
 my $action = shift;
@@ -59,6 +58,7 @@ my $action = shift;
 &format_toterm(@ARGV)		   if $action eq 'format_toterm';
 &base64_encode(@ARGV)		   if $action eq 'base64_encode';
 &create_mailct(@ARGV)		   if $action eq 'create_mailct';
+&filter_html(@ARGV)		   if $action eq 'filter_html';
 
 
 #
@@ -79,6 +79,7 @@ Example:
   format_toterm  {output-contain-htmlcode-htmlcolor}
   base64_encode  {strings-to-be-encode}
   create_mailct	 {tpl_path} {plugin_name} {plugin_output} {handler_output}
+  filter_html    {plugin_output}
 EOF
 ;
 exit(1);
@@ -175,6 +176,32 @@ sub base64_encode {
 	}
 }
 
+
+# Filter HTML Code
+# Usage: 	filter_html  {output} {mode}
+# Note:		mode ~ perl,print
+# Example:	filter_html
+#
+sub filter_html {
+	my $content = shift || return;
+	my $mode = shift || 'print';
+	### before_filter: $content
+	$content =~ s/href\s*=\s*.+?script\s*://gi;
+	$content =~ s/src\s*=\s*.+?script\s*://gi;
+	$content =~ s/src\s*=\s*.+?\.(js|vbs|asp|aspx|php|php4|php5|jsp)//gi;
+	$content =~ s/<script.+<\/script([^>])*>//gi;
+	$content =~ s/<iframe.+<\/iframe([^>])*>//gi;
+	$content =~ s/<frameset.+<\/frameset([^>])*>//gi;
+	$content =~ s/on(blur|c(hange|lick)|dblclick|focus|keypress)//gi;
+	$content =~ s/on((key|mouse)(down|up)|(un)?load|mouse(move|o(ut|ver))|reset|s(elect|ubmit))//gi;
+	### after_filter: $content
+        if ($mode eq 'perl'){
+                return $content;
+        } elsif ($mode eq 'print'){
+                print $content;
+        }
+}
+
 # Create Mail Content by Template
 # Usage:   create_mailct {tpl_path} {plugin} {plugin_output} {handler_output}
 # Example: create_mailct "notify_mail.tpl" "disk_fs" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
@@ -189,6 +216,11 @@ sub create_mailct {
 	### $plugin
 	### $content
 	### $hd_content
+
+	$content = &filter_html($content,'perl');
+	$hd_content = &filter_html($hd_content,'perl');
+	### after_filter_html: $content
+	### after_filter_html: $hd_content
 
 	my $level = &parted_output(1,$content,'perl') || 'level';
 	$level = uc $level;
