@@ -102,5 +102,13 @@ else
 fi
 
 %changelog
+* Wed Mar 19 2014 Zhang Guangzheng<zhang.elinks@gmail.com>
+- agent端修正mole的daemon启动过程
+- 重启proxy时增加em_dynamic_config刷新动作
+- 首次启动初始化的时候，限制用户输入的parter_id必须为小写字母/数字，长度固定32
+- agent端发送的信件套用模板来生成
+- 在生成提醒信和上报时，过滤替换插件输出中的疑似恶意HTML代码
+- agent端添加recovery事件的handler响应，影响发信，上报，快照，自动响应处理等配置
+- 插件disk_fs添加参数exclude，允许跳过指定设备的文件系统状态检查，允许跳过指定挂载点的IO读写测试
 * Mon Mar  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - init buildrpm for esop-1.0-beta1.rpm
