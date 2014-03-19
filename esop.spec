@@ -102,7 +102,7 @@ else
 fi
 
 %changelog
-* Wed Mar 19 2014 Zhang Guangzheng<zhang.elinks@gmail.com>
+* Wed Mar 19 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - agent端修正mole的daemon启动过程
 - 重启proxy时增加em_dynamic_config刷新动作
 - 首次启动初始化的时候，限制用户输入的parter_id必须为小写字母/数字，长度固定32
