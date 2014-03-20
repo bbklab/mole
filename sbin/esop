@@ -8,6 +8,8 @@ PATH_SBIN="$PATH_APP/sbin"
 PATH_RUN="$PATH_ESOP/run"
 PATH_OPT="$PATH_ESOP/opt"
 PATH_OPT_SBIN="$PATH_OPT/sbin"
+PATH_LOG="$PATH_ESOP/log"
+PATH_INITLOG="$PATH_LOG/init.out"
 
 PATH_MOLE="${PATH_ESOP}/mole"
 PATH_MOLE_SBIN="${PATH_MOLE}/sbin"
@@ -174,35 +176,35 @@ is_running(){
 }
 
 start_phptd(){
-  echo -en "Starting proxy ... "
-  if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+  echo -en "Starting proxy ... " | tee -a $PATH_INITLOG
+  if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
 	echo -en "$(echo_yellow "SKIP")"
   else
-	$CMD_SUDO_EYOU $PATH_SBIN/em_dynamic_config all   >/dev/null 2>&1
+	$CMD_SUDO_EYOU $PATH_SBIN/em_dynamic_config all >>$PATH_INITLOG 2>&1
 	if [ "$?" != "0" ]; then
 		echo -en "$(echo_red "Re-Generate dynamic config FAIL")"
 		echo -en "\n"
 		return 1
 	fi
-  	$CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD >/dev/null 2>&1
+  	$CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD >>$PATH_INITLOG 2>&1
 	wait; sleep 1
-	if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+	if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_green "OK")"
 	else
 		echo -en "$(echo_red "FAIL")"
 	fi
   fi
-  echo -en "\n"
+  echo -en "\n" | tee -a $PATH_INITLOG
 }
 
 stop_phptd(){
-  echo -en "Stoping proxy ... "
-  if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+  echo -en "Stoping proxy ... " | tee -a $PATH_INITLOG
+  if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
   	local pid=$(get_pid ${PIDF_PHPTD})
-  	[ ! -z "${pid}" ] && kill ${pid} >/dev/null 2>&1
-  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD} >/dev/null 2>&1
+  	[ ! -z "${pid}" ] && kill ${pid} >>$PATH_INITLOG 2>&1
+  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD} >> $PATH_INITLOG 2>&1
 	wait; sleep 1
-	if is_running "${PIDF_PHPTD}" "phptd" >/dev/null 2>&1; then
+	if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_red "FAIL")"
 	else
 		echo -en "$(echo_green "OK")"
@@ -210,32 +212,32 @@ stop_phptd(){
   else
 	echo -en "$(echo_yellow "SKIP")"
   fi
-  echo -en "\n"
+  echo -en "\n" | tee -a $PATH_INITLOG
 }
 
 
 start_mole(){
-  echo -e "Starting mole ... "
+  echo -e "Starting mole ... " | tee -a $PATH_INITLOG
   ${PATH_MOLE_SBIN}/mole start
   wait; sleep 1
-  if is_running "${PIDF_MOLE}" "mole" >/dev/null 2>&1; then
+  if is_running "${PIDF_MOLE}" "mole" >>$PATH_INITLOG 2>&1; then
 	echo -en "$(echo_green "OK")"
   else
 	echo -en "$(echo_red "FAIL")"
   fi
-  echo -en "\n"
+  echo -en "\n" | tee -a $PATH_INITLOG
 }
 
 stop_mole(){
-  echo -en "Stoping mole ... "
-  ${PATH_MOLE_SBIN}/mole stop >/dev/null 2>&1
+  echo -en "Stoping mole ... " | tee -a $PATH_INITLOG
+  ${PATH_MOLE_SBIN}/mole stop >>$PATH_INITLOG 2>&1
   wait; sleep 1
-  if is_running "${PIDF_MOLE}" "mole" >/dev/null 2>&1; then
+  if is_running "${PIDF_MOLE}" "mole" >>$PATH_INITLOG 2>&1; then
 	echo -en "$(echo_red "FAIL")"
   else
 	echo -en "$(echo_green "OK")"
   fi
-  echo -en "\n"
+  echo -en "\n" | tee -a $PATH_INITLOG
 }
 
 
@@ -329,7 +331,7 @@ fi
 
 
 # 1. check sudo user exist or not ?
-if (id "${EXEC_USER}") >/dev/null 2>&1; then
+if (id "${EXEC_USER}") >>$PATH_INITLOG 2>&1; then
   :
 else
   echo_red "user ${EXEC_USER} not exists!";echo
@@ -396,7 +398,7 @@ case "$#" in
 	[ "${arg2}" == "1" ] && arg2="phptd"
 	[ "${arg2}" == "2" ] && arg2="mole"
 
-	if ! is_comp "${arg2}" >/dev/null 2>&1; then
+	if ! is_comp "${arg2}" >>$PATH_INITLOG 2>&1; then
 		echo "$(echo_yellow "${arg2}") not component"
 		exit 1
 	fi
