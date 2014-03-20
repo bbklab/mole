@@ -71,6 +71,37 @@ check_rc() {
 
 # Build Func Def
 
+# -- build_gmp
+build_gmp() {		# by: php54
+  local filename="gmp-4.3.0.tar.bz2"  dirname="gmp-4.3.0"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_BZ2 $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+        CFLAGS='-I$PATH_INCLUDE' \
+        CPPFLAGS='-I$PATH_INCLUDE' \
+        LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+        ./configure \
+        --prefix=$PATH_INSTALL \
+  "
+
+  if [ "$OS_BIT" == "64" ]; then
+        CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
+  fi
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "make install $filename"
+}
 
 # -- build_libiconv
 build_libiconv() {      # by:  php54
@@ -204,7 +235,7 @@ build_php54() {
     --with-iconv=$PATH_INSTALL \
     --with-iconv-dir=$PATH_INSTALL \
     --with-kerberos \
-    --with-gmp \
+    --with-gmp=$PATH_INSTALL \
     --enable-zip \
     --enable-pcntl \
     --enable-shmop \
@@ -367,6 +398,7 @@ fi
 mkdir -p "${PATH_TARBALL_PECL}" "${PATH_EXTRACT_PECL}" "${LOG_DIR}"
 
 
+build_gmp
 build_libiconv
 build_curl
 build_libevent
