@@ -69,6 +69,7 @@ array_directories=(
 	${CONF_DIR} 
 	${HANDLER_DIR} 
 	${OPT_DIR} 
+	${TPL_DIR}
 	${PLUGIN_DIR} 
 	${INNER_DIR} 
 	${TMP_DIR} 
@@ -78,11 +79,14 @@ array_directories=(
 	${SNAPSHOT_DIR} 
 	${SHARE_DIR}
 	${LOCALE_DIR}
+	${PLLIB_DIR}
 )
-### SHs DEF
-array_shs=(
+### Files DEF
+array_files=(
 	${INCLUDE_FILE}
 	${MOLE_FILE}
+	${CONFIG_FILE}
+	${TPL_MAIL}
 	${PLUTIL}
 	${PRECHECK_SH}
 	#${UPDATE_SH}
@@ -110,12 +114,12 @@ CRIT="$(echo_red "[$(gettext "CRIT")]")"
 for ((i=0;i<${#array_directories[@]};i++)) 
 do
 	if [ "${MODE}" == "1" ]; then
-		[ -d "${array_directories[i]}" -a -w "${array_directories[i]}" ] && {
+		if [ -d "${array_directories[i]}" -a -w "${array_directories[i]}" ]; then
 			echo -e "${OK} : ${array_directories[i]} $(gettext "prepared")"
-		} || {
+		else
 			echo -e "${CRIT} : ${array_directories[i]} $(gettext "not prepared")"
 			((ckrc++))
-		}
+		fi
 	else
 		/bin/mkdir -v -p -m 755 "${array_directories[i]}"
 		if [ "$?" != "0" ]; then
@@ -123,22 +127,17 @@ do
 		fi
 	fi
 done
-### +x SH
-for ((i=0;i<${#array_shs[@]};i++))
-do
-	if [ "${MODE}" == "1" ]; then
-		[ -f "${array_shs[i]}" -a -x "${array_shs[i]}" ] && {
-			echo -e "${OK} : [${array_shs[i]}] $(gettext "prepared")"
-		} || {
-			echo -e "${CRIT} : [${array_shs[i]}] $(gettext "not prepared")"
-			((ckrc++))
-		}
-	else
-		/bin/chmod +x "${array_shs[i]}"
-		if [ "$?" != "0" ]; then
-			((mkrc++))
-		fi
-	fi
 
+### Check Files
+for ((i=0;i<${#array_files[@]};i++))
+do
+	if [ -f "${array_files[i]}" -a -s "${array_files[i]}" ]; then
+		echo -e "${OK} : [${array_files[i]}] $(gettext "prepared")"
+	else
+		echo -e "${CRIT} : [${array_files[i]}] $(gettext "not prepared")"
+		((ckrc++))
+	fi
 done
+
+# Exit
 [ "${MODE}" == "1" ] && exit ${ckrc} || exit ${mkrc}
