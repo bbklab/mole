@@ -339,7 +339,7 @@ else
 		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir -c return failed[rc=${rc}]. exit"
   		echo -e "\n$(gettext "DirCheck Result: Sorry, Directories not prepared") \n"
   		echo -e "${result}\n"
-  		echo -e "$(gettext "Try to Run: \${MAKEDIR_SH}")\n"
+  		echo -e "$(eval_gettext "Try to Run: \${MAKEDIR_SH}")\n"
   		exit 1
 	else
 		echo -e "[$(echo_green "$(gettext "succeed!")")]"
