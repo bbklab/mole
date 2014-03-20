@@ -408,6 +408,13 @@ else
 		trap ' write_log -f "${ERRLOG}" "TRAPERROR [LINE:$LINENO] exited with status: $?" 
 		' ERR
 
+		${MAKEDIR_SH} -c >/dev/null 2>&1
+		rc=$?
+		if [ "${rc}" != "0" ]; then
+			write_log -f "${MOLE_LOG}" "M0000000 MOLE missing files or directories, EXIT"
+			exit 1
+		fi
+		
 		### Important !!!  
 		### [wait] can NOT be placed in  "list|while ... done"  struct  !!!
 		### as wait will lead to mole haning up.
