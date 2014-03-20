@@ -131,11 +131,13 @@ done
 ### Check Files
 for ((i=0;i<${#array_files[@]};i++))
 do
-	if [ -f "${array_files[i]}" -a -s "${array_files[i]}" ]; then
-		echo -e "${OK} : [${array_files[i]}] $(gettext "prepared")"
-	else
-		echo -e "${CRIT} : [${array_files[i]}] $(gettext "not prepared")"
-		((ckrc++))
+	if [ "${MODE}" == "1" ]; then
+		if [ -f "${array_files[i]}" -a -s "${array_files[i]}" ]; then
+			echo -e "${OK} : [${array_files[i]}] $(gettext "prepared")"
+		else
+			echo -e "${CRIT} : [${array_files[i]}] $(gettext "not prepared")"
+			((ckrc++))
+		fi
 	fi
 done
 
