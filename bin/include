@@ -2656,17 +2656,17 @@ process_plugin() {
 	local _errcount_uplimit=${array_repeat_err_stuff[2]}
 	if [ "${_yes_ornot}" == "1" ]; then  # got event recovery
 		local new_level="recovery"
-		output="{${new_level}}:{${part2}}:{${part3}}"  # reset plugin {output}
-		rc="${new_level}"			       # reset plugin {rc}
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, nower errcount reached maximize errtimes, [${_now_errcount} >= ${_errcount_uplimit}],"
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset level from ${part1} to ${new_level}. CONTINUE"
+		output="{${new_level}}:{${part2}}:{${part3}}"  # reset plugin {output}
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset return code from ${rc} to ${new_level}. CONTINUE"
+		rc="${new_level}"			       # reset plugin {rc}
 	else
 		write_log ${jid} ${plugin_name}\
-			"not event recovery, return status: [SUCC]. CONTINUE"
+			"not event recovery (${_now_errcount} < ${_errcount_uplimit}), return status: [SUCC]. CONTINUE"
 	fi
 	write_log ${jid} ${plugin_name}\
 		"will zero repeat errcount. CONTINUE";
