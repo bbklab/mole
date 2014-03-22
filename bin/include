@@ -166,8 +166,8 @@ ARRAY_RCSTATUS_MAPS=(
 )
 
 ### VALID ACTION CONFIG
-# all     = crit warn unkn succ notify tmout
-# default = crit warn unkn notify tmout
+# all     = crit warn unkn succ notify recovery tmout
+# default = crit warn unkn notify recovery tmout
 # none	  = none
 VALID_ACTION_CONFIG="crit warn unkn succ notify recovery tmout all default none "
 
@@ -2644,17 +2644,28 @@ process_plugin() {
   # return status: 0:OK  
   if [ "${rc}" == "0" ]; then    
 	write_log ${jid} ${plugin_name}\
-		"return status: [SUCC], will check nower errcount. CONTINUE";
-	local _now_errcount=$(get_repeat_errcount "${plugin_name}")
-	if [ "$(echo "${_now_errcount} > 0" | bc 2>&-)" == "1" ]; then
-		local new_part1="recovery"
-		output="{${new_part1}}:{${part2}}:{${part3}}"  # reset {output}
-		rc="${new_part1}"			       # reset {rc}
+		"return status: [SUCC], will check nower errcount to detect recovery event, CONTINUE";
+	local array_repeat_err_stuff=()
+	array_repeat_err_stuff=( $(check_repeat_errcount ${plugin_name}) )
+	local _yes_ornot=${array_repeat_err_stuff[0]}
+	local _now_errcount=${array_repeat_err_stuff[1]}
+	local _errcount_uplimit=${array_repeat_err_stuff[2]}
+	if [ "${_yes_ornot}" == "1" ]; then  # got event recovery
+		local new_level="recovery"
+		output="{${new_level}}:{${part2}}:{${part3}}"  # reset plugin {output}
+		rc="${new_level}"			       # reset plugin {rc}
 		write_log ${jid} ${plugin_name}\
-			"nower errcount [${_now_errcount}], reset level from ${part1} to ${new_part1}. CONTINUE"
+			"got event recovery, nower errcount reached maximize errtimes, [${_now_errcount} >= ${_errcount_uplimit}],"
+		write_log ${jid} ${plugin_name}\
+			"got event recovery, reset level from ${part1} to ${new_level}. CONTINUE"
+		write_log ${jid} ${plugin_name}\
+			"got event recovery, reset return code from ${rc} to ${new_level}. CONTINUE"
+	else
+		write_log ${jid} ${plugin_name}\
+			"not event recovery, return status: [SUCC]. CONTINUE"
 	fi
 	write_log ${jid} ${plugin_name}\
-		"return status: [SUCC], will zero repeat errcount. CONTINUE";
+		"will zero repeat errcount. CONTINUE";
 	zero_repeat_errcount "${plugin_name}" "${jid}"		# reset accumulated return-err number => 0
   # return status: 4:NOOP
   elif [ "${rc}" == "4" ]; then  ### plugin finished. 
