@@ -2333,19 +2333,33 @@ disable_plugin() {
 # LogFlag:	INIT0000
 # 
 init_plugin() {
-  local plugin_name=$1
+  local plugin_name=$1  rc=0
   if [ -z "${plugin_name}" ]; then
-	write_log -f "${MOLE_LOG}" "INIT0000 resetting all plugins ...";
 	: > ${TMP_LASTRUN} >/dev/null 2>&1
+	((rc+=$?))
   	: > ${TMP_NEXTRUN} >/dev/null 2>&1
+	((rc+=$?))
   	: > ${TMP_REPEAT}  >/dev/null 2>&1
+	((rc+=$?))
+	plugin_name="all plugins"
   else
-	write_log -f "${MOLE_LOG}" "INIT0000 resetting plugin: [${plugin_name}] ..."
  	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
+	((rc+=$?))
  	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
+	((rc+=$?))
  	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
+	((rc+=$?))
+	plugin_name="plugin: [${plugin_name}]"
   fi
-  return $?
+
+
+  if [ "${rc}" == "0" ]; then
+	write_log -f "${MOLE_LOG}" "INIT0000 resetting ${plugin_name} succeed, return rc=$rc"
+  else
+	write_log -f "${MOLE_LOG}" "INIT0000 resetting ${plugin_name} failed, return rc=$rc"
+  fi
+
+  return ${rc}
 }
 
 # List base-config-name ==> config-value of plugin
