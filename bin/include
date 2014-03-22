@@ -1422,11 +1422,11 @@ update_lastrun_and_nextrun() {
 	rc=$?
 	if [ "${rc}" != "0" ]; then
                 write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
-			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun} (${frequency} later)]"\
 			"error: [${errinfo}]";
 	else
                 write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
-			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun}]"\
+			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun} (${frequency} later)]"\
 			"success";
 	fi
   else
@@ -1436,11 +1436,11 @@ update_lastrun_and_nextrun() {
 	rc=$?
 	if [ "${rc}" != "0" ]; then
                 write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
-			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
+			"[${plugin_name}] for [update nextrun as ${nextrun}] (${frequency} later)"\
 			"error: [${errinfo}]";
 	else
                 write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
-			"[${plugin_name}] for [update nextrun as ${nextrun}]"\
+			"[${plugin_name}] for [update nextrun as ${nextrun}] (${frequency} later)"\
 			"success";
         fi
   fi
@@ -2524,6 +2524,9 @@ process_plugin() {
   write_log ${jid} ${plugin_name} "execution completed."\
 	"return code: [${rc}]  return string: [${output}]. CONTINUE";
 
+
+  write_log ${jid} ${plugin_name} "begin to process various examinations on plugin result. CONTINUE"
+
   # Step 6.1: check plugin output max length
   local PLUGIN_MAXLEN=$(get_plugin_maxlen)
   local plugin_output_length="${#output}"
@@ -2636,6 +2639,7 @@ process_plugin() {
   
 
   # update plugin execution result
+  write_log ${jid} ${plugin_name} "all examinations on plugin result passed. CONTINUE"
   update_status "${plugin_name}" "${jid}" "${output}"
 
 
