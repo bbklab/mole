@@ -284,6 +284,7 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 
 header_priority="X-Priority: 1"
 header_eventid="Event_ID: ${jobid}"
+header_mailer="X-Mailer: esop-Sendmail-1.0"
 ### sendmail depend on different {mail_type}.
 vexit=0
 case "${mail_type}" in
@@ -362,6 +363,7 @@ case "${mail_type}" in
                         -o message-header="${header_subject}" \
                         -o message-header="${header_priority}" \
                         -o message-header="${header_eventid}" \
+			-o message-header="${header_mailer}" \
 			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			if [ "$?" == "0" ]; then
 				((t_s+=1)) 
@@ -409,6 +411,7 @@ case "${mail_type}" in
 			-o message-header="${header_subject}" \
 			-o message-header="${header_priority}" \
 			-o message-header="${header_eventid}" \
+			-o message-header="${header_mailer}" \
 	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 		  if [ "$?" == "0" ]; then
 			((t_s+=1))

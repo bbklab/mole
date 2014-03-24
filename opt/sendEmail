@@ -68,9 +68,9 @@ my %conf = (
     "tls_server"           => 0,                                   ## If TLS is supported by the remote SMTP server
     
     ## Email
-    "delimiter"            => "----MIME delimiter for sendEmail-"  ## MIME Delimiter
+    "delimiter"            => "----MIME delimiter for esop-Sendmail-"  ## MIME Delimiter
                               . rand(1000000),                     ## Add some randomness to the delimiter
-    "Message-ID"           => rand(1000000) . "-sendEmail",        ## Message-ID for email header
+    "Message-ID"           => rand(1000000) . "-esop-Sendmail",        ## Message-ID for email header
     
 );
 
