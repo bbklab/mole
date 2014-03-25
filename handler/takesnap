@@ -138,9 +138,9 @@ take_snap() {
 [ -x /usr/bin/top ] && /usr/bin/top -b -n1 > top
 [ -x /usr/bin/vmstat ] && /usr/bin/vmstat 1 3 > vmstat
 if [ -x /usr/bin/iostat ]; then
-	/usr/bin/iostat 1 3 > iostat
+	/usr/bin/iostat -x 1 5 > iostat
 elif [ -x /usr/local/bin/iostat ]; then
-	/usr/local/bin/iostat 1 3 > iostat
+	/usr/local/bin/iostat -x 1 5 > iostat
 fi
 [ -x /usr/bin/free ] && /usr/bin/free -ltm > free-ltm
 
@@ -265,6 +265,13 @@ ls -d /proc/[0-9]*  > proc-psdir
 [ -f /var/eyou/mysql/var/$(hostname).err ] && tail -n 200 /var/eyou/mysql/var/$(hostname).err > mailv4.mysql.err
 [ -f /usr/local/eyou/mail/data/mysql/$(hostname).err ] && tail -n 200 /usr/local/eyou/mail/data/mysql/$(hostname).err > mailv5.mysql.err
 
+# eyou mysql status.
+mysql_cli="/usr/local/eyou/mail/opt/mysql/bin/mysql"
+if [ -f "$mysql_cli" -a -x "$mysql_cli" ]; then
+	$mysql_cli -h 127.1 -P 3306 -ueyou -peyou -s -e "show global status; show full processlist;"  > mysql.3306
+	$mysql_cli -h 127.1 -P 3316 -ueyou -peyou -s -e "show global status; show full processlist;"  > mysql.3316
+	$mysql_cli -h 127.1 -P 3326 -ueyou -peyou -s -e "show global status; show full processlist;"  > mysql.3326
+fi
 
 ### be careful
 #[ -x /usr/local/eyou/mail/app/bin/em_mailq ] && /usr/local/eyou/mail/app/bin/em_mailq -qa > v5_em_mailq.list
