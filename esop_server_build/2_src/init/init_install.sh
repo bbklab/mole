@@ -19,7 +19,13 @@ PATH_ETC="${PATH_ESOP}/etc"
 INIT_SH="${PATH_SBIN}/eyou_toolmail"
 MYSQL_CLI="${PATH_MYSQL}/bin/mysql"
 MYSQL_CONF="${PATH_ECT}/mysql/my.cnf"
+MYSQL_DATA="${PATH_ESOP}/data/mysql/"
 
+# SUDO DEF
+SUDO="sudo -u eyou"
+
+# DATABASE DEF
+DATABASE="eyou_monitor"
 
 # Global Func Def
 
@@ -36,26 +42,39 @@ check_rc() {
 
 ### Main Body Begin
 
+if [ -f ${MYSQL_CLI} -a -x ${MYSQL_CLI} ]; then
+	MYSQL_CLI="${MYSQL_CLI} -h 127.1 -P 3308"
+else
+	echo "${MYSQL_CLI} not prepared!"
+	exit 1
+fi
+
 # init install mysql db
 init_db() {
-	cd /usr/local/eyou/toolmail/opt/mysql/
-	sudo -u eyou ./scripts/mysql_install_db --defaults-file=/usr/local/eyou/toolmail/etc/mysql/my.cnf --datadir=/usr/local/eyou/toolmail/data/mysql/
+	cd "${PATH_MYSQL}" >/dev/null 2>&1
+	check_rc "chaning directory into ${PATH_MYSQL}"
+
+	${SUDO} ./scripts/mysql_install_db --defaults-file=${MYSQL_CONF} --datadir=${MYSQL_DATA}
+	check_rc "init install mysql db to ${MYSQL_DATA}"
 }
 
 # start mysql db
-/usr/local/eyou/toolmail/app/sbin/eyou_toolmail watch
-/usr/local/eyou/toolmail/app/sbin/eyou_toolmail start mysql
+start_mysql() {
+	${INIT_SH} start mysql
+	wait
+	# check mysql start succeed here!
+}
 
 # create eyou_monitor
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -s -e "create database eyou_monitor;"
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -s -e "drop database test;"
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -s -e "delete from mysql.user where User='';"
+${MYSQL_CLI} -s -e "create database ${DATABASE};"
+${MYSQL_CLI} -s -e "drop database test;"
+${MYSQL_CLI} -s -e "delete from mysql.user where User='';"
 
 # create tables
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -D eyou_monitor  < sql/eyou_monitor.schema.sql 
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -D eyou_monitor  < sql/eyou_monitor.plugin_desc.sql 
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -D eyou_monitor  < sql/eyou_monitor.industry.sql 
+${MYSQL_CLI} -s -e -D ${DATABASE} < sql/eyou_monitor.schema.sql 
+${MYSQL_CLI} -s -e -D ${DATABASE} < sql/eyou_monitor.plugin_desc.sql 
+${MYSQL_CLI} -s -e -D ${DATABASE} < sql/eyou_monitor.industry.sql 
 
 # grant
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -s -e "GRANT ALL PRIVILEGES ON eyou_monitor.* TO eyou@127.0.0.1 IDENTIFIED BY 'eyou' WITH GRANT OPTION;" 
-/usr/local/eyou/toolmail/opt/mysql/bin/mysql -h 127.1 -P 3308 -s -e "GRANT ALL PRIVILEGES ON eyou_monitor.* TO eyou@localhost IDENTIFIED BY 'eyou' WITH GRANT OPTION;"
+${MYSQL_CLI} -s -e "GRANT ALL PRIVILEGES ON eyou_monitor.* TO eyou@127.0.0.1 IDENTIFIED BY 'eyou' WITH GRANT OPTION;" 
+${MYSQL_CLI} -s -e "GRANT ALL PRIVILEGES ON eyou_monitor.* TO eyou@localhost IDENTIFIED BY 'eyou' WITH GRANT OPTION;"

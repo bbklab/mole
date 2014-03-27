@@ -51,8 +51,22 @@ build_esopserver_code() {
   check_rc "install $dirname to $PATH_ESOP"
 }
 
+install_sh() {
+  local sh1="${BASE_DIR}/sbin/init_install.sh" sql1= sql2=
+
+  mkdir -p $PATH_ESOP/tmp_install/sbin/
+  check_rc "create $PATH_ESOP/tmp_install/sbin/"
+
+  cp "$sh1" "$PATH_ESOP/tmp_install/sbin/"
+  check_rc "install $sh1 to $PATH_ESOP/tmp_install/sbin/"
+
+  mkdir -p $PATH_ESOP/tmp_install/sql/
+  check_rc "create $PATH_ESOP/tmp_install/sql/"
+}
+
 ### Main Body Begin ...
 
 echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
 build_esopserver_code
+install_sh
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
