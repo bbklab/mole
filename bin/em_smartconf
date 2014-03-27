@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+#
+# ============================================================================
+#  This Script Responsible for Configuring Plugins According by eYou Product
+# ============================================================================
+#
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+####################################
+#                                  #
+#  --*--< Global Variables >--*--  #
+#                                  #
+####################################
+
+
+# DIR DEF
+EM_INSTALL="/usr/local/eyou/mail"
+EMG_INSTALL="/var/emdg"
+EMG_OPT_INSTALL="/opt"
+EM_CONFDIR="$EM_INSTALL/etc"
+EMG_CONFDIR="$EMG_INSTALL/etc"
+
+# EM FILE DEF
+EM_CONFIG="$EM_CONFDIR/eyou_mail.ini"
+EM_INIT_CONFIG="$EM_CONFDIR/em_init_config"
+EM_MTA_CONFIG="$EM_CONFDIR/em_mta.ini"
+EM_PHPD_CONFIG="$EM_CONFDIR/em_phpd.ini"
+EM_PLUGIN_CONFIG="$EM_CONFDIR/em_plugins.ini"
+EM_MIGRATE_CONFIG="$EM_CONFDIR/em_migrate.ini"
+
+# EMG FILE DEF
+EMG_CONFIG="$EMG_CONFDIR/mail.conf"
+
+
+####################################
+#                                  #
+#  --*--< Public Functions >--*--  #
+#                                  #
+####################################
+
+read_conf() {
+	local file=$1 config=$2
+	local result=
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		result=$( awk -F"=" '($1~/'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
+		result=$( echo -e "${result}" | tr -d '[" \t\n]' | sed -e 's/\x00//g;s/\x0D//g' )
+	fi
+	echo -en "${result}"
+}
+
+read_iniconf() {
+	local file=$1 section=$2 config=$3
+	local result=
+	if [ -f "${file}" -a -s "${file}" ]; then
+		result=$( cat ${file} | tr '\t' ' ' |\
+                        awk -F "=" '\
+                                ($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+                                ( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+                                ( k==1 && x==1 && $1~/^'${config}'\>/ ){$1="";print;exit}' 2>&- |\
+                         sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
+		result=$( echo -e "${result}" | tr -d '[" \t\n]' | sed -e 's/\x00//g;s/\x0D//g' )
+	fi
+	echo -en "${result}"
+}
+
+get_emstart() {
+	local result=
+	if [ -f "${EM_INIT_CONFIG}" -a -s "${EM_INIT_CONFIG}" ]; then
+		result=$(awk 'BEGIN{x=0;y=0} ($0~/^[ \t]*ARRAY_START=\(/){x=1;y=1;next;} \
+			($0~/^[ \t]*#/){next;} (x==1 && y==1 && $0~/^[ \t]*\)/){exit;} \
+			(x==1 && y==1){print} ' "${EM_INIT_CONFIG}" 2>&-)
+	fi
+	echo -en "${result}"
+}
+
+get_emgstart() {
+	local result=
+	
+	echo -en "${result}"
+}
+
+# Check item is subset of sets or not ?
+# Return 	0,1 
+#
+is_sub() {
+	local item=$1  sets=$2
+}
+
+
+####################################
+#                                  #
+#  --*--< Main Body Begin >--*--   #
+#                                  #
+####################################
+
+
+# collectint config stuff
+em_start=( $(get_emstart) )
+emg_start=( $(get_emgstart) )
+
+em_port=
+em_g_port=
+
+# process user args
+# mode="print, config"

@@ -98,6 +98,7 @@ array_files=(
 	${SENDEMAIL}
 	${MAKEDIR_SH}
 	${SETINIT_SH}
+	${EMSMARTCONF_SH}
 )
 
 MODE=0
