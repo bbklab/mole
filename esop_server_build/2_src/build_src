@@ -52,16 +52,19 @@ build_esopserver_code() {
 }
 
 install_sh() {
-  local sh1="${BASE_DIR}/sbin/init_install.sh" sql1= sql2=
+  local sh1="sbin/init_install" sql1="sql/" sql2="sql/"
 
   mkdir -p $PATH_ESOP/tmp_install/sbin/
   check_rc "create $PATH_ESOP/tmp_install/sbin/"
 
-  cp "$sh1" "$PATH_ESOP/tmp_install/sbin/"
+  cp $PATH_EXTRACT/"$sh1" "$PATH_ESOP/tmp_install/sbin/"
   check_rc "install $sh1 to $PATH_ESOP/tmp_install/sbin/"
 
   mkdir -p $PATH_ESOP/tmp_install/sql/
   check_rc "create $PATH_ESOP/tmp_install/sql/"
+
+  cp $PATH_EXTRACT/"$sql1" $PATH_EXTRACT/"${sql2}" "$PATH_ESOP/tmp_install/sql/"
+  check_rc "install $sql1 $sql2 to $PATH_ESOP/tmp_install/sql/"
 }
 
 ### Main Body Begin ...

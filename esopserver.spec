@@ -67,7 +67,7 @@ if [ -L /usr/bin/%{name} ]; then
 else
 	/bin/ln -s /usr/local/eyou/toolmail/app/sbin/eyou_toolmail /usr/bin/%{name} >/dev/null 2>&1
 fi
-/bin/bash /usr/local/eyou/toolmail/tmp_install/sbin/init_install.sh
+/bin/bash /usr/local/eyou/toolmail/tmp_install/sbin/init_install
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
