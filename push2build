@@ -2,6 +2,8 @@
 
 basedir="$(cd $(dirname $0);pwd)"
 
+
+# Func Def
 check_rc() {
   if [ $? == 0 ]; then
         echo -e " -- $(date +%F_%T)  succed!  ${*}"
@@ -11,12 +13,22 @@ check_rc() {
 }
 
 
+### Main Body Begin ...
 if [ "$1" == "server" ]; then
+  filename="${basedir}/esop_server_build/2_src/init/init_install"
   specfile="${basedir}/esopserver.spec"
   initfile="${basedir}/esopserver.init"
   destdir="/data/esop_codes/server_side/"
-  /bin/cp -f ${basedir}/esop_server_build/2_src/init/init_install.sh $destdir/sbin/
-  check_rc "copying init_install.sh to $destdir/sbin/"
+
+  /bin/cp -f ${filename} ${destdir}/sbin/
+  check_rc "copy to ${destdir}/sbin/${filename##*}"
+
+  /bin/cp -f ${specfile} ${destdir}/
+  check_rc "copy to ${destdir}/${specfile##*/}"
+
+  /bin/cp -f ${initfile} ${destdir}/
+  check_rc "copy to ${destdir}/${initfile##*/}"
+
   exit
 elif [ "$1" == "agent" ]; then
   specfile="${basedir}/esop.spec"
@@ -28,19 +40,12 @@ else
 fi
 autorpm="${basedir}/rpm_build/autorpm"
 args="tarball"
-scp_client="/usr/bin/scp"
-build_server=(
-  #comment	#address		#port	#user	#path
-  "rhel5_64"	"172.16.103.210"	"22"	"zgz"	"/databuild/esop_codes/"
-)
-
 
 filename=$( eval "${autorpm} ${args}" )
 check_rc "make rpm"
 
 ls "${filename}" >/dev/null 2>&1
 check_rc "check path: ${filename}"
-
 
 /bin/cp -f "${filename}" "${destdir}/"
 check_rc "copy to ${destdir}/${filename##*/}"
@@ -50,22 +55,3 @@ check_rc "copy to ${destdir}/${specfile##*/}"
 
 /bin/cp -f "${initfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${initfile##*/}"
-exit;
-
-
-for((i=0;i<${#build_server[*]};i++))
-do
-	if (( $i%5 == 0 )); then
-		server=${build_server[$i]}
-	elif (( $i%5 == 1 )); then
-		ssh_host=${build_server[$i]}
-	elif (( $i%5 == 2 )); then
-		ssh_port=${build_server[$i]}
-	elif (( $i%5 == 3 )); then
-		ssh_user=${build_server[$i]}
-	elif (( $i%5 == 4 )); then
-		ssh_path=${build_server[$i]}
-		$scp_client -P ${ssh_port} ${filename} ${ssh_user}@${ssh_host}:${ssh_path}/${filename##*/}
-		check_rc "scp on: ${filename}"
-	fi
-done
