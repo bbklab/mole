@@ -18,10 +18,10 @@ if [ "$1" == "server" ]; then
   filename="${basedir}/esop_server_build/2_src/init/init_install"
   specfile="${basedir}/esopserver.spec"
   initfile="${basedir}/esopserver.init"
-  destdir="/data/esop_codes/server_side/"
+  destdir="/data/esop_codes/server-side"
 
   /bin/cp -f ${filename} ${destdir}/sbin/
-  check_rc "copy to ${destdir}/sbin/${filename##*}"
+  check_rc "copy to ${destdir}/sbin/${filename##*/}"
 
   /bin/cp -f ${specfile} ${destdir}/
   check_rc "copy to ${destdir}/${specfile##*/}"
