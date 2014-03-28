@@ -1,17 +1,6 @@
 #!/bin/bash
 
 basedir="$(cd $(dirname $0);pwd)"
-specfile="${basedir}/esop.spec"
-initfile="${basedir}/esop.init"
-destdir="/data/esop_codes/"
-autorpm="${basedir}/rpm_build/autorpm"
-args="tarball"
-scp_client="/usr/bin/scp"
-build_server=(
-  #comment	#address		#port	#user	#path
-  "rhel5_64"	"172.16.103.210"	"22"	"zgz"	"/databuild/esop_codes/"
-)
-
 
 check_rc() {
   if [ $? == 0 ]; then
@@ -20,6 +9,31 @@ check_rc() {
         echo -e " -- $(date +%F_%T)  failed!  ${*}"; exit 1
   fi
 }
+
+
+if [ "$1" == "server" ]; then
+  specfile="${basedir}/esopserver.spec"
+  initfile="${basedir}/esopserver.init"
+  destdir="/data/esop_codes/server_side/"
+  /bin/cp -f ${basedir}/esop_server_build/2_src/init/init_install.sh $destdir/sbin/
+  check_rc "copying init_install.sh to $destdir/sbin/"
+  exit
+elif [ "$1" == "agent" ]; then
+  specfile="${basedir}/esop.spec"
+  initfile="${basedir}/esop.init"
+  destdir="/data/esop_codes/"
+else
+  echo "agent or server ?"
+  exit 1
+fi
+autorpm="${basedir}/rpm_build/autorpm"
+args="tarball"
+scp_client="/usr/bin/scp"
+build_server=(
+  #comment	#address		#port	#user	#path
+  "rhel5_64"	"172.16.103.210"	"22"	"zgz"	"/databuild/esop_codes/"
+)
+
 
 filename=$( eval "${autorpm} ${args}" )
 check_rc "make rpm"
