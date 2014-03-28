@@ -52,7 +52,7 @@ build_esopserver_code() {
 }
 
 install_sh() {
-  local sh1="sbin/init_install" sql1="sql/" sql2="sql/"
+  local sh1="sbin/init_install" sql1="sql/db_creation_eyou_monitor.sql" sql2="sql/db_init_eyou_monitor.sql"
 
   mkdir -p $PATH_ESOP/tmp_install/sbin/
   check_rc "create $PATH_ESOP/tmp_install/sbin/"
