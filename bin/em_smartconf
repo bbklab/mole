@@ -135,12 +135,6 @@ get_emgstart() {
 	echo -en "${result}"
 }
 
-# Check item is subset of sets or not ?
-# Return 	0,1 
-#
-is_sub() {
-	local item=$1  sets=$2
-}
 
 
 ####################################

@@ -226,6 +226,19 @@ sub_str() {
   [ "${1#*$2*}" == "$1" ] && echo no || echo yes  
 }
 
+# Check item is subset of sets or not ?
+# Usge:		is_sub "item" "sets"
+# Return:	0,1 | yes,no
+#
+is_sub() {
+        local item=$1  sets=$2
+        if [ "$(echo -e "${sets}" | grep -E -o -w "${item}")" == "" ]; then
+                return 1
+        else
+                return 0
+        fi  
+}
+
 # Write log
 # Usage1:	1: set {_LOG} and ${_DEBUG} before you call this function.
 # Usage2:	2: -f path/to/log/file     Note: this pattern will ignore ${_DEBUG} flag.
@@ -1215,7 +1228,7 @@ get_action_type() {
   ### unfolder [all|default|none] and remove invalid values.
   for item in `echo "${result}"`
   do
-	if [ "$(echo -e "${VALID_ACTION_CONFIG}"|grep -E -o -w "${item}")" == "${item}" ]; then  ### item valid
+	if is_sub "${item}" "${VALID_ACTION_CONFIG}" ; then  ### item valid
 		case "${item}" in
 		"all")
 			output="${output} crit warn unkn succ notify recovery tmout "	;;
@@ -1258,29 +1271,28 @@ take_action_ornot() {
   ### 2. event in actinon_type or not ? 
   local status=
   if [ "${event}" == "tmout" ]; then  ### 2.1 process event: tmout 
-	[ "$(echo -e "${action_type_config}"|grep -E -o -w "${event}")" == "${event}" ] && {
+	if is_sub "${event}" "${action_type_config}"; then
 		result="yes"
-	} || {
+	else
 		result="no"
-	}
+	fi
   elif [ "${event}" == "recovery" ]; then	### 2.1 process event: recovery
-	[ "$(echo -e "${action_type_config}"|grep -E -o -w "${event}")" == "${event}" ] && {
+	if is_sub "${event}" "${action_type_config}"; then
 		result="yes"
-	} || {
+	else
 		result="no"
-	}
+	fi
   else
   	for ((i=0;i<=${#ARRAY_RCSTATUS_MAPS[@]}-1;i++))  ### 2.2 process event: return_code
   	do
 		[ "${ARRAY_RCSTATUS_MAPS[${i}]}" == "${event}" ] && {
 			local i2=$((${i}+1))
 			status=${ARRAY_RCSTATUS_MAPS[${i2}]}
-			# echo "${i} ${i2} ${ARRAY_RCSTATUS_MAPS[${i2}]} ${action_type_config}"
-			[ "$(echo -e "${action_type_config}"|grep -E -o -w "${status}")" == "${status}" ] && {
+			if is_sub "${status}" "${action_type_config}"; then
 				result="yes"
-			} || {
+			else
 				result="no"
-			}
+			fi
 			break
 		}
   	done
@@ -2410,12 +2422,12 @@ view_extra_config() {
 	local search_tag=0  headline="$(gettext "config_name(user-def)") ==> $(gettext "value")"
   	for cname in `list_section_keys "${plugin_name}"`
   	do
-		[ "$(echo -e "${ARRAY_BASE_CONFIG[@]}"  | grep -E -o -w "${cname}")" == "" ] && {  ### 2. user-def config
+		if ! is_sub "${cname}" "${ARRAY_BASE_CONFIG[@]}"; then		### 2. user-def config
 			cvalue=$(read_mole_config ${plugin_name} ${cname})
 			[ "${silient}" == "0" -a "${search_tag}" == "0" ] && echo -e "${headline}"
 			echo -e "${cname} ==> ${cvalue}"
 			search_tag=1
-		}
+		fi
   	done
   } | column -t -s "==>"
 }
