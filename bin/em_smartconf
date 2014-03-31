@@ -6,7 +6,8 @@
 #
 #
 
-# BASE_DIR DEF
+# === BASE_DIR DEF
+#
 [ -z ${BASE_DIR} ] && { 
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
@@ -51,7 +52,7 @@ fi
 #
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
-        export LANG="zh_CN.UTF-8"               ## read from sysenv
+        export LANG="zh_CN.UTF-8"
 elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"
 elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
@@ -85,7 +86,46 @@ EM_MIGRATE_CONFIG="$EM_CONFDIR/em_migrate.ini"
 
 # EMG FILE DEF
 EMG_CONFIG="$EMG_CONFDIR/mail.conf"
+EMG_DOMAIN_CONFIG="$EMG_CONFDIR/domain.conf"
 
+# MOLE DEF
+ESOP_PATH="/usr/local/esop/agent"
+MOLE_PATH="${ESOP_PATH}/mole"
+MOLE_SBIN="${MOLE_PATH}/sbin/"
+MOLE="${MOLE_SBIN}/mole"
+
+# ARRAY EMPS
+ARRAY_EMPS=(
+	"syslog"	"/usr/local/eyou/mail/app/bin/em_syslogd"							"1"
+	"rsyslogd"	"/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1"
+	"mysql"  	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1"
+	"mysql_index"	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*"	"1"
+	"mysql_log"	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"
+	"mproxy"	"/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"				"1"
+	"mproxy_index"	"/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"
+	"memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"
+	"memcache_fix"	"/usr/local/eyou/mail/opt/bin/memcached.+memcache_fix.pid.*"					"1"
+	"memcache_hot"	"/usr/local/eyou/mail/opt/bin/memcached.+memcache_hot.pid.*"					"1"
+	"gearman"	"/usr/local/eyou/mail/opt/sbin/gearmand.+em_gearman.pid.+gearman_queue.+"			"1"
+	"phpd"		"/usr/local/eyou/mail/opt/bin/php.+app/bin/em_phpd.*"						"6"
+	"crtmpd"	"/usr/local/eyou/mail/opt/sbin/crtmpserver.*em_crtmpserver.pid.*"				"1"
+	"ecs_rstorage"	"/usr/local/eyou/mail/bin/ecs_rstorage"								"2"
+	"ecs_wstorage"	"/usr/local/eyou/mail/bin/ecs_wstorage"								"2"
+	"ecs_tracker"	"/usr/local/eyou/mail/bin/ecs_tracker"								"2"
+	"filed"		"/usr/local/eyou/mail/app/bin/em_filed.*"							"3"
+	"filedrepd"	"/usr/local/eyou/mail/app/bin/em_filedrepd.*"							"1"
+	"filedagenat"	"/usr/local/eyou/mail/app/bin/em_filedagent.*"							"3"
+	"httpd"		"/usr/local/eyou/mail/opt/bin/httpd.+start.*"							"3"
+	"nginx"		"nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"							"1"
+	"bounce"	"/usr/local/eyou/mail/app/bin/em_bounce"							"3"
+	"local"		"/usr/local/eyou/mail/app/bin/em_local"								"3"
+	"remote"	"/usr/local/eyou/mail/app/bin/em_remote"							"3"
+	"mlist"		"/usr/local/eyou/mail/app/bin/em_mlist"								"3"
+	"smtp"		"/usr/local/eyou/mail/app/bin/em_smtpd"								"6"
+	"pop"		"/usr/local/eyou/mail/app/bin/em_pop3d"								"6"
+	"imap"		"/usr/local/eyou/mail/app/bin/em_imapd"								"6"
+	"cleanup"	"/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"
+)
 
 ####################################
 #                                  #
@@ -94,22 +134,39 @@ EMG_CONFIG="$EMG_CONFDIR/mail.conf"
 ####################################
 
 read_conf() {
-	local file=$1 config=$2
-	local result=
+	local file=$1 config=$2 kvsep=$3
+	local result=   awk=
+
+	if [ -z "${kvsep}" ]; then
+		awk=" awk "
+	else
+		awk=" awk -F"${kvsep}" "
+	fi
 
 	if [ -f "${file}" -a -s "${file}" ]; then
-		result=$( awk -F"=" '($1~/'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
+		if [ -z "${config}" ]; then
+			result=$( ${awk} '($0~/^[ \t]*$/){next;}  {print $1;exit}' "${file}" 2>&- )
+		else
+			result=$( ${awk} '($1~/'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
+		fi
 		result=$( echo -e "${result}" | tr -d '[" \t\n]' | sed -e 's/\x00//g;s/\x0D//g' )
 	fi
 	echo -en "${result}"
 }
 
 read_iniconf() {
-	local file=$1 section=$2 config=$3
-	local result=
+	local file=$1 section=$2 config=$3 kvsep=$4
+	local result=	awk=
+
+	if [ -z "${kvsep}" ]; then
+		awk=" awk "
+	else
+		awk=" awk -F"${kvsep}" "
+	fi
+
 	if [ -f "${file}" -a -s "${file}" ]; then
 		result=$( cat ${file} | tr '\t' ' ' |\
-                        awk -F "=" '\
+                        ${awk} '\
                                 ($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
                                 ( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
                                 ( k==1 && x==1 && $1~/^'${config}'\>/ ){$1="";print;exit}' 2>&- |\
@@ -124,17 +181,248 @@ get_emstart() {
 	if [ -f "${EM_INIT_CONFIG}" -a -s "${EM_INIT_CONFIG}" ]; then
 		result=$(awk 'BEGIN{x=0;y=0} ($0~/^[ \t]*ARRAY_START=\(/){x=1;y=1;next;} \
 			($0~/^[ \t]*#/){next;} (x==1 && y==1 && $0~/^[ \t]*\)/){exit;} \
-			(x==1 && y==1){print} ' "${EM_INIT_CONFIG}" 2>&-)
+			(x==1 && y==1){gsub(" ","");print} ' "${EM_INIT_CONFIG}" 2>&-)
 	fi
 	echo -en "${result}"
 }
 
 get_emgstart() {
-	local result=
+:
+}
+
+# Should em_process start or not ?
+# Usage:	is_emstarton	{process}
+# Return:	0,1	|	yes,no
+#
+is_emstarton() {
+	local process=$1
+
+	[ -z "${EM_START}" ] && EM_START=( $(get_emstart) )
+	[ -z "${process}" -o "${#EM_START[*]}" == "0" ] && return 1
 	
+	if is_sub "${process}" "${EM_START[*]}"; then
+		return 0
+	else
+		return 1
+	fi 
+}
+
+# Print em_process information
+# Usage:	get_empsinfo	{process}
+# Output:	{bind_addr} {conn_addr} {process_regex} {min_running}
+#
+get_empsinfo() {
+	local process=$1 result=
+	local bind_addr=  conn_addr=  process_regex=  min_running=
+	
+	result="${bind_addr}\n${conn_addr}\n${process_regex}\n${min_running}\n"
 	echo -en "${result}"
 }
 
+get_emport() {
+	local result=
+
+	echo -en "${result}"
+}
+
+get_emgport() {
+:
+}
+
+get_basedomain() {
+	local result=  file=	
+
+	if [ -f "${EM_CONFIG}" -a -s "${EM_CONFIG}" ]; then
+		result=$( read_conf "${EM_CONFIG}" "server_me" "=" 2>&- )
+	elif [ -f "${EMG_DOMAIN_CONFIG}" -a -s "${EMG_DOMAIN_CONFIG}" ]; then
+		result=$( read_conf "${EMG_DOMAIN_CONFIG}" "" 2>&- )
+	fi
+
+	echo -en "${result}"
+}
+
+
+#
+# config_pxxxxxx
+#
+config_pnotify_oom() {
+	local plugin="notify_oom"
+	local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"	 file=
+	local cfg="messagefile" cfg_value=
+
+	if [ -f "${el5_file}" -a -s "${el5_file}" ]; then
+		file="${el5_file}"
+	elif [ -f "${el6_file}" -a -s "${el6_file}" ]; then
+		file="${el6_file}"
+	fi
+	cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/\*\.info/){print $NF;exit;}' "${file}" 2>&-)"
+
+	if [ ! -z "${cfg_value}" ]; then
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_pnotify_syslogin() {
+        local plugin="notify_syslogin"
+        local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"  file=
+        local cfg="authfile" cfg_value=
+
+        if [ -f "${el5_file}" -a -s "${el5_file}" ]; then
+                file="${el5_file}"
+        elif [ -f "${el6_file}" -a -s "${el6_file}" ]; then
+                file="${el6_file}"
+        fi  
+        cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/authpriv\.\*/){print $NF;exit;}' "${file}" 2>&-)"
+
+        if [ ! -z "${cfg_value}" ]; then
+                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+        fi  
+}
+
+config_pmemory() {
+	local plugin="memory"
+	local file="/proc/meminfo"
+	local cfg1="mem_uplimit" cfg_value1="99.99"  cfg2="swp_uplimit" cfg_value2=
+
+	if [ -f "${file}" ]; then
+		local mem_size=$(awk '/^MemTotal:/ {print $2/1024/1024;exit;}' "${file}" 2>&-)
+		if [ -z "${mem_size}" -o ! -z "${mem_size//[0-9.]}" ]; then
+			cfg_value2=10
+		elif [ "$(echo "${mem_size} >= 16" | bc 2>&-)" == "1" ]; then
+                	cfg_value2=10
+        	elif [ "$(echo "${mem_size} >=  8" | bc 2>&-)" == "1" ]; then
+                	cfg_value2=20
+        	else
+                	cfg_value2=30
+        	fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+}
+
+config_psysload() {
+	local plugin="sysload"
+	local file="/proc/cpuinfo"
+	local cfg="load_uplimit"  cfg_value=
+
+	if [ -f "${file}" ]; then
+		local cpunum=$(awk '(/^processor\s*\d*.*$/){x++} END{print x}' "${file}" 2>&-)
+		if [ -z "${cpunum}" -o ! -z "${cpunum//[0-9]}" ]; then
+			cfg_value=10
+		else
+                	if [ ${cpunum} -le 4 ]; then
+                        	cfg_value=4
+                	elif [ ${cpunum} -le 8 ]; then
+                        	cfg_value=${cpunum}
+                	elif [ ${cpunum} -le 16 ]; then
+                        	cfg_value=$( echo "${cpunum} * 0.7" | bc 2>&-)
+                	else
+                        	cfg_value=$( echo "${cpunum} * 0.5" | bc 2>&-)
+                	fi  
+        	fi  
+		if [ -z "${cfg_value}" -o ! -z "${cfg_value//[0-9.]}" ]; then
+			cfg_value=10
+		fi
+	fi
+	
+	if [ ! -z "${cfg_value}" ]; then
+                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_pdisk_space() {
+	local plugin="disk_space"
+	local file="/etc/mtab"
+	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
+	local cfg3="space_pct"  cfg_value3="90"  cfg4="inode_pct"  cfg_value4="90"
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		if [ "$(awk '($2=="/boot"){print $2}' "${file}" 2>&-)" != "" ]; then
+			cfg_value2="/boot"
+		fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+}
+
+config_pdisk_fs() {
+	local plugin="disk_fs"
+	local file="/etc/mtab"	tune2fs="/sbin/tune2fs"
+	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude"  cfg_value2=
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		if [ -f "${tune2fs}" -a -x "${tune2fs}" ]; then
+			local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
+			for d in `echo "${devices}"`
+			do
+				if [ "$( ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
+					cfg_value2="${cfg_value2} ${d}"
+				fi
+			done
+		fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+}
+
+config_pdisk_iostat() {
+	local plugin="disk_iostat"
+	local file="/etc/mtab"
+	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="50"
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
+		for d in `echo "${devices}"`
+		do
+			if [ -b "${d}" ]; then
+				cfg_value1="${cfg_value1} ${d}"
+			fi
+		done
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+}
+
+config_ptraffic() {
+	local plugin="traffic"
+	local file="/proc/net/dev"
+	local cfg="ifdev_lst"  cfg_value=
+	
+	if [ -f "${file}" ]; then
+                local cfg_value=$( awk -F: '(NF!=2){next;} ($1~/\<lo\>/){next;} {print $1,$2}' "${file}" 2>&- |\
+					 awk '($2!=0 && $3!=0){print $1;exit;}' |\
+					 tr -d '\r\n\t ')
+        fi 
+	
+	if [ ! -z "${cfg_value}" ]; then
+		cfg_value="${cfg_value}:5M/s:10M/s:0:0"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_pport() {
+	local plugin="port"
+	local cfg="port_list"  cfg_value=
+
+
+	if [ ! -z "${cfg_value}" ]; then
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
 
 
 ####################################
@@ -144,12 +432,18 @@ get_emgstart() {
 ####################################
 
 
-# collectint config stuff
-em_start=( $(get_emstart) )
-emg_start=( $(get_emgstart) )
+if [ ! -f "${MOLE}" -o ! -x "${MOLE}" ]; then
+	exit 1
+fi
 
-em_port=
-em_g_port=
+# collectint config stuff
+EM_START=( $(get_emstart) )
+EMG_SATRT=( $(get_emgstart) )
+
+EM_PORT=( $(get_emport) )
+EMG_PORT=( $(get_emgport) )
+
+
 
 # process user args
 # mode="print, config"
