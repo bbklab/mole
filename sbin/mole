@@ -663,10 +663,10 @@ case "$#" in
 						"0") echo "$(eval_gettext "enable [\$plugin] success") [$(echo_green OK)]"
 				     			init_plugin mole_report_conf
 							;;
-						*)   echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}]" ;;
+						*)   echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}]" ;;
 			      		esac
 					;;
-				*)    echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}" 	;;
+				*)    echo "$(eval_gettext "enable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}" 	;;
 				esac
 				((rcode+=$rc))
 			else
@@ -696,10 +696,10 @@ case "$#" in
 					"0") echo "$(eval_gettext "disable [\$plugin] success") [$(echo_green OK)]"
 				     		init_plugin mole_report_conf
 						;;
-					*)   echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}]" ;;
+					*)   echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}]" ;;
 			      	esac
 				;;
-                        	*)    echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"       ;;
+                        	*)    echo "$(eval_gettext "disable [\$plugin] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"       ;;
                         	esac
 				((rcode+=$rc))
 			else
@@ -882,7 +882,7 @@ case "$#" in
 				;;
 			"2") echo "$(eval_gettext "delete [\$arg2]-[\$arg3] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already not exists")")]"	;;
 			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **"					;;
-			*)   echo "$(eval_gettext "delete [\$arg2]-[\$arg3] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"    	;;
+			*)   echo "$(eval_gettext "delete [\$arg2]-[\$arg3] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"    	;;
 			esac
 			exit ${rc}
 		else
@@ -914,7 +914,7 @@ case "$#" in
 				;;
 			"2") echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already exists")")]"		;;
 			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **" 					  ;;
-			*)   echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"        ;;
+			*)   echo "$(eval_gettext "add [\$arg2]-[\$arg3]:[\$arg4] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"        ;;
 			esac
 			exit ${rc}
 		else
@@ -933,7 +933,7 @@ case "$#" in
 			"2") echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] is already what you want")")]" ;;
 			"5") echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] warn") [$(echo_yellow "$(eval_gettext "NoConf: config [\$arg3] not found")")]"	;;
 			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **" 					;;
-			*)   echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] failed") $(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG}"		;;
+			*)   echo "$(eval_gettext "update [\$arg2]-[\$arg3]:[\$arg4] failed") $(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"		;;
 			esac
 			exit ${rc}
 		else
