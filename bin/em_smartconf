@@ -71,9 +71,16 @@ fi
 
 # DIR DEF
 EM_INSTALL="/usr/local/eyou/mail"
+EM_CONFDIR="$EM_INSTALL/etc"
+EM_CONFDIR_MYSQL="$EM_CONFDIR/mysql"
+EM_CONFDIR_NGINX="$EM_CONFDIR/nginx"
+EM_CONFDIR_APACHE="$EM_CONFDIR/httpd"
+EM_CONFDIR_MPROXY="$EM_CONFDIR/mproxy"
+EM_CONFDIR_CRTMP="$EM_CONFDIR/crtmpserver"
+EM_CONFDIR_PHP="$EM_CONFDIR/php"
+EM_CONFDIR_PHPZTS="$EM_CONFDIR/phpzts"
 EMG_INSTALL="/var/emdg"
 EMG_OPT_INSTALL="/opt"
-EM_CONFDIR="$EM_INSTALL/etc"
 EMG_CONFDIR="$EMG_INSTALL/etc"
 
 # EM FILE DEF
@@ -91,11 +98,12 @@ EMG_DOMAIN_CONFIG="$EMG_CONFDIR/domain.conf"
 # MOLE DEF
 ESOP_PATH="/usr/local/esop/agent"
 MOLE_PATH="${ESOP_PATH}/mole"
-MOLE_SBIN="${MOLE_PATH}/sbin/"
+MOLE_SBIN="${MOLE_PATH}/sbin"
 MOLE="${MOLE_SBIN}/mole"
 
-# ARRAY EMPS
-ARRAY_EMPS=(
+# ARRAY EMCOMP
+ARRAY_EMCOMP=(
+	# comp		# comp_regex						# min_running
 	"syslog"	"/usr/local/eyou/mail/app/bin/em_syslogd"							"1"
 	"rsyslogd"	"/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1"
 	"mysql"  	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1"
@@ -190,39 +198,8 @@ get_emgstart() {
 :
 }
 
-# Should em_process start or not ?
-# Usage:	is_emstarton	{process}
-# Return:	0,1	|	yes,no
-#
-is_emstarton() {
-	local process=$1
-
-	[ -z "${EM_START}" ] && EM_START=( $(get_emstart) )
-	[ -z "${process}" -o "${#EM_START[*]}" == "0" ] && return 1
-	
-	if is_sub "${process}" "${EM_START[*]}"; then
-		return 0
-	else
-		return 1
-	fi 
-}
-
-# Print em_process information
-# Usage:	get_empsinfo	{process}
-# Output:	{bind_addr} {conn_addr} {process_regex} {min_running}
-#
-get_empsinfo() {
-	local process=$1 result=
-	local bind_addr=  conn_addr=  process_regex=  min_running=
-	
-	result="${bind_addr}\n${conn_addr}\n${process_regex}\n${min_running}\n"
-	echo -en "${result}"
-}
-
 get_emport() {
-	local result=
-
-	echo -en "${result}"
+:
 }
 
 get_emgport() {
@@ -241,8 +218,140 @@ get_basedomain() {
 	echo -en "${result}"
 }
 
+# Should em_process start or not ?
+# Usage:	is_emstarton	{process}
+# Return:	0,1	|	yes,no
+#
+is_emstarton() {
+	local process=$1
+
+	[ -z "${EM_START}" ] && EM_START=( $(get_emstart) )
+	[ -z "${process}" -o "${#EM_START[*]}" == "0" ] && return 1
+	
+	if is_sub "${process}" "${EM_START[*]}"; then
+		return 0
+	else
+		return 1
+	fi 
+}
+
+# Is EM_COMP or not ?
+# Usage:	is_emcomp	{comp}
+# Return:	0,1	| 	yes,no
+# Output:	index number of EM_COMP
+#
+is_emcomp() {
+	local comp=$1	rval=1
+	local index=
+	
+	[ -z "${comp}" -o "${#ARRAY_EMCOMP[*]}" == "0" ] && return 1
+
+	for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=3))
+	do
+		if [ "${ARRAY_EMCOMP[$i]}" == "${comp}" ]; then
+			index=$i
+			rval=0
+			break
+		fi
+	done
+	
+	echo -en "${index}"
+	return $rval
+}
+
+# Get EM_COMP regex
+#
+get_emcomp_regex() {
+	local comp=$1	result=
+	local index=
+
+	index=$(is_emcomp "${comp}" 2>&1)
+
+	if [ "$?" == "0" ]; then
+		((index++))
+		result=${ARRAY_EMCOMP[$index]}
+	fi
+
+	echo -en "${result}"
+}
+
+# Get EM_COMP min_running
+#
+get_emcomp_minr() {
+	local comp=$1	result=
+	local index=
+	
+	index=$(is_emcomp "${comp}" 2>&1)
+
+	if [ "$?" == "0" ]; then
+		((index+=2))
+		result=${ARRAY_EMCOMP[$index]}
+	fi
+		
+	echo -en "${result}"
+}	
+
+
+# Print em_comp information
+# Usage:	get_empsinfo	{comp}	{part}
+# Note:		part  ~  bind_addr, conn_addr, comp_regex, min_running
+# Output:	{bind_addr} {conn_addr} {comp_regex} {min_running}
+#
+get_empsinfo() {
+	local comp=$1 part=$2 result=
+	local bind_addr=  conn_addr=  comp_regex=  min_running=
+
+	local file=
+	if is_emcomp "${comp}" >/dev/null 2>&1; then
+		if   [ "${comp}" == "mysql" 		]; then
+			file="$EM_CONFDIR_MYSQL/my.cnf"
+			if [ -f "${file}" -a -s "${file}" ]; then
+				local mysqld_bind=$(read_iniconf "${file}" "mysqld" "bind-address" "=")
+				local mysqld_port=$(read_iniconf "${file}" "mysqld" "port" "=")
+				# bind_addr="${mysqld_bind}:${mysqld_port}"
+			fi
+		elif [ "${comp}" == "mysql_index" 	]; then
+			file="$EM_CONFDIR_MYSQL/my_index.cnf"
+		elif [ "${comp}" == "mysql_log"   	]; then
+			file="$EM_CONFDIR_MYSQL/my_log.cnf"
+		elif [ "${comp}" == "mproxy"      	]; then
+		:
+		elif [ "${comp}" == "mproxy_index" 	]; then
+		:
+		elif [ "${comp}" == "memcache_session"	]; then
+		:
+		fi
+
+		comp_regex="$(get_emcomp_regex "${comp}" 2>&-)"
+		min_running="$(get_emcomp_minr "${comp}" 2>&-)"
+	fi
+	
+	case "${part}" in
+	"bind_addr")
+		result="${bind_addr}"		;;
+	"conn_addr")
+		result="${conn_addr}"		;;
+	"comp_regex")
+		result="${comp_regex}"	;;
+	"min_running")
+		result="${min_running}"		;;
+	*)
+		result="${bind_addr}\n${conn_addr}\n${comp_regex}\n${min_running}\n"	;;
+	esac
+
+	echo -en "${result}"
+}
+get_empsinfo mysql bind_addr;echo
+get_empsinfo mysql conn_addr;echo
+get_empsinfo mysql comp_regex;echo
+get_empsinfo mysql min_running;echo
+get_empsinfo mysql
+exit;
+
 
 #
+# Plugin Configuring Functions
+# 
 # config_pxxxxxx
 #
 config_pnotify_oom() {
@@ -424,6 +533,86 @@ config_pport() {
 	fi
 }
 
+config_pprocess() {
+	local plugin="process"
+	local cfg="pslist_file"  cfg_value=
+
+
+	if [ ! -z "${cfg_value}" ]; then
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_ptcp_conn() {
+	local plugin="tcp_conn"
+	local cfg="port_list"  cfg_value=
+
+	if [ ! -z "${cfg_value}" ]; then
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_phttp_svr() {
+	local plugin="http_svr"
+	local cfg1="addr_port"  cfg_value=  cfg2="time_out"  cfg_value2="10"
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+}
+config_phttp_svr
+
+config_ppop_svr() {
+	local plugin="pop_svr"
+	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
+	local cfg3="pop_user"  cfg_value3="$2"  cfg4="pop_pass"  cfg_value4="$3"
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	fi
+	if [ ! -z "${cfg_value4}" ]; then
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+	fi
+}
+
+config_psmtp_svr() {
+	local plugin="smtp_svr"
+	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
+	local cfg3="smtp_user"  cfg_value3="$2"  cfg4="smtp_pass"  cfg_value4="$3"
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	fi
+	if [ ! -z "${cfg_value4}" ]; then
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+	fi
+}
+
+config_pimap_svr() {
+	local plugin="imap_svr"
+	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
+	local cfg3="imap_user"  cfg_value3="$2"  cfg4="imap_pass"  cfg_value4="$3"
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	fi
+	if [ ! -z "${cfg_value4}" ]; then
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+	fi
+}
 
 ####################################
 #                                  #
