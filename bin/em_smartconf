@@ -71,10 +71,11 @@ fi
 
 # DIR DEF
 EM_INSTALL="/usr/local/eyou/mail"
+EM_OPT_INSTALL="$EM_INSTALL/opt"
 EM_CONFDIR="$EM_INSTALL/etc"
 EM_CONFDIR_MYSQL="$EM_CONFDIR/mysql"
-EM_CONFDIR_NGINX="$EM_CONFDIR/nginx"
-EM_CONFDIR_APACHE="$EM_CONFDIR/httpd"
+EM_CONFDIR_NGINX="$EM_CONFDIR/nginx/conf"
+EM_CONFDIR_APACHE="$EM_CONFDIR/httpd/conf"
 EM_CONFDIR_MPROXY="$EM_CONFDIR/mproxy"
 EM_CONFDIR_CRTMP="$EM_CONFDIR/crtmpserver"
 EM_CONFDIR_PHP="$EM_CONFDIR/php"
@@ -90,6 +91,7 @@ EM_MTA_CONFIG="$EM_CONFDIR/em_mta.ini"
 EM_PHPD_CONFIG="$EM_CONFDIR/em_phpd.ini"
 EM_PLUGIN_CONFIG="$EM_CONFDIR/em_plugins.ini"
 EM_MIGRATE_CONFIG="$EM_CONFDIR/em_migrate.ini"
+EM_FILEDAGENT_CONFIG="$EM_CONFDIR/em_filedagent.cf"
 
 # EMG FILE DEF
 EMG_CONFIG="$EMG_CONFDIR/mail.conf"
@@ -103,36 +105,37 @@ MOLE="${MOLE_SBIN}/mole"
 
 # ARRAY EMCOMP
 ARRAY_EMCOMP=(
-	# comp		# comp_regex						# min_running
-	"syslog"	"/usr/local/eyou/mail/app/bin/em_syslogd"							"1"
-	"rsyslogd"	"/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1"
-	"mysql"  	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1"
-	"mysql_index"	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*"	"1"
-	"mysql_log"	".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"
-	"mproxy"	"/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"				"1"
-	"mproxy_index"	"/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"
-	"memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"
-	"memcache_fix"	"/usr/local/eyou/mail/opt/bin/memcached.+memcache_fix.pid.*"					"1"
-	"memcache_hot"	"/usr/local/eyou/mail/opt/bin/memcached.+memcache_hot.pid.*"					"1"
-	"gearman"	"/usr/local/eyou/mail/opt/sbin/gearmand.+em_gearman.pid.+gearman_queue.+"			"1"
-	"phpd"		"/usr/local/eyou/mail/opt/bin/php.+app/bin/em_phpd.*"						"6"
-	"crtmpd"	"/usr/local/eyou/mail/opt/sbin/crtmpserver.*em_crtmpserver.pid.*"				"1"
-	"ecs_rstorage"	"/usr/local/eyou/mail/bin/ecs_rstorage"								"2"
-	"ecs_wstorage"	"/usr/local/eyou/mail/bin/ecs_wstorage"								"2"
-	"ecs_tracker"	"/usr/local/eyou/mail/bin/ecs_tracker"								"2"
-	"filed"		"/usr/local/eyou/mail/app/bin/em_filed.*"							"3"
-	"filedrepd"	"/usr/local/eyou/mail/app/bin/em_filedrepd.*"							"1"
-	"filedagenat"	"/usr/local/eyou/mail/app/bin/em_filedagent.*"							"3"
-	"httpd"		"/usr/local/eyou/mail/opt/bin/httpd.+start.*"							"3"
-	"nginx"		"nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"							"1"
-	"bounce"	"/usr/local/eyou/mail/app/bin/em_bounce"							"3"
-	"local"		"/usr/local/eyou/mail/app/bin/em_local"								"3"
-	"remote"	"/usr/local/eyou/mail/app/bin/em_remote"							"3"
-	"mlist"		"/usr/local/eyou/mail/app/bin/em_mlist"								"3"
-	"smtp"		"/usr/local/eyou/mail/app/bin/em_smtpd"								"6"
-	"pop"		"/usr/local/eyou/mail/app/bin/em_pop3d"								"6"
-	"imap"		"/usr/local/eyou/mail/app/bin/em_imapd"								"6"
-	"cleanup"	"/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"
+  # comp	   # comp_regex									# min_running	 # max_conn
+  "syslog"	   "/usr/local/eyou/mail/app/bin/em_syslogd"							"1" 	""
+  "rsyslogd"	   "/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1" 	""
+  "mysql"  	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1" 	"100"
+  "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"100"
+  "mysql_log"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"	"100"
+  "mproxy"	   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"			"1"	"200"
+  "mproxy_index"   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"	"200"
+  "memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"	"100"
+  "memcache_fix"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_fix.pid.*"					"1"	"100"
+  "memcache_hot"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_hot.pid.*"					"1"	"100"
+  "gearman"	   "/usr/local/eyou/mail/opt/sbin/gearmand.+em_gearman.pid.+gearman_queue.+"			"1"	"200"
+  "phpd"	   "/usr/local/eyou/mail/opt/bin/php.+app/bin/em_phpd.*"					"6"	""
+  "crtmpd"	   "/usr/local/eyou/mail/opt/sbin/crtmpserver.*em_crtmpserver.pid.*"				"1"	""
+  "ecs_rstorage"   "/usr/local/eyou/mail/bin/ecs_rstorage"							"2"	"100"
+  "ecs_wstorage"   "/usr/local/eyou/mail/bin/ecs_wstorage"							"2"	"100"
+  "ecs_tracker"	   "/usr/local/eyou/mail/bin/ecs_tracker"							"2"	"100"
+  "filed"	   "/usr/local/eyou/mail/app/bin/em_filed.*"							"3"	"100"
+  "filedrepd"	   "/usr/local/eyou/mail/app/bin/em_filedrepd.*"						"1"	""
+  "filedagent"	   "/usr/local/eyou/mail/app/bin/em_filedagent.*"						"3"	"100"
+  "httpd"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*"						"3"	"300"
+  "nginx"	   "nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"						"1"	"300"
+  "bounce"	   "/usr/local/eyou/mail/app/bin/em_bounce"							"3"	""
+  "local"	   "/usr/local/eyou/mail/app/bin/em_local"							"3"	""
+  "remote"	   "/usr/local/eyou/mail/app/bin/em_remote"							"3"	""
+  "mlist"	   "/usr/local/eyou/mail/app/bin/em_mlist"							"3"	""
+  "smtp"	   "/usr/local/eyou/mail/app/bin/em_smtpd"							"6"	"100"
+  "pop"		   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
+  "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"200"
+  "cleanup"	   "/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"	""
+  "virusd"	   ""												""	""
 )
 
 ####################################
@@ -235,6 +238,23 @@ is_emstarton() {
 	fi 
 }
 
+# List all EM_COMP
+#
+list_emcomp() {
+	local result=
+
+	[ "${#ARRAY_EMCOMP[*]}" == "0" ] && return 1
+
+        for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=4))
+        do  
+                if [ -n "${ARRAY_EMCOMP[$i]}" ]; then
+			result="${result} ${ARRAY_EMCOMP[$i]}"
+                fi  
+        done
+
+	echo -en "${result}"
+}
+
 # Is EM_COMP or not ?
 # Usage:	is_emcomp	{comp}
 # Return:	0,1	| 	yes,no
@@ -246,7 +266,7 @@ is_emcomp() {
 	
 	[ -z "${comp}" -o "${#ARRAY_EMCOMP[*]}" == "0" ] && return 1
 
-	for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=3))
+	for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=4))
 	do
 		if [ "${ARRAY_EMCOMP[$i]}" == "${comp}" ]; then
 			index=$i
@@ -291,13 +311,29 @@ get_emcomp_minr() {
 	echo -en "${result}"
 }	
 
+# Get EM_COMP max_conn
+# 
+get_emcomp_maxc() {
+	local comp=$1	result=
+	local index=
+	
+	index=$(is_emcomp "${comp}" 2>&1)
+		
+	if [ "$?" == "0" ]; then
+		((index+=3))
+		result=${ARRAY_EMCOMP[$index]}
+	fi
+
+	echo -en "${result}"
+}
+
 
 # Print em_comp information
-# Usage:	get_empsinfo	{comp}	{part}
+# Usage:	get_emcompinfo	{comp}	{part}
 # Note:		part  ~  bind_addr, conn_addr, comp_regex, min_running
 # Output:	{bind_addr} {conn_addr} {comp_regex} {min_running}
 #
-get_empsinfo() {
+get_emcompinfo() {
 	local comp=$1 part=$2 result=
 	local bind_addr=  conn_addr=  comp_regex=  min_running=
 
@@ -306,20 +342,179 @@ get_empsinfo() {
 		if   [ "${comp}" == "mysql" 		]; then
 			file="$EM_CONFDIR_MYSQL/my.cnf"
 			if [ -f "${file}" -a -s "${file}" ]; then
-				local mysqld_bind=$(read_iniconf "${file}" "mysqld" "bind-address" "=")
-				local mysqld_port=$(read_iniconf "${file}" "mysqld" "port" "=")
-				# bind_addr="${mysqld_bind}:${mysqld_port}"
+				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
+					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
+					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
+					(x==1 && $1~/^[ \t]*skip-networking/){printf "1"}' \
+					"${file}" 2>&- )
+				if [ "${skip_network}" != "1" ]; then
+					local listen_addr=$(read_iniconf "${file}" "mysqld" "bind-address" "=")
+					local listen_port=$(read_iniconf "${file}" "mysqld" "port" "=")
+					if [ -z "${listen_addr}" ]; then
+						listen_addr="0.0.0.0"
+					fi
+					if [ -z "${listen_port}" ]; then
+						listen_port="3306"
+					fi
+					bind_addr="${listen_addr}:${listen_port}"
+				fi
 			fi
 		elif [ "${comp}" == "mysql_index" 	]; then
 			file="$EM_CONFDIR_MYSQL/my_index.cnf"
+			if [ -f "${file}" -a -s "${file}" ]; then
+				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
+					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
+					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
+					(x==1 && $1~/^[ \t]*skip-networking/){printf "1"}' \
+					"${file}" 2>&- )
+				if [ "${skip_network}" != "1" ]; then
+					local listen_addr=$(read_iniconf "${file}" "mysqld" "bind-address" "=")
+					local listen_port=$(read_iniconf "${file}" "mysqld" "port" "=")
+					if [ -z "${listen_addr}" ]; then
+						listen_addr="0.0.0.0"
+					fi
+					if [ -z "${listen_port}" ]; then
+						listen_port="3306"
+					fi
+					bind_addr="${listen_addr}:${listen_port}"
+				fi
+			fi
 		elif [ "${comp}" == "mysql_log"   	]; then
 			file="$EM_CONFDIR_MYSQL/my_log.cnf"
+			if [ -f "${file}" -a -s "${file}" ]; then
+				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
+					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
+					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
+					(x==1 && $1~/^[ \t]*skip-networking/){printf "1"}' \
+					"${file}" 2>&- )
+				if [ "${skip_network}" != "1" ]; then
+					local listen_addr=$(read_iniconf "${file}" "mysqld" "bind-address" "=")
+					local listen_port=$(read_iniconf "${file}" "mysqld" "port" "=")
+					if [ -z "${listen_addr}" ]; then
+						listen_addr="0.0.0.0"
+					fi
+					if [ -z "${listen_port}" ]; then
+						listen_port="3306"
+					fi
+					bind_addr="${listen_addr}:${listen_port}"
+				fi
+			fi
 		elif [ "${comp}" == "mproxy"      	]; then
-		:
+			bind_addr=$(read_conf "${EM_INIT_CONFIG}" "MPROXY_LISTEN" "=")
+			conn_addr=$(read_conf "${EM_INIT_CONFIG}" "MPROXY_BACKEND" "=")
 		elif [ "${comp}" == "mproxy_index" 	]; then
-		:
+			bind_addr=$(read_conf "${EM_INIT_CONFIG}" "MPROXY_INDEX_LISTEN" "=")
+			conn_addr=$(read_conf "${EM_INIT_CONFIG}" "MPROXY_INDEX_BACKEND" "=")
 		elif [ "${comp}" == "memcache_session"	]; then
-		:
+			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_SESSION_LISTEN" "=")
+			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_SESSION_PORT" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+		elif [ "${comp}" == "memcache_fix"	]; then
+			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_FIX_LISTEN" "=")
+			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_FIX_PORT" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+		elif [ "${comp}" == "memcache_hot"	]; then
+			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_HOT_LISTEN" "=")
+			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_HOT_PORT" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+		elif [ "${comp}" == "gearman"		]; then
+			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_LISTEN" "=")
+			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_PORT" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+			local gmysql_addr=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_MYSQL_HOST" "=")
+			local gmysql_port=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_MYSQL_PORT" "=")
+			if [ -n "${gmysql_addr}" -a -n "${gmysql_port}" ]; then
+				conn_addr="${gmysql_addr}:${gmysql_port}"
+			fi
+		elif [ "${comp}" == "filed"		]; then
+			local listen_addr="0.0.0.0"
+			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "filed" "filed_port" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+		elif [ "${comp}" == "filedagent"	]; then
+			local listen_addr="0.0.0.0"
+			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "agent" "agent_port" "=")
+			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+				bind_addr="${listen_addr}:${listen_port}"
+			fi
+			if [ -f "${EM_FILEDAGENT_CONFIG}" -a -s "${EM_FILEDAGENT_CONFIG}" ]; then
+				conn_addr=$( awk '($0~/^[ \t]*#/){next;} \
+						(NF=="4" && $1~/[0-9]+/){printf "%s:%d ",$2,$3}' \
+						"${EM_FILEDAGENT_CONFIG}" 2>&- )
+			fi
+		elif [ "${comp}" == "httpd"		]; then
+			local file1="${EM_CONFDIR_APACHE}/httpd.conf"
+			local file2="${EM_OPT_INSTALL}/conf/httpd.conf"
+			if [ -f "${file1}" -a -s "${file1}" ]; then
+				file="${file1}"
+			elif [ "${file2}" -a -s "${file2}" ]; then
+				file="${file2}"
+			fi
+			if [ -n "${file}" -a -f "${file}" -a -s "${file}" ]; then
+				bind_addr=$( awk '($0~/^[ \t]*#/){next;} \
+						(NF=="2" && $1=="Listen" && $2~/:/){printf "%s ",$2;next;} \
+						(NF=="2" && $1=="Listen" && $2!~/:/){printf "0.0.0.0:%s ",$2;next;}' \
+						"${file}" 2>&- )
+			fi
+		elif [ "${comp}" == "nginx"		]; then
+			local file="${EM_CONFDIR_NGINX}/nginx.conf"	
+			if [ -f "${file}" -a -s "${file}" ]; then
+				local listen_addr="0.0.0.0"
+				bind_addr="$(awk -v addr="${listen_addr}" '($0~/^[ \t]*#/){next;} \
+					($0~/^[ \t]*server[ \t]*{[ \t]*$/){x=1;next;} \
+					(x==1 && $0~/^[ \t]*}[ \t]*$/){exit;} \
+					(x==1 && $1~/^[ \t]*listen[ \t]*/){gsub(";","",$2);printf "%s:%s ",addr,$2;next;}' \
+					"${file}" 2>&- )"
+				conn_addr="$(awk '($0~/^[ \t]*#/){next;} \
+					($0~/^[ \t]*upstream[ \t]*apache_server[ \t]*{[ \t]*$/){x=1;next;} \
+					(x==1 && $0~/^[ \t]*}[ \t]*$/){exit;} \
+					(x==1 && $1~/^[ \t]*server[ \t]*/){gsub(";","",$2);printf "%s ",$2;next;}' \
+					"${file}" 2>&- )"
+			fi
+		elif [ "${comp}" == "smtp"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd"   "smtpd_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_1" "smtpd_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_2" "smtpd_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "pop"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d"   "pop3d_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_1" "pop3d_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_2" "pop3d_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "imap"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "imapd"   "imapd_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "imapd_1" "imapd_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "imapd_2" "imapd_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "virusd"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "virusd"   "virusd_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "virusd_1" "virusd_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "virusd_2" "virusd_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "ecs_tracker"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "tracker"   "tracker_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "tracker_1" "tracker_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "tracker_2" "tracker_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "ecs_rstorage"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage"   "rstorage_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage_1" "rstorage_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage_2" "rstorage_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+		elif [ "${comp}" == "ecs_wstorage"		]; then
+			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage"   "wstorage_listener" "=")
+			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage_1" "wstorage_listener" "=")
+			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage_2" "wstorage_listener" "=")
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
 		fi
 
 		comp_regex="$(get_emcomp_regex "${comp}" 2>&-)"
@@ -341,13 +536,6 @@ get_empsinfo() {
 
 	echo -en "${result}"
 }
-get_empsinfo mysql bind_addr;echo
-get_empsinfo mysql conn_addr;echo
-get_empsinfo mysql comp_regex;echo
-get_empsinfo mysql min_running;echo
-get_empsinfo mysql
-exit;
-
 
 #
 # Plugin Configuring Functions
@@ -412,6 +600,17 @@ config_pmemory() {
 	fi
 }
 
+config_pcpu_usage() {
+        local plugin="cpu_usage"
+        local cfg1="uplimit"  cfg_value1="75"  cfg2="wa_uplimit" cfg_value2="20"
+	local cfg3="sy_uplimit"  cfg_value3="30"  cfg4="us_uplimit"  cfg_value4="50"
+
+        ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+}
+
 config_psysload() {
 	local plugin="sysload"
 	local file="/proc/cpuinfo"
@@ -473,7 +672,11 @@ config_pdisk_fs() {
 			for d in `echo "${devices}"`
 			do
 				if [ "$( ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
-					cfg_value2="${cfg_value2} ${d}"
+					if [ -z "${cfg_value2}" ]; then
+						cfg_value2="${d}"
+					else
+						cfg_value2="${cfg_value2} ${d}"
+					fi
 				fi
 			done
 		fi
@@ -495,7 +698,11 @@ config_pdisk_iostat() {
 		for d in `echo "${devices}"`
 		do
 			if [ -b "${d}" ]; then
-				cfg_value1="${cfg_value1} ${d}"
+				if [ -z  "${cfg_value1}" ]; then
+					cfg_value1="${d}"
+				else
+					cfg_value1="${cfg_value1} ${d}"
+				fi
 			fi
 		done
 	fi
@@ -527,7 +734,20 @@ config_pport() {
 	local plugin="port"
 	local cfg="port_list"  cfg_value=
 
+	for comp in `list_emcomp`
+	do
+		if is_emstarton "${comp}" ; then
+			if [ -z "${cfg_value}" ]; then
+				cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+			else
+				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+			fi
+		fi
+	done
 
+	cfg_value=$(echo -e "${cfg_value}" | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
@@ -535,17 +755,58 @@ config_pport() {
 
 config_pprocess() {
 	local plugin="process"
-	local cfg="pslist_file"  cfg_value=
+	local cfg="pslist_file"  cfg_value="opt/process.lst"
 
+	local headline="# resource file which plugin process.pslist_file specified
+# FORMAT: process-name   process-number[at least]   process-regex
+# process-number will be 1 if not numberic
+# automatic skip the line which not contains three filed
+# search process via command:   ps -eo cmd= | grep -E -o -x -c {process-regex}
+#
+# Example:
+# sshd		1		/usr/sbin/sshd.*
+"
+	local file="${MOLE_PATH}/${cfg_value}"
 
-	if [ ! -z "${cfg_value}" ]; then
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+        { 
+	echo -e "${headline}"
+	for comp in `list_emcomp`
+        do  
+                if is_emstarton "${comp}" ; then
+			echo -e "${comp}" "\t\t" "$(get_emcomp_minr "${comp}")" "\t" "$(get_emcomp_regex "${comp}")"
+                fi  
+        done
+	} > "${file}" 2>/dev/null
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		${MOLE} config-del ${plugin} ${cfg}
+		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"
 	fi
 }
 
 config_ptcp_conn() {
 	local plugin="tcp_conn"
 	local cfg="port_list"  cfg_value=
+
+	local bind_addr=  port=  max_conn=
+	for comp in `list_emcomp`
+	do
+		if is_emstarton "${comp}" ; then
+			max_conn="$(get_emcomp_maxc "${comp}")"
+			if [ -n "${max_conn}" ]; then
+				bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+				for x in `echo "${bind_addr}"`
+				do
+					port=$(echo -e "${x}" | awk -F: '{print $NF}')
+					if [ -z "${cfg_value}" ]; then
+						cfg_value="${port}:${max_conn}"
+					else
+						cfg_value="${cfg_value} ${port}:${max_conn}"
+					fi
+				done
+			fi
+		fi
+	done
 
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
@@ -554,19 +815,61 @@ config_ptcp_conn() {
 
 config_phttp_svr() {
 	local plugin="http_svr"
-	local cfg1="addr_port"  cfg_value=  cfg2="time_out"  cfg_value2="10"
+	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
+
+	local comps=( 
+		"httpd" 
+		"nginx"
+	 )
+	
+	local bind_addr=  port=  protocal=
+	for comp in `echo "${comps[*]}"`
+	do
+		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+		for x in `echo "${bind_addr}"`
+		do
+			port=$(echo -e "${x}" | awk -F: '{print $NF}')
+			if [ "${port}" == "443" ]; then
+				protocal="https"
+			else
+				protocal="http"
+			fi
+			if [ -z "${cfg_value1}" ]; then
+				cfg_value1="${protocal}:${x}"
+			else
+				cfg_value1="${cfg_value1} ${protocal}:${x}"
+			fi
+		done
+	done
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
 	fi
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 }
-config_phttp_svr
 
 config_ppop_svr() {
 	local plugin="pop_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
-	local cfg3="pop_user"  cfg_value3="$2"  cfg4="pop_pass"  cfg_value4="$3"
+	local cfg3="pop_user"  cfg_value3="$1"  cfg4="pop_pass"  cfg_value4="$2"
+
+        local comps=( 
+                "pop" 
+         )
+
+	local bind_addr=
+	for comp in `echo "${comps[*]}"`
+	do
+		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+		for x in `echo "${bind_addr}"`
+		do
+			if [ -z "${cfg_value1}" ]; then
+				cfg_value1="${x}"
+			else
+				cfg_value1="${cfg_value1} ${x}"
+			fi
+		done
+	done
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
@@ -583,7 +886,25 @@ config_ppop_svr() {
 config_psmtp_svr() {
 	local plugin="smtp_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
-	local cfg3="smtp_user"  cfg_value3="$2"  cfg4="smtp_pass"  cfg_value4="$3"
+	local cfg3="smtp_user"  cfg_value3="$1"  cfg4="smtp_pass"  cfg_value4="$2"
+
+        local comps=( 
+                "smtp" 
+         )   
+
+        local bind_addr=
+        for comp in `echo "${comps[*]}"`
+        do  
+                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+                for x in `echo "${bind_addr}"`
+                do  
+                        if [ -z "${cfg_value1}" ]; then
+                                cfg_value1="${x}"
+                        else
+                                cfg_value1="${cfg_value1} ${x}"
+                        fi  
+                done
+        done
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
@@ -600,7 +921,25 @@ config_psmtp_svr() {
 config_pimap_svr() {
 	local plugin="imap_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
-	local cfg3="imap_user"  cfg_value3="$2"  cfg4="imap_pass"  cfg_value4="$3"
+	local cfg3="imap_user"  cfg_value3="$1"  cfg4="imap_pass"  cfg_value4="$2"
+
+        local comps=( 
+                "imap" 
+         )   
+
+        local bind_addr=
+        for comp in `echo "${comps[*]}"`
+        do  
+                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+                for x in `echo "${bind_addr}"`
+                do  
+                        if [ -z "${cfg_value1}" ]; then
+                                cfg_value1="${x}"
+                        else
+                                cfg_value1="${cfg_value1} ${x}"
+                        fi  
+                done
+        done
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
@@ -613,6 +952,31 @@ config_pimap_svr() {
 		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
 	fi
 }
+
+config_pemp_mailqueue() {
+	local plugin="emp_mailqueue"
+	local cfg="uplimit"	cfg_value="1000"
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_pdns_svr() {
+	local plugin="dns_svr"
+	local cfg1="dns_check_lst"   cfg_value1=   cfg2="max_wait_time"   cfg_value2="10"
+		
+	local base_domain="$(get_basedomain)"
+	if [ ! -z "${base_domain}" ]; then
+		cfg_value1="${base_domain}:mx,ns"
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+}
+
 
 ####################################
 #                                  #
@@ -631,8 +995,6 @@ EMG_SATRT=( $(get_emgstart) )
 
 EM_PORT=( $(get_emport) )
 EMG_PORT=( $(get_emgport) )
-
-
 
 # process user args
 # mode="print, config"
