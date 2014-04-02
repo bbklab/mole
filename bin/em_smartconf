@@ -970,6 +970,11 @@ config_pdns_svr() {
 	if [ ! -z "${base_domain}" ]; then
 		cfg_value1="${base_domain}:mx,ns"
 	fi
+	if [ -z "${cfg_value1}" ]; then
+		cfg_value1="eyou.net:mx,ns"
+	else
+		cfg_value1="${cfg_value1} eyou.net:mx,ns"
+	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
