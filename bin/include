@@ -2362,20 +2362,44 @@ disable_plugin() {
 init_plugin() {
   local plugin_name=$1  rc=0
   if [ -z "${plugin_name}" ]; then
-	: > ${TMP_LASTRUN} >/dev/null 2>&1
-	((rc+=$?))
-  	: > ${TMP_NEXTRUN} >/dev/null 2>&1
-	((rc+=$?))
-  	: > ${TMP_REPEAT}  >/dev/null 2>&1
-	((rc+=$?))
+	if [ -f "${TMP_LASTRUN}" -a -s "${TMP_LASTRUN}" ]; then
+		: > "${TMP_LASTRUN}" >/dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
+	if [ -f "${TMP_NEXTRUN}" -a -s "${TMP_NEXTRUN}" ]; then
+  		: > "${TMP_NEXTRUN}" >/dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
+	if [ -f "${TMP_REPEAT}" -a -s "${TMP_REPEAT}" ]; then
+  		: > "${TMP_REPEAT}"  >/dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
 	plugin_name="all plugins"
   else
- 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_LASTRUN} > /dev/null 2>&1
-	((rc+=$?))
- 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_NEXTRUN} > /dev/null 2>&1
-	((rc+=$?))
- 	sed -i '/^'"${plugin_name}"'\>/d' ${TMP_REPEAT}  > /dev/null 2>&1
-	((rc+=$?))
+	if [ -f "${TMP_LASTRUN}" -a -s "${TMP_LASTRUN}" ]; then
+ 		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_LASTRUN}" > /dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
+	if [ -f "${TMP_NEXTRUN}" -a -s "${TMP_NEXTRUN}" ]; then
+ 		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_NEXTRUN}" > /dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
+	if [ -f "${TMP_REPEAT}" -a -s "${TMP_REPEAT}" ]; then
+ 		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_REPEAT}"  > /dev/null 2>&1
+		((rc+=$?))
+	else
+		((rc+=0))
+	fi
 	plugin_name="plugin: [${plugin_name}]"
   fi
 
