@@ -1165,6 +1165,8 @@ sub genjson_heartbeat() {
 			$raw_data{'interval'} = $1;
 		}elsif(m/\A\s*(\d+)hour/i){
 			$raw_data{'interval'} = $1*3600;
+		}elsif(m/\A\s*(\d+)day/i){
+			$raw_data{'interval'} = $1*86400;
 		}else{
 			$raw_data{'interval'} = 120;
 		}
