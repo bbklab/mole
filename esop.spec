@@ -97,6 +97,11 @@ else
 fi
 /bin/bash /usr/local/%{name}/agent/mole/bin/setinit rpminit
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit
+if [ -f "${MOLE_CONFIG_SAVE}" ]; then
+	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+else
+	:
+fi
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
