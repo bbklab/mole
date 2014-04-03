@@ -1037,27 +1037,37 @@ fi
 
 EM_START=( $(get_emstart) )
 EMG_SATRT=( $(get_emgstart) )
+MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 PREFIX="config_p"
 
-# process args
+# 1. process args
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
 [ "$#" == "0" ] && show_usage
 [ "$1" == "rpminit" ] && MODE=1 || show_usage
 [ "$2" == "-v" -o "$2" == "verbose" ] && VERBOSE=1
 
-# auto config all plugins
+# 2. restore old mole configs
+if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
+
+	mole_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global id 2>&- )
+	part_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global parter_id 2>&- )
+	gloname=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global name 2>&- )
+	recevie=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" default mail_receviers 2>&- )
+	
+	update_mole_config force global id "${mole_id}"
+	update_mole_config force global parter_id "${part_id}"
+	update_mole_config force global name "${gloname}"
+	update_mole_config default mail_receviers "${mail_receviers}"
+
+	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+fi
+
+# 3. automatic config all plugins
 for plugin in `${MOLE} ln 2>&-`
 do
 	if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
-		if [ "${VERBOSE}" == "1" ]; then
-			echo "plugin [$(echo_green "${plugin}")] supported";
-		fi
 		if [ "${MODE}" == "1" ]; then
-			if [ "${VERBOSE}" == "1" ]; then
-				eval "${PREFIX}${plugin}"; echo;echo;
-			else
-				eval "${PREFIX}${plugin} >/dev/null 2>&1"
-			fi
+			eval "${PREFIX}${plugin} >/dev/null 2>&1"
 	
 			# enable plugins here
 			case "${plugin}" in

@@ -3208,4 +3208,4 @@ process_plugin_misform() {
 
 # stopps_by_pidfile  /usr/local/esop/agent/mole/tmp/run/esop_mole.pid
 # read_mole_config global locale
-# read_mole_config -f /tmp/123  global globale
+# read_mole_config -f /tmp/123  global locale
