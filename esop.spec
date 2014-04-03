@@ -116,7 +116,7 @@ fi
 
 # remove original mole config file
 if [ -f "${MOLE_CONFIG_SAVE}" ]; then
-	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
 else
 	:
 fi
