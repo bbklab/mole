@@ -59,7 +59,6 @@ SENDMAIL="${HANDLER_DIR}/sendmail"
 SENDEMAIL="${OPT_DIR}/sendEmail"
 MAKEDIR_SH="${BIN_DIR}/makedir"
 SETINIT_SH="${BIN_DIR}/setinit"
-EMSMARTCONF_SH="${BIN_DIR}/em_smartconf"
 
 # MAIL_TPL DEF
 TPL_MAIL="${TPL_DIR}/notify_mail.tpl"
