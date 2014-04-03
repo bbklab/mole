@@ -66,6 +66,17 @@ else
 fi
 
 
+# === PRECHECK
+#
+result=$( eval ${PRECHECK_SH} 2>&1 )
+rc=$?
+if [ "$rc" != "0" ]; then
+        echo -e "\n$(gettext "PreCheck Result: Sorry, Current Enviroment is NOT Suitable to Run MOLE") \n" 
+        echo -e "${result}"
+        exit 1
+fi
+
+
 # Set Return Codes
 STATE_OK=0
 STATE_WARN=1
