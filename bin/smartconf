@@ -201,14 +201,6 @@ get_emgstart() {
 :
 }
 
-get_emport() {
-:
-}
-
-get_emgport() {
-:
-}
-
 get_basedomain() {
 	local result=  file=	
 
@@ -542,6 +534,117 @@ get_emcompinfo() {
 # 
 # config_pxxxxxx
 #
+
+#
+# config for base plugins
+#
+config_pcpu_usage() {
+        local plugin="cpu_usage"
+        local cfg1="uplimit"  cfg_value1="75"  cfg2="wa_uplimit" cfg_value2="20"
+	local cfg3="sy_uplimit"  cfg_value3="30"  cfg4="us_uplimit"  cfg_value4="50"
+
+        ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+}
+
+config_pdisk_fs() {
+	local plugin="disk_fs"
+	local file="/etc/mtab"	tune2fs="/sbin/tune2fs"
+	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude"  cfg_value2=
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		if [ -f "${tune2fs}" -a -x "${tune2fs}" ]; then
+			local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
+			for d in `echo "${devices}"`
+			do
+				if [ "$( ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
+					if [ -z "${cfg_value2}" ]; then
+						cfg_value2="${d}"
+					else
+						cfg_value2="${cfg_value2} ${d}"
+					fi
+				fi
+			done
+		fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+}
+
+config_pdisk_space() {
+	local plugin="disk_space"
+	local file="/etc/mtab"
+	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
+	local cfg3="space_pct"  cfg_value3="90"  cfg4="inode_pct"  cfg_value4="90"
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		if [ "$(awk '($2=="/boot"){print $2}' "${file}" 2>&-)" != "" ]; then
+			cfg_value2="/boot"
+		fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+}
+
+config_pdisk_iostat() {
+	local plugin="disk_iostat"
+	local file="/etc/mtab"
+	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="50"
+
+	if [ -f "${file}" -a -s "${file}" ]; then
+		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
+		for d in `echo "${devices}"`
+		do
+			if [ -b "${d}" ]; then
+				if [ -z  "${cfg_value1}" ]; then
+					cfg_value1="${d}"
+				else
+					cfg_value1="${cfg_value1} ${d}"
+				fi
+			fi
+		done
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+}
+
+config_pmemory() {
+	local plugin="memory"
+	local file="/proc/meminfo"
+	local cfg1="mem_uplimit" cfg_value1="99.99"  cfg2="swp_uplimit" cfg_value2=
+
+	if [ -f "${file}" ]; then
+		local mem_size=$(awk '/^MemTotal:/ {print $2/1024/1024;exit;}' "${file}" 2>&-)
+		if [ -z "${mem_size}" -o ! -z "${mem_size//[0-9.]}" ]; then
+			cfg_value2=10
+		elif [ "$(echo "${mem_size} >= 16" | bc 2>&-)" == "1" ]; then
+                	cfg_value2=10
+        	elif [ "$(echo "${mem_size} >=  8" | bc 2>&-)" == "1" ]; then
+                	cfg_value2=20
+        	else
+                	cfg_value2=30
+        	fi
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	fi
+}
+
 config_pnotify_oom() {
 	local plugin="notify_oom"
 	local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"	 file=
@@ -574,160 +677,6 @@ config_pnotify_syslogin() {
         if [ ! -z "${cfg_value}" ]; then
                 ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
         fi  
-}
-
-config_pmemory() {
-	local plugin="memory"
-	local file="/proc/meminfo"
-	local cfg1="mem_uplimit" cfg_value1="99.99"  cfg2="swp_uplimit" cfg_value2=
-
-	if [ -f "${file}" ]; then
-		local mem_size=$(awk '/^MemTotal:/ {print $2/1024/1024;exit;}' "${file}" 2>&-)
-		if [ -z "${mem_size}" -o ! -z "${mem_size//[0-9.]}" ]; then
-			cfg_value2=10
-		elif [ "$(echo "${mem_size} >= 16" | bc 2>&-)" == "1" ]; then
-                	cfg_value2=10
-        	elif [ "$(echo "${mem_size} >=  8" | bc 2>&-)" == "1" ]; then
-                	cfg_value2=20
-        	else
-                	cfg_value2=30
-        	fi
-	fi
-
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	fi
-}
-
-config_pcpu_usage() {
-        local plugin="cpu_usage"
-        local cfg1="uplimit"  cfg_value1="75"  cfg2="wa_uplimit" cfg_value2="20"
-	local cfg3="sy_uplimit"  cfg_value3="30"  cfg4="us_uplimit"  cfg_value4="50"
-
-        ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
-	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
-}
-
-config_psysload() {
-	local plugin="sysload"
-	local file="/proc/cpuinfo"
-	local cfg="load_uplimit"  cfg_value=
-
-	if [ -f "${file}" ]; then
-		local cpunum=$(awk '(/^processor\s*\d*.*$/){x++} END{print x}' "${file}" 2>&-)
-		if [ -z "${cpunum}" -o ! -z "${cpunum//[0-9]}" ]; then
-			cfg_value=10
-		else
-                	if [ ${cpunum} -le 4 ]; then
-                        	cfg_value=4
-                	elif [ ${cpunum} -le 8 ]; then
-                        	cfg_value=${cpunum}
-                	elif [ ${cpunum} -le 16 ]; then
-                        	cfg_value=$( echo "${cpunum} * 0.7" | bc 2>&-)
-                	else
-                        	cfg_value=$( echo "${cpunum} * 0.5" | bc 2>&-)
-                	fi  
-        	fi  
-		if [ -z "${cfg_value}" -o ! -z "${cfg_value//[0-9.]}" ]; then
-			cfg_value=10
-		fi
-	fi
-	
-	if [ ! -z "${cfg_value}" ]; then
-                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
-	fi
-}
-
-config_pdisk_space() {
-	local plugin="disk_space"
-	local file="/etc/mtab"
-	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
-	local cfg3="space_pct"  cfg_value3="90"  cfg4="inode_pct"  cfg_value4="90"
-
-	if [ -f "${file}" -a -s "${file}" ]; then
-		if [ "$(awk '($2=="/boot"){print $2}' "${file}" 2>&-)" != "" ]; then
-			cfg_value2="/boot"
-		fi
-	fi
-
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	fi
-	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
-	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
-}
-
-config_pdisk_fs() {
-	local plugin="disk_fs"
-	local file="/etc/mtab"	tune2fs="/sbin/tune2fs"
-	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude"  cfg_value2=
-
-	if [ -f "${file}" -a -s "${file}" ]; then
-		if [ -f "${tune2fs}" -a -x "${tune2fs}" ]; then
-			local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
-			for d in `echo "${devices}"`
-			do
-				if [ "$( ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
-					if [ -z "${cfg_value2}" ]; then
-						cfg_value2="${d}"
-					else
-						cfg_value2="${cfg_value2} ${d}"
-					fi
-				fi
-			done
-		fi
-	fi
-
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	fi
-}
-
-config_pdisk_iostat() {
-	local plugin="disk_iostat"
-	local file="/etc/mtab"
-	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="50"
-
-	if [ -f "${file}" -a -s "${file}" ]; then
-		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
-		for d in `echo "${devices}"`
-		do
-			if [ -b "${d}" ]; then
-				if [ -z  "${cfg_value1}" ]; then
-					cfg_value1="${d}"
-				else
-					cfg_value1="${cfg_value1} ${d}"
-				fi
-			fi
-		done
-	fi
-
-	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-}
-
-config_ptraffic() {
-	local plugin="traffic"
-	local file="/proc/net/dev"
-	local cfg="ifdev_lst"  cfg_value=
-	
-	if [ -f "${file}" ]; then
-                local cfg_value=$( awk -F: '(NF!=2){next;} ($1~/\<lo\>/){next;} {print $1,$2}' "${file}" 2>&- |\
-					 awk '($2!=0 && $3!=0){print $1;exit;}' |\
-					 tr -d '\r\n\t ')
-        fi 
-	
-	if [ ! -z "${cfg_value}" ]; then
-		cfg_value="${cfg_value}:5M/s:10M/s:0:0"
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
-	fi
 }
 
 config_pport() {
@@ -767,21 +716,66 @@ config_pprocess() {
 # sshd		1		/usr/sbin/sshd.*
 "
 	local file="${MOLE_PATH}/${cfg_value}"
+	local errinfo=
 
-        { 
-	echo -e "${headline}"
-	for comp in `list_emcomp`
-        do  
-                if is_emstarton "${comp}" ; then
-			echo -e "${comp}" "\t\t" "$(get_emcomp_minr "${comp}")" "\t" "$(get_emcomp_regex "${comp}")"
-                fi  
-        done
-	} > "${file}" 2>/dev/null
+	errinfo=$(touch "${file}" 2>&1 1>/dev/null)
+	if [ "$?" == "0" ]; then
+        	{ 
+		echo -e "${headline}"
+		for comp in `list_emcomp`
+        	do  
+                	if is_emstarton "${comp}" ; then
+				echo -e "${comp}" "\t\t" "$(get_emcomp_minr "${comp}")" "\t" "$(get_emcomp_regex "${comp}")"
+                	fi  
+        	done
+		} > "${file}" 2>/dev/null
+	else
+		echo "can't create ${file} : ${errinfo}"
+		return 1
+	fi
 
 	if [ -f "${file}" -a -s "${file}" ]; then
 		${MOLE} config-del ${plugin} ${cfg}
 		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"
 	fi
+}
+
+config_psysload() {
+	local plugin="sysload"
+	local file="/proc/cpuinfo"
+	local cfg="load_uplimit"  cfg_value=
+
+	if [ -f "${file}" ]; then
+		local cpunum=$(awk '(/^processor\s*\d*.*$/){x++} END{print x}' "${file}" 2>&-)
+		if [ -z "${cpunum}" -o ! -z "${cpunum//[0-9]}" ]; then
+			cfg_value=10
+		else
+                	if [ ${cpunum} -le 4 ]; then
+                        	cfg_value=4
+                	elif [ ${cpunum} -le 8 ]; then
+                        	cfg_value=${cpunum}
+                	elif [ ${cpunum} -le 16 ]; then
+                        	cfg_value=$( echo "${cpunum} * 0.7" | bc 2>&-)
+                	else
+                        	cfg_value=$( echo "${cpunum} * 0.5" | bc 2>&-)
+                	fi  
+        	fi  
+		if [ -z "${cfg_value}" -o ! -z "${cfg_value//[0-9.]}" ]; then
+			cfg_value=10
+		fi
+	fi
+	
+	if [ ! -z "${cfg_value}" ]; then
+                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_psystem_dyninfo() {
+:
+}
+
+config_psystem_fixinfo() {
+:
 }
 
 config_ptcp_conn() {
@@ -810,6 +804,81 @@ config_ptcp_conn() {
 
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+config_ptraffic() {
+	local plugin="traffic"
+	local file="/proc/net/dev"
+	local cfg="ifdev_lst"  cfg_value=
+	
+	if [ -f "${file}" ]; then
+                local cfg_value=$( awk -F: '(NF!=2){next;} ($1~/\<lo\>/){next;} {print $1,$2}' "${file}" 2>&- |\
+					 awk '($2!=0 && $3!=0){print $1;exit;}' |\
+					 tr -d '\r\n\t ')
+        fi 
+	
+	if [ ! -z "${cfg_value}" ]; then
+		cfg_value="${cfg_value}:5M/s:10M/s:0:0"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+	fi
+}
+
+#
+# config for mail plugins
+#
+config_pdns_svr() {
+	local plugin="dns_svr"
+	local cfg1="dns_check_lst"   cfg_value1=   cfg2="max_wait_time"   cfg_value2="10"
+		
+	local base_domain="$(get_basedomain)"
+	if [ ! -z "${base_domain}" ]; then
+		cfg_value1="${base_domain}:mx,ns"
+	fi
+	if [ -z "${cfg_value1}" ]; then
+		cfg_value1="eyou.net:mx,ns"
+	else
+		cfg_value1="${cfg_value1} eyou.net:mx,ns"
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+}
+
+config_ppop_svr() {
+	local plugin="pop_svr"
+	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
+	local cfg3="pop_user"  cfg_value3="$1"  cfg4="pop_pass"  cfg_value4="$2"
+
+        local comps=( 
+                "pop" 
+         )
+
+	local bind_addr=
+	for comp in `echo "${comps[*]}"`
+	do
+		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+		for x in `echo "${bind_addr}"`
+		do
+			if [ -z "${cfg_value1}" ]; then
+				cfg_value1="${x}"
+			else
+				cfg_value1="${cfg_value1} ${x}"
+			fi
+		done
+	done
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	fi
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+	fi
+	if [ ! -z "${cfg_value4}" ]; then
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
 	fi
 }
 
@@ -848,28 +917,28 @@ config_phttp_svr() {
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 }
 
-config_ppop_svr() {
-	local plugin="pop_svr"
+config_pimap_svr() {
+	local plugin="imap_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
-	local cfg3="pop_user"  cfg_value3="$1"  cfg4="pop_pass"  cfg_value4="$2"
+	local cfg3="imap_user"  cfg_value3="$1"  cfg4="imap_pass"  cfg_value4="$2"
 
         local comps=( 
-                "pop" 
-         )
+                "imap" 
+         )   
 
-	local bind_addr=
-	for comp in `echo "${comps[*]}"`
-	do
-		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-		for x in `echo "${bind_addr}"`
-		do
-			if [ -z "${cfg_value1}" ]; then
-				cfg_value1="${x}"
-			else
-				cfg_value1="${cfg_value1} ${x}"
-			fi
-		done
-	done
+        local bind_addr=
+        for comp in `echo "${comps[*]}"`
+        do  
+                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+                for x in `echo "${bind_addr}"`
+                do  
+                        if [ -z "${cfg_value1}" ]; then
+                                cfg_value1="${x}"
+                        else
+                                cfg_value1="${cfg_value1} ${x}"
+                        fi  
+                done
+        done
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
@@ -918,41 +987,6 @@ config_psmtp_svr() {
 	fi
 }
 
-config_pimap_svr() {
-	local plugin="imap_svr"
-	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
-	local cfg3="imap_user"  cfg_value3="$1"  cfg4="imap_pass"  cfg_value4="$2"
-
-        local comps=( 
-                "imap" 
-         )   
-
-        local bind_addr=
-        for comp in `echo "${comps[*]}"`
-        do  
-                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-                for x in `echo "${bind_addr}"`
-                do  
-                        if [ -z "${cfg_value1}" ]; then
-                                cfg_value1="${x}"
-                        else
-                                cfg_value1="${cfg_value1} ${x}"
-                        fi  
-                done
-        done
-
-	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	if [ ! -z "${cfg_value3}" ]; then
-		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
-	fi
-	if [ ! -z "${cfg_value4}" ]; then
-		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
-	fi
-}
-
 config_pemp_mailqueue() {
 	local plugin="emp_mailqueue"
 	local cfg="uplimit"	cfg_value="1000"
@@ -960,26 +994,6 @@ config_pemp_mailqueue() {
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
-}
-
-config_pdns_svr() {
-	local plugin="dns_svr"
-	local cfg1="dns_check_lst"   cfg_value1=   cfg2="max_wait_time"   cfg_value2="10"
-		
-	local base_domain="$(get_basedomain)"
-	if [ ! -z "${base_domain}" ]; then
-		cfg_value1="${base_domain}:mx,ns"
-	fi
-	if [ -z "${cfg_value1}" ]; then
-		cfg_value1="eyou.net:mx,ns"
-	else
-		cfg_value1="${cfg_value1} eyou.net:mx,ns"
-	fi
-
-	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 }
 
 
@@ -994,12 +1008,17 @@ if [ ! -f "${MOLE}" -o ! -x "${MOLE}" ]; then
 	exit 1
 fi
 
-# collectint config stuff
 EM_START=( $(get_emstart) )
 EMG_SATRT=( $(get_emgstart) )
+PREFIX="config_p"
 
-EM_PORT=( $(get_emport) )
-EMG_PORT=( $(get_emgport) )
-
-# process user args
-# mode="print, config"
+if [ "$1" == "rpminit" ]; then
+	for plugin in `${MOLE} ln 2>&-`
+	do
+		if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
+			eval "${PREFIX}${plugin}"
+		else
+			echo_yellow "plugin ${plugin} not supported yet";echo
+		fi
+	done
+fi
