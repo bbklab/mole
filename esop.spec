@@ -73,6 +73,16 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 /usr/local/%{name}/agent/mole/docs/
 
 %pre
+# check instance running or not ?
+MOLE_INIT="/usr/local/%{name}/agent/mole/sbin/mole"
+if [ -f "${MOLE_INIT}" -a -x "${MOLE_INIT}" ]; then
+	if ${MOLE_INIT} status >/dev/null 2>&1; then
+		echo "an esop instance is already running ? stop the instance if you want to continue." 
+		exit 0
+	fi
+fi
+
+# create system user: eyou
 USER="eyou"
 if id ${USER} >/dev/null 2>&1; then
 	:
@@ -80,6 +90,7 @@ else
 	useradd ${USER} -m -d /usr/local/%{name}/ -u 12037 >/dev/null 2>&1
 fi
 
+# save original mole config file
 MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
@@ -89,19 +100,28 @@ else
 fi
 
 %post
+# create symbolic link for esop,mole
 if [ -L /usr/bin/%{name} ]; then
 	:
 else
 	/bin/ln -s /usr/local/%{name}/agent/app/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
 	/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /usr/bin/mole >/dev/null 2>&1
 fi
+
+# init mole id
 /bin/bash /usr/local/%{name}/agent/mole/bin/setinit rpminit
+
+# restore original mole configs, init all plugin configs
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
+
+# remove original mole config file
 if [ -f "${MOLE_CONFIG_SAVE}" ]; then
 	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
 else
 	:
 fi
+
+# register as linux startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
