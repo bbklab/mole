@@ -80,31 +80,10 @@ else
 	useradd ${USER} -m -d /usr/local/%{name}/ -u 12037 >/dev/null 2>&1
 fi
 
-MOLE="/usr/local/%{name}/agent/mole/sbin/mole"
 MOLE_CONFIG="/usr/local/%{name}/agent/conf/.mole.ini"
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.save"
-if [ -f "${MOLE}" -a -x "${MOLE}" ]; then
-	if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
-		mid="$( ${MOLE} config-view global id 2>&- )"
-		pid="$( ${MOLE} config-view global parter_id 2>&- )"
-		hname="$( ${MOLE} config-view global name 2>&- )"
-		receviers="$( ${MOLE} config-view default mail_receviers 2>&- )"
-		: > "${MOLE_CONFIG_SAVE}"
-		if [ -n "${mid}" ]; then
-			echo "mid: ${mid}" >> "${MOLE_CONFIG_SAVE}"
-		fi
-		if [ -n "${pid}" ]; then
-			echo "pid: ${pid}" >> "${MOLE_CONFIG_SAVE}"
-		fi
-		if [ -n "${hname}" ]; then
-			echo "hname: ${hname}" >> "${MOLE_CONFIG_SAVE}"
-		fi
-		if [ -n "${receviers}" ]; then
-			echo "receviers: ${receviers}" >> "${MOLE_CONFIG_SAVE}"
-		fi
-	else
-		:
-	fi
+MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
+	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
 else
 	:
 fi
