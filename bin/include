@@ -537,7 +537,7 @@ read_mole_config(){
 		"missing arguments, section=[${section}] key=[${key}]";
 	return 1
   else
-	if [ "${MODE}" == "0" ]; then		# automatic set {config_file}
+	if [ "${Mode}" == "0" ]; then		# automatic set {config_file}
 		if [ "${section}" == "global" -o "${section}" == "default" ]; then 
         		config_file="${CONFIG_FILE}"
 		elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
@@ -547,7 +547,7 @@ read_mole_config(){
   		else 
         		config_file="${CONF_DIR}/${section}.ini"
   		fi
-	elif [ "${MODE}" == "1" ]; then		# set {config_file} according by specified file
+	elif [ "${Mode}" == "1" ]; then		# set {config_file} according by specified file
 		config_file="${specified_file}"
 	fi
 
@@ -3207,3 +3207,5 @@ process_plugin_misform() {
 #################  Debug Area  #####################
 
 # stopps_by_pidfile  /usr/local/esop/agent/mole/tmp/run/esop_mole.pid
+# read_mole_config global locale
+# read_mole_config -f /tmp/123  global globale
