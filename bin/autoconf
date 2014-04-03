@@ -1045,11 +1045,42 @@ do
 		fi
 		if [ "${MODE}" == "1" ]; then
 			if [ "${VERBOSE}" == "1" ]; then
-				eval "${PREFIX}${plugin}"
-				echo;echo;
+				eval "${PREFIX}${plugin}"; echo;echo;
 			else
 				eval "${PREFIX}${plugin} >/dev/null 2>&1"
 			fi
+	
+			# enable plugins here
+			case "${plugin}" in
+			"dns_svr")
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				;;
+			"pop_svr")
+				if is_emstarton "pop" ; then 
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				fi
+				;;
+			"smtp_svr")
+				if is_emstarton "smtp" ; then
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				fi
+				;;
+			"imap_svr")
+				if is_emstarton "imap" ; then
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				fi
+				;;
+			"http_svr")
+				if is_emstarton "nginx" || is_emstarton "httpd" ; then
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				fi
+				;;
+			"emp_mailqueue")
+				if is_emstarton "local" || is_emstarton "remote" ; then
+					${MOLE} enable ${plugin} >/dev/null 2>&1
+				fi
+				;;
+			esac
 		fi
 	else
 		echo_yellow "plugin ${plugin} not supported yet";echo
