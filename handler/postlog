@@ -1153,7 +1153,7 @@ sub genjson_heartbeat() {
 
   # set data
   my %raw_data = (
-        'interval'                => '120',
+        'interval'                => '60',
   );
   open my $fh, "$mole view mole_iam_alive frequency 2>&- | ";
   if($fh){
@@ -1168,7 +1168,7 @@ sub genjson_heartbeat() {
 		}elsif(m/\A\s*(\d+)day/i){
 			$raw_data{'interval'} = $1*86400;
 		}else{
-			$raw_data{'interval'} = 120;
+			$raw_data{'interval'} = 60;
 		}
 		last;
 	}
