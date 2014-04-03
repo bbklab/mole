@@ -71,3 +71,7 @@ check_rc "remove nfs remote: ${destdir}/rpm_workdir/${agent_build_dir}"
 
 /bin/cp -a "${basedir}/${agent_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/${agent_build_dir}"
+
+${autorpm} clean
+check_rc "rpm clean"
+
