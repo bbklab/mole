@@ -80,7 +80,7 @@ else
 	useradd ${USER} -m -d /usr/local/%{name}/ -u 12037 >/dev/null 2>&1
 fi
 
-MOLE_CONFIG="/usr/local/%{name}/agent/conf/.mole.ini"
+MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
 	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
@@ -124,7 +124,7 @@ fi
 - 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
 - 修正插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
 - 新增运行时的目录文件完整性检查, 文件丢失则自动退出DAEMON, 事件标志:MIS00000
-- 增强include函数文件中的若干函数: is_sub, read_mole_config
+- 增强include函数文件中的若干函数: is_sub, read_mole_config, init_plugin
 - 新增自动化配置插件参数的功能,在rpm安装后自动触发,主要根据eYou邮件8版的配置自动激活插件和激活插件
 - 新增自动保留老版本MOLE配置参数(id,parter_id,name,mail_receviers)的功能
 * Wed Mar 19 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
