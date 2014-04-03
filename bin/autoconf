@@ -1080,10 +1080,22 @@ if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 	gloname=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global name 2>&- )
 	recevie=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" default mail_receviers 2>&- )
 	
-	update_mole_config force global id "${mole_id}"
-	update_mole_config force global parter_id "${part_id}"
-	update_mole_config force global name "${gloname}"
-	update_mole_config default mail_receviers "${mail_receviers}"
+	nower_mole_id=$( read_mole_config global id 2>&- )
+	nower_part_id=$( read_mole_config global parter_id 2>&- )
+	nower_gloname=$( read_mole_config global name 2>&- )
+	nower_recevie=$( read_mole_config default mail_receviers 2>&- )
+	if [ -z "${nower_mole_id}" -o "${nower_mole_id}" != "${mole_id}" ]; then
+		update_mole_config force global id "${mole_id}"
+	fi
+	if [ -z "${nower_part_id}" -o "${nower_part_id}" != "${part_id}" ]; then
+		update_mole_config force global parter_id "${part_id}"
+	fi
+	if [ -z "${nower_gloname}" -o "${nower_gloname}" != "${gloname}" ]; then
+		update_mole_config force global name "${gloname}"
+	fi
+	if [ -z "${nower_recevie}" -o "${nower_recevie}" != "${recevie}" ]; then
+		update_mole_config default mail_receviers "${recevie}"
+	fi
 
 	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
 fi
