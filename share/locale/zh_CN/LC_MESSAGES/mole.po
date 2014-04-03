@@ -137,7 +137,7 @@ msgid "NoNeed: config [$arg3] already exists"
 msgstr "配置项 [$arg3] 已存在"
 
 msgid "NoNeed: config [$arg3] is already what you want"
-msgstr "配置项 [$arg3] 的值已经是所要设定的值"
+msgstr "配置项 [$arg3] 的值无变化"
 
 msgid "NoConf: config [$arg3] not found"
 msgstr "配置项 [$arg3] 并不存在"
