@@ -159,7 +159,8 @@ show_usage() {
 cat << EOF
         ${0##*/}
         ${0##*/} help
-        ${0##*/} rpminit [-v|verbose]
+        ${0##*/} rpminit {plugin1} {plugin2} ...
+        ${0##*/} rpminit all
 EOF
 exit 0
 }
@@ -741,9 +742,8 @@ config_pprocess() {
 	fi
 
 	local file="${MOLE_PATH}/${cfg_value}"
-	local errinfo=
 
-	errinfo=$(touch "${file}" 2>&1 1>/dev/null)
+	touch "${file}" 1>/dev/null 2>&1
 	if [ "$?" == "0" ]; then
         	{ 
 		echo -e "${headline}"
@@ -755,9 +755,6 @@ config_pprocess() {
         	done
 		} > "${file}" 2>/dev/null
 	else
-		if [ "${VERBOSE}" == "1" ]; then
-			echo "can't create ${file}: $(echo_red "${errinfo}")"
-		fi
 		return 1
 	fi
 
@@ -1039,12 +1036,24 @@ EM_START=( $(get_emstart) )
 EMG_SATRT=( $(get_emgstart) )
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 PREFIX="config_p"
+PLUGINS=		## plugins to be processed
 
 # 1. process args
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
 [ "$#" == "0" ] && show_usage
-[ "$1" == "rpminit" ] && MODE=1 || show_usage
-[ "$2" == "-v" -o "$2" == "verbose" ] && VERBOSE=1
+if [ "$1" == "rpminit" ]; then
+	MODE=1 
+	if [ -z "$2" ]; then
+		show_usage
+	elif [ "$2" == "all" ]; then
+		PLUGINS="$(${MOLE} ln 2>&-)"
+	else
+		shift 1
+		PLUGINS="$*"
+	fi
+else
+	show_usage
+fi
 
 # 2. restore old mole configs
 if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
@@ -1063,7 +1072,7 @@ if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 fi
 
 # 3. automatic config all plugins
-for plugin in `${MOLE} ln 2>&-`
+for plugin in `echo "${PLUGINS}"`
 do
 	if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
 		if [ "${MODE}" == "1" ]; then
