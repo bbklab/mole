@@ -89,6 +89,7 @@ array_files=(
 	${TPL_MAIL}
 	${PLUTIL}
 	${PRECHECK_SH}
+	${AUTOCONF_SH}
 	#${UPDATE_SH}
 	${REPORT_SH}
 	${CHECKCONF_SH}

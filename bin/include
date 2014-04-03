@@ -49,6 +49,7 @@ PLLIB_DIR="${OPT_DIR}/plmods"
 
 # SH DEF
 PRECHECK_SH="${BIN_DIR}/precheck"
+AUTOCONF_SH="${BIN_DIR}/autoconf"
 UPDATE_SH="${BIN_DIR}/update"
 REPORT_SH="${BIN_DIR}/report"
 CHECKCONF_SH="${BIN_DIR}/checkconf"
