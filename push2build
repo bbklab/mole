@@ -29,6 +29,14 @@ if [ "$1" == "server" ]; then
   /bin/cp -f ${initfile} ${destdir}/
   check_rc "copy to ${destdir}/${initfile##*/}"
 
+  server_build_dir="esop_server_build"
+  /bin/rm -rf "${destdir}"/rpm_workdir/${server_build_dir}
+  check_rc "remove nfs remote: ${destdir}/rpm_workdir/${server_build_dir}"
+
+  /bin/cp -a "${basedir}/${server_build_dir}" ${destdir}/rpm_workdir/
+  check_rc "copy to ${destdir}/rpm_workdir/${server_build_dir}"
+
+
   exit
 elif [ "$1" == "agent" ]; then
   specfile="${basedir}/esop.spec"
@@ -55,3 +63,11 @@ check_rc "copy to ${destdir}/${specfile##*/}"
 
 /bin/cp -f "${initfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${initfile##*/}"
+
+
+agent_build_dir="esop_agent_build"
+/bin/rm -rf "${destdir}"/rpm_workdir/${agent_build_dir}
+check_rc "remove nfs remote: ${destdir}/rpm_workdir/${agent_build_dir}"
+
+/bin/cp -a "${basedir}/${agent_build_dir}" ${destdir}/rpm_workdir/
+check_rc "copy to ${destdir}/rpm_workdir/${agent_build_dir}"
