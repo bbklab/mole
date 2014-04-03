@@ -704,6 +704,16 @@ config_pport() {
 	local plugin="port"
 	local cfg="port_list"  cfg_value=
 
+	local sshd_file="/etc/ssh/sshd_config"
+	if [ -f "${sshd_file}" -a -s "${sshd_file}" ]; then
+		local listen_addr="$(awk '($0~/^[ \t]*#/){next;} ($1~/^ListenAddress\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
+		local listen_port="$(awk '($0~/^[ \t]*#/){next;} ($1~/^Port\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
+		[ -z "${listen_addr}" ] && listen_addr="0.0.0.0"
+		[ -z "${listen_port}" ] && listen_port="22"
+		local sshd_bind_addr="${listen_addr}:${listen_port}"
+		cfg_value="${sshd_bind_addr}"
+	fi
+	
 	for comp in `list_emcomp`
 	do
 		if is_emstarton "${comp}" ; then
@@ -805,6 +815,13 @@ config_psystem_fixinfo() {
 config_ptcp_conn() {
 	local plugin="tcp_conn"
 	local cfg="port_list"  cfg_value=
+
+	local sshd_file="/etc/ssh/sshd_config"
+	if [ -f "${sshd_file}" -a -s "${sshd_file}" ]; then
+		local listen_port="$(awk '($0~/^[ \t]*#/){next;} ($1~/^Port\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
+		[ -z "${listen_port}" ] && listen_port="22"
+		cfg_value="${listen_port}:50"
+	fi
 
 	local bind_addr=  port=  max_conn=
 	for comp in `list_emcomp`
