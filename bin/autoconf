@@ -103,6 +103,7 @@ MOLE_PATH="${ESOP_PATH}/mole"
 MOLE_SBIN="${MOLE_PATH}/sbin"
 MOLE="${MOLE_SBIN}/mole"
 
+
 # ARRAY EMCOMP
 ARRAY_EMCOMP=(
   # comp	   # comp_regex									# min_running	 # max_conn
@@ -143,6 +144,16 @@ ARRAY_EMCOMP=(
 #  --*--< Public Functions >--*--  #
 #                                  #
 ####################################
+
+# Show Help
+show_usage() {
+cat << EOF
+        ${0##*/}
+        ${0##*/} help
+        ${0##*/} rpminit [-v|verbose]
+EOF
+exit 0
+}
 
 read_conf() {
 	local file=$1 config=$2 kvsep=$3
@@ -715,6 +726,11 @@ config_pprocess() {
 # Example:
 # sshd		1		/usr/sbin/sshd.*
 "
+
+	if [ -f "/usr/sbin/sshd" -a -f "/etc/init.d/sshd" ]; then
+		headline="${headline}\nsshd		1	/usr/sbin/sshd.*\n"
+	fi
+
 	local file="${MOLE_PATH}/${cfg_value}"
 	local errinfo=
 
@@ -730,7 +746,9 @@ config_pprocess() {
         	done
 		} > "${file}" 2>/dev/null
 	else
-		echo "can't create ${file} : ${errinfo}"
+		if [ "${VERBOSE}" == "1" ]; then
+			echo "can't create ${file}: $(echo_red "${errinfo}")"
+		fi
 		return 1
 	fi
 
@@ -1012,13 +1030,26 @@ EM_START=( $(get_emstart) )
 EMG_SATRT=( $(get_emgstart) )
 PREFIX="config_p"
 
+# process args
+[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
+[ "$#" == "0" ] && show_usage
+[ "$1" == "rpminit" ] && MODE=1 || show_usage
+[ "$2" == "-v" -o "$2" == "verbose" ] && VERBOSE=1
+
+# auto config all plugins
 for plugin in `${MOLE} ln 2>&-`
 do
 	if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
-		if [ "$1" == "rpminit" ]; then
-			eval "${PREFIX}${plugin}"
-		else
-			echo "plugin [$(echo_green "${plugin}")] supported"
+		if [ "${VERBOSE}" == "1" ]; then
+			echo "plugin [$(echo_green "${plugin}")] supported";
+		fi
+		if [ "${MODE}" == "1" ]; then
+			if [ "${VERBOSE}" == "1" ]; then
+				eval "${PREFIX}${plugin}"
+				echo;echo;
+			else
+				eval "${PREFIX}${plugin} >/dev/null 2>&1"
+			fi
 		fi
 	else
 		echo_yellow "plugin ${plugin} not supported yet";echo
