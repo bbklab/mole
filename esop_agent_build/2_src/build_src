@@ -139,7 +139,7 @@ build_proxy(){
 
 
 [ "$1" == "clean" ] && {
-   rm -rf "${PATH_EXTRACT}"
+   rm -rfv "${PATH_EXTRACT}"
    exit 0
 }
 

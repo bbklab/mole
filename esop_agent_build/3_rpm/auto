@@ -6,7 +6,7 @@ specfile="${path}/esop.spec"
 
 
 clean(){
-  rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+  rm -rfv "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
   mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
 }
 clean

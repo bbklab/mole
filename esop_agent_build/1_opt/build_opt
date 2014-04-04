@@ -376,7 +376,7 @@ build_pecl_dio() {
 ### Main Body Begin ...
 
 if [ "$1" == "clean" ]; then
-   [ -d "${PATH_EXTRACT}" ] && rm -rf "${PATH_EXTRACT}"
+   [ -d "${PATH_EXTRACT}" ] && rm -rfv "${PATH_EXTRACT}"
    exit 0
 fi
 
