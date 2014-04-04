@@ -120,8 +120,8 @@ fi
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
 # create symbolic link for esop,mole
-/bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
-/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /usr/bin/mole >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /bin/%{name} >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /bin/mole >/dev/null 2>&1
 :
 
 %preun
