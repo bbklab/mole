@@ -126,6 +126,14 @@ fi
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
 %preun
+# save original mole config file
+MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
+MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
+        /bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
+else
+        :   
+fi
 /sbin/service %{name} stop >/dev/null 2>&1
 /sbin/chkconfig --del %{name} >/dev/null 2>&1
 
@@ -138,24 +146,24 @@ fi
 
 %changelog
 * Thu Apr  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布 1.0-beta2 版本
-- 新增两个自带插件: process, disk_iostat
-- 修正rpm包的依赖关系, 新增sysstat,redhat-lsb依赖, 去除gmp依赖
-- 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
-- 修正插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
-- 新增运行时的目录文件完整性检查, 文件丢失则自动退出DAEMON, 事件标志:MIS00000
-- 调整若干插件的结果输出, 使更方便阅读和理解: disk_fs,memory,sysload,traffic,tcp_conn
-- 增强include函数文件中的若干函数: is_sub, read_mole_config, init_plugin
-- 新增自动化配置插件参数的功能,在rpm安装后自动触发,主要根据eYou邮件8版的配置自动激活插件和激活插件
-- 新增自动保留老版本MOLE配置参数(id,parter_id,name,mail_receviers)的功能
+- 发布: 1.0-beta2 版本
+- 新增: 两个自带基础插件: process, disk_iostat
+- 新增: DAEMON运行定期检查目录文件完整性, 文件丢失则自动退出DAEMON, 事件标志:MIS00000
+- 新增: rpm安装后自动化配置插件参数, 主要根据eYou邮件8版的配置自动激活插件和配置插件参数
+- 新增: rpm安装后自动恢复旧版MOLE的若干配置参数: id,parter_id,name,mail_receviers
+- 修正: rpm包的依赖关系, 新增sysstat,redhat-lsb依赖, 将gmp打入包内, 去除gmp依赖
+- 修正: 插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
+- 调整: 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
+- 调整: 若干插件的结果输出, 使更方便阅读和理解: disk_fs,memory,sysload,traffic,tcp_conn
+- 调整: 增强函数文件中的若干函数: is_sub, read_mole_config, init_plugin
 * Wed Mar 19 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布 1.0-beta1 版本
-- agent端修正mole的daemon启动过程
-- 重启proxy时增加em_dynamic_config刷新动作
-- 首次启动初始化的时候, 限制用户输入的parter_id必须为小写字母/数字, 长度固定32
-- agent端发送的信件套用HTML模板来生成
-- 新增插件返回结果的安全性过滤, 过滤部分有安全风险的HTML字符
-- agent端添加recovery事件的handler响应, 影响发信,上报,快照,自动响应处理等配置
-- 插件disk_fs添加参数exclude,允许跳过指定设备的文件系统状态检查,允许跳过指定挂载点的IO读写测试
+- 发布: 1.0-beta1 版本
+- 新增: 重启proxy时增加em_dynamic_config刷新配置的动作
+- 新增: 首次启动mole初始化的时候, 限制用户输入的parter_id必须为小写字母/数字, 长度32
+- 新增: 对插件返回结果进行安全性过滤, 过滤部分有安全风险的HTML字符
+- 新增: 添加"恢复"(recovery)事件的响应, 包括发信,上报,快照,自动响应处理等配置
+- 新增: 基础插件disk_fs增加参数exclude, 允许跳过某些设备的文件系统状态检查和某些挂载点的读写测试
+- 修正: mole的DAEMON启动流程
+- 调整: mole发送的信件套用HTML模板来生成
 * Mon Mar  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 首次打包 1.0-rc1 版本
+- 发布: 1.0-rc1 版本
