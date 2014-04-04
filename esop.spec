@@ -145,7 +145,7 @@ else
 fi
 
 %changelog
-* Thu Apr  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Fri Apr  4 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-beta2 版本
 - 新增: 两个自带基础插件: process, disk_iostat
 - 新增: DAEMON运行定期检查目录文件完整性, 文件丢失则自动退出DAEMON, 事件标志:MIS00000
