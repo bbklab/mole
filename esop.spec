@@ -98,12 +98,9 @@ if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
 else
 	:
 fi
+:
 
 %post
-# create symbolic link for esop,mole
-/bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
-/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /usr/bin/mole >/dev/null 2>&1
-
 # init mole id
 /bin/bash /usr/local/%{name}/agent/mole/bin/setinit rpminit
 
@@ -111,6 +108,7 @@ fi
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
 
 # remove original mole config file
+MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 if [ -f "${MOLE_CONFIG_SAVE}" ]; then
 	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
 else
@@ -120,6 +118,11 @@ fi
 # register as linux startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
+
+# create symbolic link for esop,mole
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /usr/bin/mole >/dev/null 2>&1
+:
 
 %preun
 # save original mole config file
@@ -132,8 +135,10 @@ else
 fi
 /sbin/service %{name} stop >/dev/null 2>&1
 /sbin/chkconfig --del %{name} >/dev/null 2>&1
+:
 
 %postun
+:
 
 %changelog
 * Fri Apr  4 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
