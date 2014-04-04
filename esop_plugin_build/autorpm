@@ -1,0 +1,61 @@
+#!/bin/bash
+
+path=$(cd $(dirname $0) && pwd)
+maps="${path}/maps"
+
+show_help(){
+cat << HELP 
+        ${0##*/}
+        ${0##*/}  help
+        ${0##*/}  clean
+        ${0##*/}  {field1_inmaps}
+HELP
+exit 0
+}
+
+get_fspec() {
+	local arg=$1  result=
+	result=$( awk '($0~/^[ \t]*#/){next;} ($1=="'${arg}'"){print $2;exit;}' "${maps}" 2>&-)
+	echo -en "${path}/${result}"
+}
+
+clean(){
+  rm -rf "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+  mkdir -p "${path}"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} 2>&-
+}
+
+### Main Begin ...
+
+[ -z "${1}" ] && show_help
+[ "${1}" == "help" -o "${1}" == "-h" -o "${1}" == "?" ] && show_help
+if [ "$1" == "clean" ]; then
+	clean
+	exit 0
+fi
+
+specfile=$(get_fspec "${1}")
+if [ -n "${specfile}" -a -f "${specfile}" -a -s "${specfile}" ]; then
+	name=$(awk -F: '($1~/Name/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
+	version=$(awk -F: '($1~/Version/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
+	source0=$(awk -F: '($1~/Source0/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
+else
+	echo "spec file: [${specfile}] not exist!"
+	exit 1
+fi
+
+[ -f "/usr/bin/rpmbuild" -a -x "/usr/bin/rpmbuild" ] || {
+	echo "/usr/bin/rpmbuild not prepared"
+	exit 1
+}
+
+cp -a "${path}"/${source0}   "${path}"/SOURCES/${source0}
+cp -a "${specfile}"  "${path}"/SPECS/
+exit;
+
+cat > ~/.rpmmacros <<EOF
+%_topdir ${path}/
+%debug_package %{nil}
+EOF
+
+/usr/bin/rpmbuild -bb "${specfile}" >/dev/null 2>&1
+find "${path}"/RPMS/ -type f -iname "*.rpm" -print
