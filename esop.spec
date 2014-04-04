@@ -101,7 +101,7 @@ fi
 
 %post
 # create symbolic link for esop,mole
-/bin/ln -s /usr/local/%{name}/agent/app/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /usr/bin/%{name} >/dev/null 2>&1
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /usr/bin/mole >/dev/null 2>&1
 
 # init mole id
