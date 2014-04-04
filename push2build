@@ -14,7 +14,7 @@ check_rc() {
 
 
 ### Main Body Begin ...
-if [ "$1" == "server" ]; then
+if [ "$1" == "server" -o "$1" == "2" ]; then
   filename="${basedir}/esop_server_build/2_src/init/init_install"
   specfile="${basedir}/esopserver.spec"
   initfile="${basedir}/esopserver.init"
@@ -38,12 +38,12 @@ if [ "$1" == "server" ]; then
 
 
   exit
-elif [ "$1" == "agent" ]; then
+elif [ "$1" == "agent" -o "$1" == "1" ]; then
   specfile="${basedir}/esop.spec"
   initfile="${basedir}/esop.init"
   destdir="/data/esop_codes/"
 else
-  echo "agent or server ?"
+  echo "agent(1) or server(2) ?"
   exit 1
 fi
 autorpm="${basedir}/rpm_build/autorpm"
