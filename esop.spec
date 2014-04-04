@@ -134,11 +134,6 @@ fi
 /sbin/chkconfig --del %{name} >/dev/null 2>&1
 
 %postun
-if [ -L /usr/bin/%{name} ]; then
-	/bin/rm -f /usr/bin/%{name} >/dev/null 2>&1
-else
-	:
-fi
 
 %changelog
 * Fri Apr  4 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
