@@ -77,7 +77,7 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 MOLE_INIT="/usr/local/%{name}/agent/mole/sbin/mole"
 if [ -f "${MOLE_INIT}" -a -x "${MOLE_INIT}" ]; then
 	if ${MOLE_INIT} status >/dev/null 2>&1; then
-		echo "an esop instance is already running ? stop the instance if you want to continue." 
+		echo -e "\033[1;31man esop instance is already running ? stop the instance if you want to continue.\033[0m\n" 
 		exit 1		# exit with non-zero so rpm installation progress won't continue.
 	fi
 fi
