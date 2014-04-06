@@ -35,8 +35,6 @@ fi
 
 specfile=$(get_fspec "${1}")
 if [ -n "${specfile}" -a -f "${specfile}" -a -s "${specfile}" ]; then
-	name=$(awk -F: '($1~/Name/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
-	version=$(awk -F: '($1~/Version/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
 	source0=$(awk -F: '($1~/Source0/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
 else
 	echo "spec file: [${specfile}] not exist!"
@@ -50,7 +48,6 @@ fi
 
 cp -a "${path}"/${source0}   "${path}"/SOURCES/${source0}
 cp -a "${specfile}"  "${path}"/SPECS/
-exit;
 
 cat > ~/.rpmmacros <<EOF
 %_topdir ${path}/
