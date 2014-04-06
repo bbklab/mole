@@ -91,6 +91,8 @@ build_gmp() {		# by: php54
 
   if [ "$OS_BIT" == "64" ]; then
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
+  elif [ "$OS_BIT" == "32" ]; then
+	CMD_CONFIG="ABI=32 $CMD_CONFIG "
   fi
 
   eval $CMD_CONFIG
