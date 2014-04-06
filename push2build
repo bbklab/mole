@@ -41,7 +41,7 @@ if [ "$1" == "server" -o "$1" == "2" ]; then
 elif [ "$1" == "agent" -o "$1" == "1" ]; then
   specfile="${basedir}/esop.spec"
   initfile="${basedir}/esop.init"
-  destdir="/data/esop_codes/"
+  destdir="/data/esop_codes"
 else
   echo "agent(1) or server(2) ?"
   exit 1
