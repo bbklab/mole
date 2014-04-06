@@ -350,6 +350,17 @@ get_emcompinfo() {
 	local comp=$1 part=$2 result=
 	local bind_addr=  conn_addr=  comp_regex=  min_running=
 
+	local conn_memcache_session=$(read_conf "${EM_CONFIG}" "memcache_session" "=" 2>&-)
+	local conn_memcache_fix=$(read_conf "${EM_CONFIG}" "memcache_fix" "=" 2>&- )
+	local conn_memcache_hot=$(read_conf "${EM_CONFIG}" "memcache_hot" "=" 2>&- )
+	conn_memcache_session=$(echo -en "${conn_memcache_session}" | tr ',' ' ')
+	conn_memcache_fix=$(echo -en "${conn_memcache_fix}" | tr ',' ' ')
+	conn_memcache_hot=$(echo -en "${conn_memcache_hot}" | tr ',' ' ')
+
+	local conn_mysql_dbuser=$(:)
+	local conn_mysql_dbindex=$(:)
+	local conn_mysql_dblog=$(:)
+
 	local file=
 	if is_emcomp "${comp}" >/dev/null 2>&1; then
 		if   [ "${comp}" == "mysql" 		]; then
@@ -447,6 +458,8 @@ get_emcompinfo() {
 			if [ -n "${gmysql_addr}" -a -n "${gmysql_port}" ]; then
 				conn_addr="${gmysql_addr}:${gmysql_port}"
 			fi
+		elif [ "${comp}" == "phpd"		]; then
+			:
 		elif [ "${comp}" == "filed"		]; then
 			local listen_addr="0.0.0.0"
 			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "filed" "filed_port" "=")
