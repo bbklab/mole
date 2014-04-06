@@ -49,8 +49,9 @@ fi
 autorpm="${basedir}/rpm_build/autorpm"
 args="tarball"
 
+# publish agent tarball codes
 filename=$( eval "${autorpm} ${args}" )
-check_rc "make rpm"
+check_rc "create tarball: ${filename}"
 
 ls "${filename}" >/dev/null 2>&1
 check_rc "check path: ${filename}"
@@ -58,13 +59,18 @@ check_rc "check path: ${filename}"
 /bin/cp -f "${filename}" "${destdir}/"
 check_rc "copy to ${destdir}/${filename##*/}"
 
+
+# publish spec file
 /bin/cp -f "${specfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${specfile##*/}"
 
+
+# publish init file
 /bin/cp -f "${initfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${initfile##*/}"
 
 
+# publish esop_agent_build
 agent_build_dir="esop_agent_build"
 /bin/rm -rf "${destdir}"/rpm_workdir/${agent_build_dir}
 check_rc "remove nfs remote: ${destdir}/rpm_workdir/${agent_build_dir}"
@@ -72,6 +78,15 @@ check_rc "remove nfs remote: ${destdir}/rpm_workdir/${agent_build_dir}"
 /bin/cp -a "${basedir}/${agent_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/${agent_build_dir}"
 
+# publish esop_plugin_build
+plugin_build_dir="esop_plugin_build"
+/bin/rm -rf "${destdir}"/rpm_workdir/${plugin_build_dir}
+check_rc "remove nfs remote: ${destdir}/rpm_workdir/${plugin_build_dir}"
+
+/bin/cp -a "${basedir}/${plugin_build_dir}" ${destdir}/rpm_workdir/
+check_rc "copy to ${destdir}/rpm_workdir/${plugin_build_dir}"
+
+# clean rpm_build dir
 ${autorpm} clean
 check_rc "rpm clean"
 
