@@ -128,6 +128,9 @@ fi
 if [ -L /usr/bin/%{name} ]; then
 	rm -f /usr/bin/%{name} 2>&-
 fi
+
+# clear remembered command caches
+hash -r >/dev/null 2>&1
 :
 
 %preun
