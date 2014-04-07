@@ -593,7 +593,7 @@ config_pdisk_fs() {
 			local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
 			for d in `echo "${devices}"`
 			do
-				if [ "$( ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
+				if [ "$( LANG=en_US.UTF-8 ${tune2fs} -l "${d}" 2>&1 | grep -E -o -i "has unsupported feature" )" != "" ]; then
 					if [ -z "${cfg_value2}" ]; then
 						cfg_value2="${d}"
 					else
