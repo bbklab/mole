@@ -1045,7 +1045,7 @@ config_pemp_mailqueue() {
 	local plugin="emp_mailqueue"
 	local cfg="uplimit"	cfg_value="1000"
 
-	if [ ! -z "${cfg_value1}" ]; then
+	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
 }
