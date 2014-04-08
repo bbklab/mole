@@ -516,8 +516,8 @@ read_mole_section() {
 }
 
 # According to input plugin-name config-name, output matched config-value in config file.
-# Usage:  	read_mole_config {plugin-name} {config-name}
-# Example:  	read_mole_config check_sysload  enable
+# Usage:  	read_mole_config [ -f  {config_file_path} ] {plugin-name} {config-name}
+# Example:  	read_mole_config [ -f /tmp/.mole.ini.saveold] check_sysload  enable
 # Return:	0 1 2 3 :  OK | Missging arguments | ${config_file} empty / not exist | Null
 #
 read_mole_config(){
