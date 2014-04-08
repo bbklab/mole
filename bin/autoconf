@@ -143,7 +143,7 @@ ARRAY_EMCOMP=(
   "mlist"	   "/usr/local/eyou/mail/app/bin/em_mlist"							"3"	""
   "smtp"	   "/usr/local/eyou/mail/app/bin/em_smtpd"							"6"	"100"
   "pop"		   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
-  "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"200"
+  "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"150"
   "cleanup"	   "/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"	""
   "virusd"	   ""												""	""
 )
