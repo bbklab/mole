@@ -163,7 +163,6 @@ fi
 - 新增: rpm安装后自动恢复旧版MOLE的若干配置参数: id,parter_id,name,mail_receviers
 - 修正: rpm包的依赖关系, 新增sysstat,redhat-lsb依赖, 将gmp打入包内, 去除gmp依赖
 - 修正: 插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
-- 修正: 升级安装后执行hash -r, 清理旧的命令路径缓存, 避免报错"路径不存在"
 - 调整: 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
 - 调整: 若干插件的结果输出, 使更方便阅读和理解: disk_fs,memory,sysload,traffic,tcp_conn
 - 调整: 增强函数文件中的若干函数: is_sub, read_mole_config, init_plugin
