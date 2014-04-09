@@ -122,7 +122,7 @@ ARRAY_EMCOMP=(
   "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"100"
   "mysql_log"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"	"100"
   "mproxy"	   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"			"1"	"200"
-  "mproxy_index"   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"	"200"
+  "mproxy_index"   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"	"400"
   "memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"	"100"
   "memcache_fix"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_fix.pid.*"					"1"	"100"
   "memcache_hot"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_hot.pid.*"					"1"	"100"
@@ -874,7 +874,7 @@ config_ptraffic() {
         fi 
 	
 	if [ ! -z "${cfg_value}" ]; then
-		cfg_value="${cfg_value}:50M/s:75M/s:0:0"
+		cfg_value="${cfg_value}:30M/s:50M/s:0:0"
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
 }
