@@ -155,12 +155,12 @@ fi
 :
 
 %changelog
-* Tue Apr  8 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Wed Apr  9 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-beta2 版本
 - 新增: 两个自带基础插件: process, disk_iostat, 自带基础插件增加至14个
 - 新增: DAEMON运行定期检查目录文件完整性, 文件丢失则自动退出, 事件标志:MIS00000
 - 新增: rpm安装后自动化配置插件参数, 根据eYou邮件8版的配置和系统配置自动调整和激活插件参数
-- 新增: rpm安装后自动恢复旧版MOLE的如下配置参数: id,parter_id,name,mail_receviers
+- 新增: rpm安装后自动恢复旧版MOLE的部分(10个)全局配置, 启动新版后不需再重新配置填写
 - 修正: rpm包的依赖关系, 新增sysstat,redhat-lsb依赖, 将gmp打入包内, 去除gmp依赖
 - 修正: 插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
 - 调整: 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
