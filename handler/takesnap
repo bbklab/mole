@@ -252,7 +252,7 @@ ls -d /proc/[0-9]*  > proc-psdir
 [ -f /proc/modules ] && cat /proc/modules > proc-modules
 [ -f /proc/version ] && cat /proc/version > proc-version
 [ -f /proc/stat ] && cat /proc/stat > proc-stat
-[ -f /proc/diskstats ] && /proc/diskstats > proc-diskstats
+[ -f /proc/diskstats ] && cat /proc/diskstats > proc-diskstats
 
 # eyou log files.
 [ -f /var/eyou/log/maillog ] && tail -n 200 /var/eyou/log/maillog > mailv4.maillog
