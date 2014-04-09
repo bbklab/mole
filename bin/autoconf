@@ -873,7 +873,7 @@ config_ptraffic() {
         fi 
 	
 	if [ ! -z "${cfg_value}" ]; then
-		cfg_value="${cfg_value}:5M/s:10M/s:0:0"
+		cfg_value="${cfg_value}:50M/s:75M/s:0:0"
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
 }
