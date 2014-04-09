@@ -178,9 +178,9 @@ read_conf() {
 
 	if [ -f "${file}" -a -s "${file}" ]; then
 		if [ -z "${config}" ]; then
-			result=$( ${awk} '($0~/^[ \t]*$/){next;}  {print $1;exit}' "${file}" 2>&- )
+			result=$( ${awk} '($0~/^[ \t]*$/){next;} ($0~/^[ \t]*#/){next;} {print $1;exit}' "${file}" 2>&- )
 		else
-			result=$( ${awk} '($1~/'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
+			result=$( ${awk} '($1~/^'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
 		fi
 		result=$( echo -e "${result}" | tr -d '[" \t\n]' | sed -e 's/\x00//g;s/\x0D//g' )
 	fi
