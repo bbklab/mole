@@ -143,6 +143,7 @@ ARRAY_EMCOMP=(
   "mlist"	   "/usr/local/eyou/mail/app/bin/em_mlist"							"3"	""
   "smtp"	   "/usr/local/eyou/mail/app/bin/em_smtpd"							"6"	"100"
   "pop"		   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
+  "pop3"	   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
   "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"150"
   "cleanup"	   "/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"	""
   "virusd"	   ""												""	""
@@ -459,7 +460,7 @@ get_emcompinfo() {
 				conn_addr="${gmysql_addr}:${gmysql_port}"
 			fi
 		elif [ "${comp}" == "phpd"		]; then
-			:
+			conn_addr="${conn_memcache_session} ${conn_memcache_fix} ${conn_memcache_hot}"
 		elif [ "${comp}" == "filed"		]; then
 			local listen_addr="0.0.0.0"
 			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "filed" "filed_port" "=")
@@ -511,7 +512,7 @@ get_emcompinfo() {
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_1" "smtpd_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_2" "smtpd_listener" "=")
 			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
-		elif [ "${comp}" == "pop"		]; then
+		elif [ "${comp}" == "pop" -o "${comp}" == "pop3" ]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d"   "pop3d_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_1" "pop3d_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_2" "pop3d_listener" "=")
@@ -740,7 +741,8 @@ config_pport() {
 		fi
 	done
 
-	cfg_value=$(echo -e "${cfg_value}" | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
+	# remove duplication items.
+	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
@@ -857,6 +859,8 @@ config_ptcp_conn() {
 		fi
 	done
 
+	# remove duplication items.
+	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
@@ -909,6 +913,7 @@ config_ppop_svr() {
 
         local comps=( 
                 "pop" 
+		"pop3"
          )
 
 	local bind_addr=  port=	 tls_port=
@@ -933,6 +938,8 @@ config_ppop_svr() {
 		done
 	done
 
+        # remove duplication items.                                                                                                 
+        cfg_value1=$(echo -e "${cfg_value1}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
 	fi
@@ -1151,7 +1158,7 @@ do
 					${MOLE} enable ${plugin} >/dev/null 2>&1
 				;;
 			"pop_svr")
-				if is_emstarton "pop" ; then 
+				if is_emstarton "pop" || is_emstarton "pop3" ; then 
 					${MOLE} enable ${plugin} >/dev/null 2>&1
 				fi
 				;;
