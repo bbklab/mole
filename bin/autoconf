@@ -988,12 +988,20 @@ config_pimap_svr() {
                 "imap" 
          )   
 
-        local bind_addr=
+	local bind_addr=  port=  tls_port=
+        local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "imapd"     "imapd_tls_port" "=" )
+        local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_1"   "imapd_tls_port" "=" )
+        local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_2"   "imapd_tls_port" "=" )
+        tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
         for comp in `echo "${comps[*]}"`
         do  
                 bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
                 for x in `echo "${bind_addr}"`
                 do  
+			port=$(echo -e "${x}" | awk -F: '{print $NF}')
+			if is_sub "${port}" "${tls_port}"; then
+				continue        # skip tls port
+			fi
                         if [ -z "${cfg_value1}" ]; then
                                 cfg_value1="${x}"
                         else
@@ -1023,12 +1031,20 @@ config_psmtp_svr() {
                 "smtp" 
          )   
 
-        local bind_addr=
+	local bind_addr=  port=  tls_port=
+        local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd"     "smtpd_tls_port" "=" )
+        local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_1"   "smtpd_tls_port" "=" )
+        local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_2"   "smtpd_tls_port" "=" )
+        tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
         for comp in `echo "${comps[*]}"`
         do  
                 bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
                 for x in `echo "${bind_addr}"`
                 do  
+			port=$(echo -e "${x}" | awk -F: '{print $NF}')
+			if is_sub "${port}" "${tls_port}"; then
+				continue        # skip tls port
+			fi
                         if [ -z "${cfg_value1}" ]; then
                                 cfg_value1="${x}"
                         else
