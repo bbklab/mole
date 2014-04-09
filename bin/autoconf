@@ -353,9 +353,9 @@ get_emcompinfo() {
 	local conn_memcache_session=$(read_conf "${EM_CONFIG}" "memcache_session" "=" 2>&-)
 	local conn_memcache_fix=$(read_conf "${EM_CONFIG}" "memcache_fix" "=" 2>&- )
 	local conn_memcache_hot=$(read_conf "${EM_CONFIG}" "memcache_hot" "=" 2>&- )
-	conn_memcache_session=$(echo -en "${conn_memcache_session}" | tr ',' ' ')
-	conn_memcache_fix=$(echo -en "${conn_memcache_fix}" | tr ',' ' ')
-	conn_memcache_hot=$(echo -en "${conn_memcache_hot}" | tr ',' ' ')
+	conn_memcache_session=$(echo -en "${conn_memcache_session}" | tr ',;' ' ' | awk '{for(i=1;i<=NF;i++){ if($i~/^[^:]+:[^:]+:[^:]+$/){split($i,A,":"); print A[1]":"A[2] } if($i~/^[^:]+:[^:]+$/){print $i}  }}' 2>&-)
+	conn_memcache_fix=$(echo -en "${conn_memcache_fix}" | tr ',;' ' ' | awk '{for(i=1;i<=NF;i++){ if($i~/^[^:]+:[^:]+:[^:]+$/){split($i,A,":"); print A[1]":"A[2] } if($i~/^[^:]+:[^:]+$/){print $i}  }}' 2>&-)
+	conn_memcache_hot=$(echo -en "${conn_memcache_hot}" | tr ',;' ' ' | awk '{for(i=1;i<=NF;i++){ if($i~/^[^:]+:[^:]+:[^:]+$/){split($i,A,":"); print A[1]":"A[2] } if($i~/^[^:]+:[^:]+$/){print $i}  }}' 2>&-)
 
 	local conn_mysql_dbuser=$(:)
 	local conn_mysql_dbindex=$(:)
@@ -510,37 +510,37 @@ get_emcompinfo() {
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd"   "smtpd_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_1" "smtpd_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_2" "smtpd_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "pop"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d"   "pop3d_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_1" "pop3d_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_2" "pop3d_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "imap"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "imapd"   "imapd_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "imapd_1" "imapd_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "imapd_2" "imapd_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "virusd"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "virusd"   "virusd_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "virusd_1" "virusd_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "virusd_2" "virusd_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "ecs_tracker"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "tracker"   "tracker_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "tracker_1" "tracker_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "tracker_2" "tracker_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "ecs_rstorage"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage"   "rstorage_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage_1" "rstorage_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "rstorage_2" "rstorage_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		elif [ "${comp}" == "ecs_wstorage"		]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage"   "wstorage_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage_1" "wstorage_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "wstorage_2" "wstorage_listener" "=")
-			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',' ' ' | sed -e 's/tcp:\/\///g') "
+			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
 		fi
 
 		comp_regex="$(get_emcomp_regex "${comp}" 2>&-)"
@@ -910,12 +910,20 @@ config_ppop_svr() {
                 "pop" 
          )
 
-	local bind_addr=
+	local bind_addr=  port=	 tls_port=
+	local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "pop3d_tls_port" "=" )
+	local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "pop3d_tls_port" "=" )
+	local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "pop3d_tls_port" "=" )
+	tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
 	for comp in `echo "${comps[*]}"`
 	do
 		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
 		for x in `echo "${bind_addr}"`
 		do
+			port=$(echo -e "${x}" | awk -F: '{print $NF}')
+			if is_sub "${port}" "${tls_port}"; then
+				continue	# skip tls port
+			fi
 			if [ -z "${cfg_value1}" ]; then
 				cfg_value1="${x}"
 			else
