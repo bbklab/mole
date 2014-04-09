@@ -1124,11 +1124,23 @@ if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 	part_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global parter_id 2>&- )
 	gloname=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global name 2>&- )
 	recevie=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" default mail_receviers 2>&- )
+	postaddr=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" postlog post_server 2>&- )
+	postport=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" postlog post_server_port 2>&- )
+	smtpaddr=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail smtp_server 2>&- )
+	smtpport=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail smtp_server_port 2>&- )
+	smtpuser=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail auth_user 2>&- )
+	smtppass=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail auth_pass 2>&- )
 	
 	nower_mole_id=$( read_mole_config global id 2>&- )
 	nower_part_id=$( read_mole_config global parter_id 2>&- )
 	nower_gloname=$( read_mole_config global name 2>&- )
 	nower_recevie=$( read_mole_config default mail_receviers 2>&- )
+	nower_postaddr=$( read_mole_config postlog post_server 2>&- )
+	nower_postport=$( read_mole_config postlog post_server_port 2>&- ) 
+	nower_smtpaddr=$( read_mole_config sendmail smtp_server 2>&- ) 
+	nower_smtpport=$( read_mole_config sendmail smtp_server_port 2>&- ) 
+	nower_smtpuser=$( read_mole_config sendmail auth_user 2>&- ) 
+	nower_smtppass=$( read_mole_config sendmail auth_pass 2>&- ) 
 	if [ -z "${nower_mole_id}" -o "${nower_mole_id}" != "${mole_id}" ]; then
 		update_mole_config force global id "${mole_id}"
 	fi
@@ -1140,6 +1152,24 @@ if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 	fi
 	if [ -z "${nower_recevie}" -o "${nower_recevie}" != "${recevie}" ]; then
 		update_mole_config default mail_receviers "${recevie}"
+	fi
+	if [ -z "${nower_postaddr}" -o "${nower_postaddr}" != "${postaddr}" ]; then
+		update_mole_config postlog post_server "${postaddr}"
+	fi
+	if [ -z "${nower_postport}" -o "${nower_postport}" != "${postport}" ]; then
+		update_mole_config postlog post_server_port "${postport}"
+	fi
+	if [ -z "${nower_smtpaddr}" -o "${nower_smtpaddr}" != "${smtpaddr}" ]; then
+		update_mole_config sendmail smtp_server "${smtpaddr}"
+	fi
+	if [ -z "${nower_smtpport}" -o "${nower_smtpport}" != "${smtpport}" ]; then
+		update_mole_config sendmail smtp_server_port "${smtpport}"
+	fi
+	if [ -z "${nower_smtpuser}" -o "${nower_smtpuser}" != "${smtpuser}" ]; then
+		update_mole_config sendmail auth_user "${smtpuser}"
+	fi
+	if [ -z "${nower_smtppass}" -o "${nower_smtppass}" != "${smtppass}" ]; then
+		update_mole_config sendmail auth_pass "${smtppass}"
 	fi
 
 	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
