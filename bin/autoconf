@@ -119,7 +119,7 @@ ARRAY_EMCOMP=(
   "syslog"	   "/usr/local/eyou/mail/app/bin/em_syslogd"							"1" 	""
   "rsyslogd"	   "/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1" 	""
   "mysql"  	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1" 	"100"
-  "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"100"
+  "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"200"
   "mysql_log"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"	"100"
   "mproxy"	   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"			"1"	"200"
   "mproxy_index"   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"	"400"
