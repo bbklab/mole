@@ -780,7 +780,6 @@ config_pprocess() {
 	else
 		return 1
 	fi
-
 	if [ -f "${file}" -a -s "${file}" ]; then
 		${MOLE} config-del ${plugin} ${cfg}
 		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"
@@ -846,10 +845,12 @@ config_ptcp_conn() {
 				for x in `echo "${bind_addr}"`
 				do
 					port=$(echo -e "${x}" | awk -F: '{print $NF}')
-					if [ -z "${cfg_value}" ]; then
-						cfg_value="${port}:${max_conn}"
-					else
-						cfg_value="${cfg_value} ${port}:${max_conn}"
+					if [ -n "${port}" ]; then
+						if [ -z "${cfg_value}" ]; then
+							cfg_value="${port}:${max_conn}"
+						else
+							cfg_value="${cfg_value} ${port}:${max_conn}"
+						fi
 					fi
 				done
 			fi
@@ -1176,7 +1177,5 @@ do
 				;;
 			esac
 		fi
-	else
-		echo_yellow "plugin ${plugin} not supported yet";echo
 	fi
 done
