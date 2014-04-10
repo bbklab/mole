@@ -3036,7 +3036,7 @@ process_plugin_timeout() {
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"post notify enabled. CONTINUE"
 	[ "${hd_output}" == "auto handle is disabled. Nothing to do" ] && hd_output="disabled"
-  	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jobid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+  	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"post alert finished, details in ${POSTLOG_LOG##*/}. CONTINUE"
   fi
