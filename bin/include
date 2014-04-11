@@ -239,6 +239,13 @@ is_sub() {
         fi  
 }
 
+# Convert string as int
+# Usage:	cto_int {stuff}
+#
+cto_int() {
+	echo -en "${1//[!0-9]}"
+}
+
 # Write log
 # Usage1:	1: set {_LOG} and ${_DEBUG} before you call this function.
 # Usage2:	2: -f path/to/log/file     Note: this pattern will ignore ${_DEBUG} flag.
