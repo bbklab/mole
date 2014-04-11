@@ -2,7 +2,7 @@
 
 path=$(cd $(dirname $0) && pwd)
 basedir=${path%/*}
-specfile="${path}/esopserver.spec"
+specfile="${path}/esop-app.spec"
 
 
 clean(){

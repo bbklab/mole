@@ -1,1 +1,0 @@
-/data/esop_codes/server-side/sql/db_creation_eyou_monitor.sql
