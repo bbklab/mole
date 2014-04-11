@@ -2,9 +2,9 @@ Summary: 	redis for esop server
 Name: 		esop-redis
 Version: 	1.0.1
 Release: 	rhel5
-License: 	GPLv3
+License: 	Commercial
 Group:  	Extension
-Vendor:		eYou
+Vendor:		Beijing eYou Information Technology Co., Ltd.
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
 Source0: 	esop-redis-1.0.1-rhel5.tgz
