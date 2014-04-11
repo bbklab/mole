@@ -970,7 +970,10 @@ config_ppop_svr() {
 	local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "pop3d_tls_port" "=" )
 	local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "pop3d_tls_port" "=" )
 	local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "pop3d_tls_port" "=" )
-	tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
+	local tls_port4=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "popsd_tls_port" "=" )
+	local tls_port5=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "popsd_tls_port" "=" )
+	local tls_port6=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "popsd_tls_port" "=" )
+	tls_port="${tls_port1} ${tls_port2} ${tls_port3} ${tls_port4} ${tls_port5} ${tls_port6}"
 	for comp in `echo "${comps[*]}"`
 	do
 		if is_emstarton "${comp}"; then
