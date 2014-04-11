@@ -126,7 +126,13 @@ ARRAY_EMCOMP=(
   "memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"	"100"
   "memcache_fix"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_fix.pid.*"					"1"	"100"
   "memcache_hot"   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_hot.pid.*"					"1"	"100"
+  "memcache_config"  "/usr/local/eyou/mail/opt/bin/memcached.+memcache_config.pid.*"				"1" 	"100"
+  "memcache_db"	   "/usr/local/eyou/mail/opt/bin/memcached.+memcache_db.pid.*"					"1" 	"100"
+  "memcache_fastdb"  "/usr/local/eyou/mail/opt/bin/memcached.+memcache_fastdb.pid.*"				"1" 	"100"
   "gearman"	   "/usr/local/eyou/mail/opt/sbin/gearmand.+em_gearman.pid.+gearman_queue.+"			"1"	"200"
+  "gearman_mta"	   "/usr/local/eyou/mail/opt/sbin/gearmand.+gearman_mta.pid.+gearman_queue_mta.*"		"1" 	"200"
+  "gearman_php"    "/usr/local/eyou/mail/opt/sbin/gearmand.+gearman_php.pid.+gearman_queue_php.*"		"1" 	"200"
+  "innerapi"	   "/usr/local/eyou/mail/opt/bin/php.+app/bin/em_innerapi.*"					"6" 	""
   "phpd"	   "/usr/local/eyou/mail/opt/bin/php.+app/bin/em_phpd.*"					"6"	""
   "crtmpd"	   "/usr/local/eyou/mail/opt/sbin/crtmpserver.*em_crtmpserver.pid.*"				"1"	""
   "ecs_rstorage"   "/usr/local/eyou/mail/bin/ecs_rstorage"							"2"	"100"
@@ -137,6 +143,7 @@ ARRAY_EMCOMP=(
   "filedagent"	   "/usr/local/eyou/mail/app/bin/em_filedagent.*"						"3"	"100"
   "httpd"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*"						"3"	"1000"
   "nginx"	   "nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"						"1"	"500"
+  "httpd_web"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*" 						"3" 	"500"
   "bounce"	   "/usr/local/eyou/mail/app/bin/em_bounce"							"3"	""
   "local"	   "/usr/local/eyou/mail/app/bin/em_local"							"3"	""
   "remote"	   "/usr/local/eyou/mail/app/bin/em_remote"							"3"	""
@@ -146,8 +153,26 @@ ARRAY_EMCOMP=(
   "pop3"	   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
   "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"150"
   "cleanup"	   "/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"	""
+  "qclean"	   "/usr/local/eyou/mail/app/bin/em_qclean.*" 							"3" 	""
   "virusd"	   ""												""	""
 )
+
+# ARRAY EMCOMP SPECIAL
+ARRAY_EMCOMP_SPECIAL=(
+  # 5.0.4
+  "mysql"	   ".*/mysqld.*--datadir=/usr/local/eyou/mail/data/mysql.*mysql.pid.*"				"1"	"300"
+  # >=8.1.0.4
+  "phpd"	   "/usr/local/eyou/mail/opt/bin/php.+bin/em_phpd.*"						"6"	""
+  "bounce"	   "/usr/local/eyou/mail/bin/em_bounce"								"3"	""
+  "local"	   "/usr/local/eyou/mail/bin/em_local"								"3"	""
+  "remote"	   "/usr/local/eyou/mail/bin/em_remote"								"3"	""
+  "mlist"	   "/usr/local/eyou/mail/bin/em_mlist"								"3"	""
+  "smtp"	   "/usr/local/eyou/mail/bin/em_smtpd"								"6"	"100"
+  "pop"		   "/usr/local/eyou/mail/bin/em_pop3d"								"6"	"300"
+  "imap"	   "/usr/local/eyou/mail/bin/em_imapd"								"6"	"150"
+  "cleanup"	   "/usr/local/eyou/mail/bin/em_cleanup.*"							"2"	""
+)
+
 
 ####################################
 #                                  #
@@ -923,22 +948,24 @@ config_ppop_svr() {
 	tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
 	for comp in `echo "${comps[*]}"`
 	do
-		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-		for x in `echo "${bind_addr}"`
-		do
-			port=$(echo -e "${x}" | awk -F: '{print $NF}')
-			if is_sub "${port}" "${tls_port}"; then
-				continue	# skip tls port
-			fi
-			if [ -z "${cfg_value1}" ]; then
-				cfg_value1="${x}"
-			else
-				cfg_value1="${cfg_value1} ${x}"
-			fi
-		done
+		if is_emstarton "${comp}"; then
+			bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+			for x in `echo "${bind_addr}"`
+			do
+				port=$(echo -e "${x}" | awk -F: '{print $NF}')
+				if is_sub "${port}" "${tls_port}"; then
+					continue	# skip tls port
+				fi
+				if [ -z "${cfg_value1}" ]; then
+					cfg_value1="${x}"
+				else
+					cfg_value1="${cfg_value1} ${x}"
+				fi
+			done
+		fi
 	done
 
-        # remove duplication items.                                                                                                 
+        # remove duplication items.
         cfg_value1=$(echo -e "${cfg_value1}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
@@ -964,21 +991,23 @@ config_phttp_svr() {
 	local bind_addr=  port=  protocal=
 	for comp in `echo "${comps[*]}"`
 	do
-		bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-		for x in `echo "${bind_addr}"`
-		do
-			port=$(echo -e "${x}" | awk -F: '{print $NF}')
-			if [ "${port}" == "443" ]; then
-				protocal="https"
-			else
-				protocal="http"
-			fi
-			if [ -z "${cfg_value1}" ]; then
-				cfg_value1="${protocal}:${x}"
-			else
-				cfg_value1="${cfg_value1} ${protocal}:${x}"
-			fi
-		done
+		if is_emstarton "${comp}"; then
+			bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+			for x in `echo "${bind_addr}"`
+			do
+				port=$(echo -e "${x}" | awk -F: '{print $NF}')
+				if [ "${port}" == "443" ]; then
+					protocal="https"
+				else
+					protocal="http"
+				fi
+				if [ -z "${cfg_value1}" ]; then
+					cfg_value1="${protocal}:${x}"
+				else
+					cfg_value1="${cfg_value1} ${protocal}:${x}"
+				fi
+			done
+		fi
 	done
 
 	if [ ! -z "${cfg_value1}" ]; then
