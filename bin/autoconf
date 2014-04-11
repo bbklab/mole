@@ -113,6 +113,10 @@ MOLE_SBIN="${MOLE_PATH}/sbin"
 MOLE="${MOLE_SBIN}/mole"
 
 
+# MIN/MAX EM VERSION SUPPORTED
+EM_MINVERSION="5.0.4rc4.fix2"
+EM_MAXVERSION="8.1.0.4"
+
 # ARRAY EMCOMP
 ARRAY_EMCOMP=(
   # comp	   # comp_regex									# min_running	 # max_conn
@@ -232,6 +236,24 @@ read_iniconf() {
 		result=$( echo -e "${result}" | tr -d '[" \t\n]' | sed -e 's/\x00//g;s/\x0D//g' )
 	fi
 	echo -en "${result}"
+}
+
+get_emversion() {
+	local result=
+	local conf_phpfile="${EM_INSTALL}/app/inc/conf/conf_global.php"
+	local conf_phpfile_new="${EM_INSTALL}/inc/conf/conf_global.php"
+	local version_file=
+	if [ -f "${conf_phpfile}" -a -s "${conf_phpfile}" ]; then
+		version_file="${conf_phpfile}"
+	elif [ -f "${conf_phpfile_new}" -a -s "${conf_phpfile_new}" ]; then
+		version_file="${conf_phpfile_new}"
+	fi
+	result=$( awk -F"," '(/^[ \t]*define.+EYOUM_VERSION/){print $2;exit;}' "${version_file}" 2>&- | tr -d "'); " )
+	echo -en "${result}"
+}
+
+get_emgversion() {
+:
 }
 
 get_emstart() {
@@ -919,10 +941,13 @@ config_pdns_svr() {
 	if [ ! -z "${base_domain}" ]; then
 		cfg_value1="${base_domain}:mx,ns"
 	fi
+
+	local dns_atleast="eyou.net:mx,ns"
+
 	if [ -z "${cfg_value1}" ]; then
-		cfg_value1="eyou.net:mx,ns"
+		cfg_value1="${dns_atleast}"
 	else
-		cfg_value1="${cfg_value1} eyou.net:mx,ns"
+		cfg_value1="${cfg_value1} ${dns_atleast}"
 	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
