@@ -59,6 +59,15 @@ build_mysql() {
   cp -a $PATH_EXTRACT/$dirname $PATH_INSTALL/mysql
   check_rc "copy $dirname as $PATH_INSTALL/mysql"
 
+  mkdir -p  ${PATH_ESOP}/tmp_install/{sbin,sql}
+  check_rc "create directory ${PATH_ESOP}/tmp_install/{sbin,sql}"
+
+  cp -a $PATH_TARBALL/tmp_install/sbin/init_install ${PATH_ESOP}/tmp_install/sbin/
+  check_rc "copy init_install to ${PATH_ESOP}/tmp_install/sbin/"
+
+  cp -a $PATH_TARBALL/tmp_install/sql/*.sql ${PATH_ESOP}/tmp_install/sql/
+  check_rc "copy sql files to ${PATH_ESOP}/tmp_install/sql/"
+
   if [ "$OS_BIT" == "64" ]; then
         cd $PATH_INSTALL/mysql
         check_rc "change into mysql"
