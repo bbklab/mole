@@ -246,6 +246,59 @@ cto_int() {
 	echo -en "${1//[!0-9]}"
 }
 
+# Get InetName by Priority 
+#
+get_inetorder() {
+	local netfile="/proc/net/dev"	result=
+	local biosdevname="/sbin/biosdevname"
+
+	local i_new="em"  i_old="eth"	new_mode=0	# old naming schema first
+	local array_inet=()
+	if [ -f "${netfile}" ]; then
+		array_inet=( $( awk -F: '(NF!=2){next;} ($1~/\<lo\>/){next;} {print $1,$2}' "${netfile}" 2>&- |\
+			awk '($2!=0 && $3!=0){print $1;}')  )	# active inet name list (exclude lo)
+		if [ "${#array_inet[*]}" == "0" ]; then
+			:
+		elif [ "${#array_inet[*]}" == "1" ]; then
+			result="${array_inet[0]}"
+		else
+			if [ -f "${biosdevname}" -a -x "${biosdevname}" ]; then
+				new_mode=1		# new naming schema first
+			fi
+
+			local ainew=  aiold=  aiother=
+			for((i=0;i<${#array_inet[*]};i++))
+			do
+				if (echo -e "${array_inet[$i]}" | grep -E "^${i_new}") >/dev/null 2>&1; then
+					ainew="${ainew}\n${array_inet[$i]}"
+				elif (echo -e "${array_inet[$i]}" | grep -E "^${i_old}") >/dev/null 2>&1; then
+					aiold="${aiold}\n${array_inet[$i]}"
+				else
+					aiother="${aiother}\n${array_inet[$i]}"
+				fi 
+			done
+			if [ -n "${ainew}" ]; then
+				ainew=$(echo -en "${ainew}\n" | sort -n)
+			fi
+			if [ -n "${aiold}" ]; then
+				aiold=$(echo -en "${aiold}\n" | sort -n)
+			fi
+			if [ -n "${aiother}" ]; then
+				aiother=$(echo -en "${aiother}\n" | sort -n)
+			fi
+
+			if [ "${new_mode}" == "1" ]; then
+				result="${ainew} ${aiold} ${aiother}"		
+			else
+				result="${aiold} ${ainew} ${aiother}"
+			fi
+		fi
+			
+	fi
+
+	echo -en "${result}" | tr '\n\t ' ' '
+}
+
 # Write log
 # Usage1:	1: set {_LOG} and ${_DEBUG} before you call this function.
 # Usage2:	2: -f path/to/log/file     Note: this pattern will ignore ${_DEBUG} flag.
