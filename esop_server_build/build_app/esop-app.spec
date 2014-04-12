@@ -1,5 +1,5 @@
-Summary: 	redis for esop server
-Name: 		esop-redis
+Summary: 	application for esop server
+Name: 		esop-app
 Version: 	1.0.1
 Release: 	rhel5
 License: 	Commercial
@@ -7,8 +7,8 @@ Group:  	Extension
 Vendor:		Beijing eYou Information Technology Co., Ltd.
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	esop-redis-1.0.1-rhel5.tgz
-Source1: 	esop-redis.init
+Source0: 	esop-app-1.0.1-rhel5.tgz
+Source1:	esop-app.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
 Requires:		psmisc >= 22.2, util-linux >= 2.13
@@ -24,7 +24,7 @@ Requires(postun): 	coreutils >= 5.97
 #
 
 %description 
-redis for esop server
+application for esop server
 
 %prep
 %setup -q
@@ -44,7 +44,9 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 %files
 %defattr(-, root, root)
 %attr(-, eyou, eyou) /usr/local/eyou/toolmail/etc/
-%attr(-, eyou, eyou) /usr/local/eyou/toolmail/data/redis/
+%attr(-, eyou, eyou) /usr/local/eyou/toolmail/web/
+%attr(-, eyou, eyou) /usr/local/eyou/toolmail/app/
+%attr(-, eyou, eyou) /usr/local/eyou/toolmail/implements/
 %attr(0755, root, root) %{_initrddir}/%{name}
 /usr/local/eyou/toolmail
 
