@@ -915,17 +915,13 @@ config_ptcp_conn() {
 
 config_ptraffic() {
 	local plugin="traffic"
-	local file="/proc/net/dev"
 	local cfg="ifdev_lst"  cfg_value=
 	
-	if [ -f "${file}" ]; then
-                local cfg_value=$( awk -F: '(NF!=2){next;} ($1~/\<lo\>/){next;} {print $1,$2}' "${file}" 2>&- |\
-					 awk '($2!=0 && $3!=0){print $1;exit;}' |\
-					 tr -d '\r\n\t ')
-        fi 
+	local speed_limit="30M/s:50M/s:0:0"
+	local netdev=$( get_inetorder 2>&- | awk '{print $1;exit;}' )
 	
-	if [ ! -z "${cfg_value}" ]; then
-		cfg_value="${cfg_value}:30M/s:50M/s:0:0"
+	if [ ! -z "${netdev}" ]; then
+		cfg_value="${netdev}:${speed_limit}"
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
 	fi
 }
