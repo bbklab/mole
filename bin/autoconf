@@ -681,7 +681,7 @@ config_pdisk_space() {
 config_pdisk_iostat() {
 	local plugin="disk_iostat"
 	local file="/etc/mtab"
-	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="50"
+	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="70"
 
 	if [ -f "${file}" -a -s "${file}" ]; then
 		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
