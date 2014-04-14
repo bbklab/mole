@@ -108,6 +108,7 @@ EMG_DOMAIN_CONFIG="$EMG_CONFDIR/domain.conf"
 
 # MOLE DEF
 ESOP_PATH="/usr/local/esop/agent"
+ESOP_CONF_PATH="${ESOP_PATH}/etc"
 MOLE_PATH="${ESOP_PATH}/mole"
 MOLE_SBIN="${MOLE_PATH}/sbin"
 MOLE="${MOLE_SBIN}/mole"
@@ -1150,6 +1151,10 @@ fi
 EM_START=( $(get_emstart) )
 EMG_SATRT=( $(get_emgstart) )
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 PREFIX="config_p"
 PLUGINS=		## plugins to be processed
 
@@ -1170,7 +1175,15 @@ else
 	show_usage
 fi
 
-# 2. restore old mole configs
+# 2. restore old configs
+if [ -f "${PROXY_CONFIG_SAVE1}" -a -s "${PROXY_CONFIG_SAVE1}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_SAVE1}" "${PROXY_CONFIG_ORIG1}"
+	/bin/rm -f "${PROXY_CONFIG_SAVE1}" 2>&-
+fi
+if [ -f "${PROXY_CONFIG_SAVE2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_SAVE2}" "${PROXY_CONFIG_ORIG2}"
+	/bin/rm -f "${PROXY_CONFIG_SAVE2}" 2>&-
+fi
 if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 
 	mole_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global id 2>&- )
@@ -1225,7 +1238,7 @@ if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
 		update_mole_config sendmail auth_pass "${smtppass}"
 	fi
 
-	rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
 fi
 
 # 3. automatic config all plugins

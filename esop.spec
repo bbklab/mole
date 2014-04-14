@@ -90,11 +90,25 @@ else
 	useradd ${USER} -m -d /usr/local/%{name}/ -u 12037 >/dev/null 2>&1
 fi
 
-# save original mole config file
+# save original mole config file before installation
 MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
 	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
+else
+	:
+fi
+if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
+else
+	:
+fi
+if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
 else
 	:
 fi
@@ -107,10 +121,22 @@ fi
 # restore original mole configs, init all plugin configs
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
 
-# remove original mole config file
+# remove original mole config file after installation
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 if [ -f "${MOLE_CONFIG_SAVE}" ]; then
 	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+else
+	:
+fi
+if [ -f "${PROXY_CONFIG_SAVE1}" ]; then
+	/bin/rm -f "${PROXY_CONFIG_SAVE1}" 2>&-
+else
+	:
+fi
+if [ -f "${PROXY_CONFIG_SAVE2}" ]; then
+	/bin/rm -f "${PROXY_CONFIG_SAVE2}" 2>&-
 else
 	:
 fi
@@ -139,13 +165,27 @@ if [ -f "/usr/local/esop/agent/mole/tmp/.status.dat" ]; then
 fi
 
 %preun
-# save original mole config file
+# save original mole config file before uninstallation
 MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
         /bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
 else
         :   
+fi
+if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
+else
+	:
+fi
+if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
+	/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
+else
+	:
 fi
 /sbin/service %{name} stop >/dev/null 2>&1
 /sbin/chkconfig --del %{name} >/dev/null 2>&1
