@@ -84,14 +84,19 @@ fi
 
 # create system user: eyou
 USER="eyou"
+USERID="12037"
 if id ${USER} >/dev/null 2>&1; then
 	:
 else
-	useradd ${USER} -m -d /usr/local/%{name}/ -u 12037 >/dev/null 2>&1
+	useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1
 fi
 
 # save original mole config file before installation
-MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
+ESOP_PATH="/usr/local/%{name}/agent"
+MOLE_PATH="${ESOP_PATH}/mole"
+ESOP_CONF_PATH="${ESOP_PATH}/etc"
+MOLE_CONF_PATH="${MOLE_PATH}/conf"
+MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
 PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
@@ -172,7 +177,11 @@ fi
 
 %preun
 # save original mole config file before uninstallation
-MOLE_CONFIG="/usr/local/%{name}/agent/mole/conf/.mole.ini"
+ESOP_PATH="/usr/local/%{name}/agent"
+MOLE_PATH="${ESOP_PATH}/mole"
+ESOP_CONF_PATH="${ESOP_PATH}/etc"                                                                                                   
+MOLE_CONF_PATH="${MOLE_PATH}/conf"
+MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
 PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
 PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
