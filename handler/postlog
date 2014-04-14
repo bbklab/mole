@@ -728,7 +728,7 @@ sub genjson_plugin() {
 				my $value = "@arrline";
 				$udef{'flag'} = $key if ($key);	
 				$udef{'title'} = $key if ($key);
-				$udef{'val'} = $value if ($value);
+				$udef{'val'} = $value if (defined $value && $value ne '');
 			}
 			push @udef_array, \%udef;
 		}
