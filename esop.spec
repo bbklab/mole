@@ -163,6 +163,12 @@ hash -r >/dev/null 2>&1
 if [ -f "/usr/local/esop/agent/mole/tmp/.status.dat" ]; then
 	rm -f "/usr/local/esop/agent/mole/tmp/.status.dat" 2>&-
 fi
+if [ -f "/usr/local/esop/agent/mole/tmp/.posthost.status" ]; then
+	rm -f "/usr/local/esop/agent/mole/tmp/.posthost.status" 2>&-
+fi
+if [ -f "/usr/local/esop/agent/mole/tmp/.smtphost.status" ]; then
+	rm -f "/usr/local/esop/agent/mole/tmp/.smtphost.status" 2>&-
+fi
 
 %preun
 # save original mole config file before uninstallation
