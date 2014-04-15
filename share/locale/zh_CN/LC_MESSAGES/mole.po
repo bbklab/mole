@@ -650,7 +650,7 @@ msgid "input invalid"
 msgstr "输入非法"
 
 msgid "base domain of this box"
-msgstr "基础域名"
+msgstr "主域名"
 
 msgid "set mole_name as"
 msgstr "初始化实例名为"
