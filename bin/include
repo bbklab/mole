@@ -116,6 +116,15 @@ ARRAY_BASE_CONFIG=(
   debug
 )
 
+### CONFIG SECTION IN MAIN CONFIG
+###  -- Exclude INNER PLUGINS
+ARRAY_GLOBAL_SECTION=(
+  global
+  default
+  postlog
+  sendmail
+  takesnap
+)
 
 ### PLACE HOLDER STRING
 PLACE_HOLDER="_PLUGIN_"
@@ -509,9 +518,7 @@ list_section_keys(){
         return 1
   }
   # set config file
-  if [ "${section}" == "global" -o "${section}" == "default" ]; then
-	config_file="${CONFIG_FILE}"
-  elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+  if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
 	config_file="${CONFIG_FILE}"
   elif [[ "${section}" =~ "^mole_" ]]; then
 	config_file="${CONFIG_FILE}"
@@ -604,9 +611,7 @@ read_mole_config(){
 	return 1
   else
 	if [ "${Mode}" == "0" ]; then		# automatic set {config_file}
-		if [ "${section}" == "global" -o "${section}" == "default" ]; then 
-        		config_file="${CONFIG_FILE}"
-		elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
+		if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
 			config_file="${CONFIG_FILE}"
   		elif [[ "${section}" =~ "^mole_" ]]; then
         		config_file="${CONFIG_FILE}"
@@ -675,10 +680,8 @@ update_mole_config() {
                 return 9
 	fi
 	# set config_file
-	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
-		config_file="${CONFIG_FILE}"
   	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
@@ -768,10 +771,8 @@ add_mole_config() {
 		return 9
 	fi
 	# set config_file 
-	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
-		config_file="${CONFIG_FILE}"
   	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
@@ -859,10 +860,8 @@ del_mole_config() {
 		return 9
 	fi
 	# set config_file 
-	if [ "${section}" == "global" -o "${section}" == "default" ]; then 
+	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-        elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
-		config_file="${CONFIG_FILE}"
   	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
