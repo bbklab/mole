@@ -513,7 +513,7 @@ list_section_keys(){
 	config_file="${CONFIG_FILE}"
   elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
 	config_file="${CONFIG_FILE}"
-  elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+  elif [[ "${section}" =~ "^mole_" ]]; then
 	config_file="${CONFIG_FILE}"
   else
 	config_file="${CONF_DIR}/${section}.ini"
@@ -608,7 +608,7 @@ read_mole_config(){
         		config_file="${CONFIG_FILE}"
 		elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
 			config_file="${CONFIG_FILE}"
-  		elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+  		elif [[ "${section}" =~ "^mole_" ]]; then
         		config_file="${CONFIG_FILE}"
   		else 
         		config_file="${CONF_DIR}/${section}.ini"
@@ -679,7 +679,7 @@ update_mole_config() {
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
 		config_file="${CONFIG_FILE}"
-  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+  	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -772,7 +772,7 @@ add_mole_config() {
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
 		config_file="${CONFIG_FILE}"
-  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+  	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -863,7 +863,7 @@ del_mole_config() {
         	config_file="${CONFIG_FILE}"
         elif [ "${section}" == "sendmail" -o "${section}" == "postlog" -o "${section}" == "takesnap" ]; then
 		config_file="${CONFIG_FILE}"
-  	elif [ "$(echo "${section}" | grep -E -o "^mole_")" != "" ]; then
+  	elif [[ "${section}" =~ "^mole_" ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -1457,10 +1457,10 @@ update_lastrun_and_nextrun() {
 	return 1
   }
 
-  if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
-	local logfile="${MOLE_LOG}"
-  else
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
 	local logfile="${INNER_LOG}"                                                                                   
+  else
+	local logfile="${MOLE_LOG}"
   fi
 
   touch ${TMP_LASTRUN} ${TMP_NEXTRUN}
@@ -1556,10 +1556,10 @@ update_status() {
         return 1
   }
 
-  if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
-	local logfile="${MOLE_LOG}"
-  else
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
 	local logfile="${INNER_LOG}"                                                                                   
+  else
+	local logfile="${MOLE_LOG}"
   fi
 
   
@@ -1819,17 +1819,17 @@ time2run_ornot() {
 #
 gen_lock() {
   local plugin_name=$1  rc=  errinfo=  logfile=  p_path=
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 gen_lock error: missing plugin name";
   	return 1
-  }
-  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-	p_path="${PLUGIN_DIR}/${plugin_name}"
-	logfile="${MOLE_LOG}"
-  } || {
+  fi
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
    	p_path="${INNER_DIR}/${plugin_name}"
 	logfile="${INNER_LOG}"
-  }
+  else
+	p_path="${PLUGIN_DIR}/${plugin_name}"
+	logfile="${MOLE_LOG}"
+  fi
   # only collect stderr output.
   errinfo=$( ln -s "${p_path}" "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
@@ -1851,15 +1851,15 @@ un_lock() {
   local plugin_name=$1  jobid=$2	# get jobid only for log record when called in process_xxxx
   local rc=  errinfo=  logfile=
   [ -z "${jobid}" ] && jobid="00000000"	# if not specified jobid, means not called in process_xxxx
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 un_lock error: missing plugin name";
         return 1
-  }
-  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-        logfile="${MOLE_LOG}"
-  } || {
+  fi
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
         logfile="${INNER_LOG}"
-  }
+  else
+        logfile="${MOLE_LOG}"
+  fi
   # only collect stderr output.
   errinfo=$( unlink "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
@@ -1880,15 +1880,15 @@ del_fpid() {
   local plugin_name=$1  jobid=$2	# get jobid only for log record when called in process_xxxx
   local rc=  errinfo=  logfile=
   [ -z "${jobid}" ] && jobid="00000000" # if not specified jobid, means not called in process_xxxx
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 del_fpid error: missing plugin name";
         return 1
-  }
-  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-        logfile="${MOLE_LOG}"
-  } || {
+  fi
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
         logfile="${INNER_LOG}"
-  }
+  else
+        logfile="${MOLE_LOG}"
+  fi
   # only collect stderr output.
   errinfo=$( /bin/rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
   rc=$?
@@ -1909,20 +1909,20 @@ del_fpid() {
 #
 check_lock() {
   local plugin_name=$1 result=
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 check_lock error: missing plugin name";
 	return 1
-  }
+  fi
   # [ -e ${RUN_DIR}/${plugin_name}.lock ] && {   ###  never check broken link: never return linkerror
   if [ -L "${RUN_DIR}/${plugin_name}.lock" ]; then
 	local f=$(readlink "${RUN_DIR}/${plugin_name}.lock" 2>&-)
-	[ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-        	local p_path="${PLUGIN_DIR}/${plugin_name}"
-		local logfile="${MOLE_LOG}"
-	} || {
+	if [[ "${plugin_name}" =~ "^mole_" ]]; then
 		local p_path="${INNER_DIR}/${plugin_name}"
 		local logfile="${INNER_LOG}"
-	}
+	else
+        	local p_path="${PLUGIN_DIR}/${plugin_name}"
+		local logfile="${MOLE_LOG}"
+	fi
 	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
 		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
 		[ -z "${result}" -o ! -z "${result//[0-9]}" ] && {
@@ -1962,14 +1962,14 @@ clear_dead_lock_pid() {
 
   clear_single_dead_lock_pid() {
 	local _p=$1  _rc=
-	[ -z "${_p}" ] && {
+	if [ -z "${_p}" ]; then
 		write_log -f "${MOLE_LOG}" "E0000000 clear_single_dead_lock_pid error: missing plugin name";
 		return 1
-	}
-  	if [ -z "$( echo "${_p}" | grep -E -o "^mole_" )" ]; then
-        	local logfile="${MOLE_LOG}"
-	else
+	fi
+  	if [[ "${_p}" =~ "^mole_" ]]; then
         	local logfile="${INNER_LOG}"
+	else
+        	local logfile="${MOLE_LOG}"
   	fi
 
 	[ -L "${RUN_DIR}/${_p}.lock" ] && {
@@ -2210,15 +2210,15 @@ timeout_ornot() {
 #
 add_runlock_on_pid_notexist(){
   local plugin_name=$1 _rc=
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 add_runlock_on_pid_notexist error: missing plugin name";
         return 1
-  }
-  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-        local logfile="${MOLE_LOG}"
-  } || {
+  fi
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
         local logfile="${INNER_LOG}"
-  }
+  else
+        local logfile="${MOLE_LOG}"
+  fi
 
   gen_lock "${plugin_name}"
   _rc=$?
@@ -2249,16 +2249,16 @@ add_runlock_on_pid_notexist(){
 #
 check_runlock_on_pid_exist() {
   local plugin_name=$1  r_c=
-  [ -z "${plugin_name}" ] && {
+  if [ -z "${plugin_name}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 check_runlock_on_pid_exist error: missing plugin name";
         return 1
-  }
+  fi
 
-  [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ] && {
-	local logfile="${MOLE_LOG}"
-  } || {
+  if [[ "${plugin_name}" =~ "^mole_" ]]; then
 	local logfile="${INNER_LOG}"
-  }
+  else
+	local logfile="${MOLE_LOG}"
+  fi
 
   local lockinfo=$(check_lock "${plugin_name}")
   [ -z "${lockinfo//[0-9]/}" ] && {	    ###   is running
@@ -2317,11 +2317,11 @@ list_plugin_status() {
 	local nextruntime=$(get_nextrun $_p)
 	local repeaterrnum=$(get_repeat_errcount "${_p}")
 
-	[ ! -z "$( echo "${_p}" | grep -E -o "^mole_" )" ] && {
+	if [[ "${_p}" =~ "^mole_" ]]; then
 		enable="yes"
-	} || {
+	else
 		enable=$(get_enable "${_p}")
-        }
+        fi
 
 	if [ -z "${lastruntime//[0-9]/}" ]; then
 		lastruntime=$(date -d "1970-01-01 UTC ${lastruntime} seconds" +%F_%T)
@@ -3005,7 +3005,7 @@ process_plugin_timeout() {
   # Step 2: stop timeout plugin 
   stop_single_plugin "${plugin_name}"
   # return here while inner plugin
-  [ "$( echo "${plugin_name}" | grep -E -o "^mole_" )" != "" ] && return 0
+  [[ "${plugin_name}" =~ "^mole_" ]] && return 0
 
   # Step 2: take snapshot
   local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot "tmout")
