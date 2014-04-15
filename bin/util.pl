@@ -203,17 +203,18 @@ sub filter_html {
 }
 
 # Create Mail Content by Template
-# Usage:   create_mailct {tpl_path} {plugin} {plugin_output} {handler_output}
-# Example: create_mailct "notify_mail.tpl" "disk_fs" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
+# Usage:   create_mailct {tpl_path} {plugin} {eventid} {plugin_output} {handler_output}
+# Example: create_mailct "notify_mail.tpl" "disk_fs" "abcdefghi012345" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
 #
 sub create_mailct {
 	### @ARGV
-	my ($tpl_path,$plugin,$content,$hd_content) = @ARGV;
-	exit(1) unless (defined $tpl_path && defined $plugin && defined $content && defined $hd_content);
+	my ($tpl_path,$plugin,$eventid,$content,$hd_content) = @ARGV;
+	exit(1) unless (defined $tpl_path && defined $plugin && defined $eventid && defined $content && defined $hd_content);
 	exit(1) unless (-f $tpl_path && -r $tpl_path);
-	exit(1) if ( $plugin =~ m/\A\s*\Z/ || $content =~ m/\A\s*\Z/ || $hd_content =~ m/\A\s*\Z/ );
+	exit(1) if ( $plugin =~ m/\A\s*\Z/ || $eventid =~ m/\A\s*\Z/ || $content =~ m/\A\s*\Z/ || $hd_content =~ m/\A\s*\Z/ );
 	### $tpl_path
 	### $plugin
+	### $eventid
 	### $content
 	### $hd_content
 
@@ -263,6 +264,9 @@ sub create_mailct {
 			}
 			if (m/\${MOLE-NOTIFY-MAIL_SUMMARY}/){
 				s/\${MOLE-NOTIFY-MAIL_SUMMARY}/$summary/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_EVENTID}/){
+				s/\${MOLE-NOTIFY-MAIL_EVENTID}/$eventid/;
 			}
 			if (m/\${MOLE-NOTIFY-MAIL_DETAILS}/){
 				s/\${MOLE-NOTIFY-MAIL_DETAILS}/$details/;

@@ -88,7 +88,7 @@ conv_output2mailbody() {
   mailbody="$(gen_tmpfile mailbody)"
   if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
 	{
-	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${plugin}" "${content}" "${hd_content}"
+	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${plugin}" "${jobid}" "${content}" "${hd_content}"
 	} >> "${mailbody}" 2>&1
   else
   	title=$(${PLUTIL} parted_output 4 "${content}")

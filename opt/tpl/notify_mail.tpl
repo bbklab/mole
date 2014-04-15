@@ -27,6 +27,10 @@
 					<span style="width:100px;display:inline-block;color:#797979;">概要</span>
 					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_SUMMARY}</i>
 				</p>
+				<p style="width:49%;float:left;padding:0;margin:10px 0;">
+					<span style="width:100px;display:inline-block;color:#797979;">事件编号</span>
+					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_EVENTID}</i>
+				</p>
 				<p style="width:100%;float:left;margin-bottom:0;padding:0;margin:10px 0;">
 					<span style="width:100px;display:inline-block;color:#797979;">详细描述：</span>				
 				</p>
