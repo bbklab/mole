@@ -203,8 +203,11 @@ show_usage() {
 cat << EOF
         ${0##*/}
         ${0##*/} help
-        ${0##*/} rpminit {plugin1} {plugin2} ...
-        ${0##*/} rpminit all
+        ${0##*/} autoconf {plugin1} {plugin2} ...
+        ${0##*/} autoconf all
+        ${0##*/} rpminit  {plugin1} {plugin2} ...
+        ${0##*/} rpminit  all
+        ${0##*/} resconf
 EOF
 exit 0
 }
@@ -919,14 +922,6 @@ config_psysload() {
 	return $?
 }
 
-config_psystem_dyninfo() {
-:
-}
-
-config_psystem_fixinfo() {
-:
-}
-
 config_ptcp_conn() {
 	local rc=0
 
@@ -1239,14 +1234,27 @@ if [ ! -f "${MOLE}" -o ! -x "${MOLE}" ]; then
 	exit 1
 fi
 
-# 1. process arguments
+
+# 0. process arguments
 PREFIX="config_p"
 PLUGINS=		## plugins to be processed
 
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
 [ "$#" == "0" ] && show_usage
-if [ "$1" == "rpminit" ]; then
+if [ "$1" == "autoconf" ]; then
 	MODE=1 
+elif [ "$1" == "resconf" ]; then
+	MODE=2
+elif [ "$1" == "rpminit" ]; then
+	MODE=3
+else
+	show_usage
+fi
+# MODE:
+#   1. autoconf		=> automatic config specified plugins
+#   2. resconf		=> automatic restore old config files
+#   3. rpminit		=> autoconf + resconf
+if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
 	if [ -z "$2" ]; then
 		show_usage
 	elif [ "$2" == "all" ]; then
@@ -1255,136 +1263,146 @@ if [ "$1" == "rpminit" ]; then
 		shift 1
 		PLUGINS="$*"
 	fi
-else
-	show_usage
 fi
 
+# 1. autoconf start
+write_log ""
+write_log ""
 write_log "script autoconf start"
 write_log "received arguments: [$@]"
-write_log "plugins to be config: [${PLUGINS}]"
+write_log "work mode: ${MODE}"
 
-# 2. restore old configs
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
-PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
-PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 
-write_log "restoring old config files"
+# 2. restore old configs, MODE=2,3
 
-# 2.1 restore etm_phptd.ini
-if [ -f "${PROXY_CONFIG_SAVE1}" -a -s "${PROXY_CONFIG_SAVE1}" ]; then
-	write_log "found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, continue"
-	if /bin/cp -f "${PROXY_CONFIG_SAVE1}" "${PROXY_CONFIG_ORIG1}" >/dev/null 2>&1; then
-		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} succeed!"
-		if /bin/rm -f "${PROXY_CONFIG_SAVE1}" >/dev/null 2>&1; then
-			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} succeed!"
-		else
-			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} failed!"
-		fi
-	else
-		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} failed!"
-	fi
-else
-	write_log "not found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, skip"
-fi
-
-# 2.2 restore etm_agent.ini
-if [ -f "${PROXY_CONFIG_SAVE2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
-	write_log "found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, continue"
-	if /bin/cp -f "${PROXY_CONFIG_SAVE2}" "${PROXY_CONFIG_ORIG2}" >/dev/null 2>&1; then
-		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} succeed!"
-		if /bin/rm -f "${PROXY_CONFIG_SAVE2}" >/dev/null 2>&1; then
-			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} succeed!"
-		else
-			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} failed!"
-		fi
-	else
-		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} failed!"
-	fi
-else
-	write_log "not found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, skip"
-fi
-
-# 2.3 restore mole.ini
-if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
-	write_log "found mole save file: ${MOLE_CONFIG_SAVE##*/}, continue"
+if [ "${MODE}" == "2" -o "${MODE}" == "3" ]; then
+	MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+	PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+	PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+	PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+	PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
 	
-	RESTORE_MOLE_CONFIG=(
-		#section	#key			#args
-		"global"	"id"			"force"
-		"global"	"parter_id"		"force"
-		"global"	"name"			"force"
-		"default"	"mail_receviers"	""
-		"postlog"	"post_server"		""
-		"postlog"	"post_server_port"	""
-		"sendmail"	"smtp_server"		""
-		"sendmail"	"smtp_server_port"	""
-		"sendmail"	"auth_user"		""
-		"sendmail"	"auth_pass"		""
-	)
-	
-	section=  key=  args=  oldvalue=  nowvalue=  rc=  n=0
-	for((i=0;i<=${#RESTORE_MOLE_CONFIG[*]}-1;i++))
-	do
-		if (( $i%3 == 0)); then
-			section="${RESTORE_MOLE_CONFIG[$i]}"
-		elif (( $i%3 == 1)); then
-			key="${RESTORE_MOLE_CONFIG[$i]}"
-		elif (( $i%3 == 2)); then
-			((n++))
-			args="${RESTORE_MOLE_CONFIG[$i]}"
-			oldvalue=$(read_mole_config -f "${MOLE_CONFIG_SAVE}" "${section}" "${key}" 2>&-)
-			nowvalue=$(read_mole_config "${section}" "${key}" 2>&-)
-			if [ "${nowvalue}" != "${oldvalue}" ]; then
-				write_log "[$n] trying to restore ${section}-${key}"
-				if [ -z "${args}" ]; then
-					update_mole_config "${section}" "${key}" "${oldvalue}"
-				else
-					update_mole_config "${args}" "${section}" "${key}" "${oldvalue}"
-				fi
-				rc=$?
-				if [ "$rc" == "0" ]; then
-					write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] succeed!($rc)"
-				else
-					write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] failed!($rc)"
-				fi
+	write_log "restoring old config files"
+
+	# 2.1 restore etm_phptd.ini
+	if [ -f "${PROXY_CONFIG_SAVE1}" -a -s "${PROXY_CONFIG_SAVE1}" ]; then
+		write_log "found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, continue"
+		if /bin/cp -f "${PROXY_CONFIG_SAVE1}" "${PROXY_CONFIG_ORIG1}" >/dev/null 2>&1; then
+			write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} succeed!"
+			if /bin/rm -f "${PROXY_CONFIG_SAVE1}" >/dev/null 2>&1; then
+				write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} succeed!"
 			else
-				write_log "[$n] no need to restore ${section}-${key} as [${oldvalue}], nothing changed!"
+				write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} failed!"
 			fi
+		else
+			write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} failed!"
 		fi
-	done
-
-	if /bin/rm -f "${MOLE_CONFIG_SAVE}" >/dev/null 2>&1; then
-		write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} succeed!"
 	else
-		write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} failed!"
+		write_log "not found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, skip"
 	fi
-else
-	write_log "not found mole save file: ${MOLE_CONFIG_SAVE##*/}, skip"
+
+	# 2.2 restore etm_agent.ini
+	if [ -f "${PROXY_CONFIG_SAVE2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
+		write_log "found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, continue"
+		if /bin/cp -f "${PROXY_CONFIG_SAVE2}" "${PROXY_CONFIG_ORIG2}" >/dev/null 2>&1; then
+			write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} succeed!"
+			if /bin/rm -f "${PROXY_CONFIG_SAVE2}" >/dev/null 2>&1; then
+				write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} succeed!"
+			else
+				write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} failed!"
+			fi
+		else
+			write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} failed!"
+		fi
+	else
+		write_log "not found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, skip"
+	fi
+
+	# 2.3 restore mole.ini
+	if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
+		write_log "found mole save file: ${MOLE_CONFIG_SAVE##*/}, continue"
+	
+		RESTORE_MOLE_CONFIG=(
+			#section	#key			#args
+			"global"	"id"			"force"
+			"global"	"parter_id"		"force"
+			"global"	"name"			"force"
+			"default"	"mail_receviers"	""
+			"postlog"	"post_server"		""
+			"postlog"	"post_server_port"	""
+			"sendmail"	"smtp_server"		""
+			"sendmail"	"smtp_server_port"	""
+			"sendmail"	"auth_user"		""
+			"sendmail"	"auth_pass"		""
+		)
+	
+		section=  key=  args=  oldvalue=  nowvalue=  rc=  n=0
+		for((i=0;i<=${#RESTORE_MOLE_CONFIG[*]}-1;i++))
+		do
+			if (( $i%3 == 0)); then
+				section="${RESTORE_MOLE_CONFIG[$i]}"
+			elif (( $i%3 == 1)); then
+				key="${RESTORE_MOLE_CONFIG[$i]}"
+			elif (( $i%3 == 2)); then
+				((n++))
+				args="${RESTORE_MOLE_CONFIG[$i]}"
+				oldvalue=$(read_mole_config -f "${MOLE_CONFIG_SAVE}" "${section}" "${key}" 2>&-)
+				nowvalue=$(read_mole_config "${section}" "${key}" 2>&-)
+				if [ "${nowvalue}" != "${oldvalue}" ]; then
+					write_log "[$n] trying to restore ${section}-${key}"
+					if [ -z "${args}" ]; then
+						update_mole_config "${section}" "${key}" "${oldvalue}"
+					else
+						update_mole_config "${args}" "${section}" "${key}" "${oldvalue}"
+					fi
+					rc=$?
+					if [ "$rc" == "0" ]; then
+						write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] succeed!($rc)"
+					else
+						write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] failed!($rc)"
+					fi
+				else
+					write_log "[$n] no need to restore ${section}-${key} as [${oldvalue}], nothing changed!"
+				fi
+			fi
+		done
+
+		if /bin/rm -f "${MOLE_CONFIG_SAVE}" >/dev/null 2>&1; then
+			write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} succeed!"
+		else
+			write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} failed!"
+		fi
+	else
+		write_log "not found mole save file: ${MOLE_CONFIG_SAVE##*/}, skip"
+	fi
 fi
 
-# 3. automatic config all plugins
-EM_START=( $(get_emstart) )
-EMG_START=( $(get_emgstart) )
 
-write_log "eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
-write_log "eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
+# 3. automatic config/enable specified plugins
 
-# inner functioin def: autoconf enable plugin
-autoconf_eplugin(){
-  local plugin="$1"
-  if ${MOLE} enable "${plugin}" >/dev/null 2>&1; then
-	write_log "${plugin} enabled succeed!"
-  else
-	write_log "${plugin} enabled failed!($?)"
-  fi
-}
-for plugin in `echo "${PLUGINS}"`
-do
-	if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
-		if [ "${MODE}" == "1" ]; then
+if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
+	# 3.1  get eyoumail/gateway starton components
+	EM_START=( $(get_emstart) )
+	EMG_START=( $(get_emgstart) )
+	write_log "eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
+	write_log "eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
+	write_log "plugins to be config: [${PLUGINS}](${#PLUGINS[*]})"
 
+	# 3.2  automatic config/enable specified plugins
+	autoconf_eplugin(){
+  	local plugin="$1"
+  	if ${MOLE} enable "${plugin}" >/dev/null 2>&1; then
+		write_log "${plugin} enabled succeed!"
+  	else
+		write_log "${plugin} enabled failed!($?)"
+  	fi
+	}
+
+	for plugin in `echo "${PLUGINS}"`
+	do
+		if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
+
+			# config plugins here
 			eval "${PREFIX}${plugin} >/dev/null 2>&1"
 			write_log "${plugin} automatic configuration finished($?)"
 	
@@ -1430,11 +1448,10 @@ do
 				;;
 			esac
 		else
-			write_log "${plugin} skipped, as MODE(${MODE})"
+			write_log "${plugin} skipped, as function ${PREFIX}${plugin} not defined!"
 		fi
-	else
-		write_log "${plugin} skipped, as function ${PREFIX}${plugin} not defined!"
-	fi
-done
+	done
+fi
 
 write_log "script autoconf end." 
+write_log ""
