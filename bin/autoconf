@@ -635,17 +635,23 @@ get_emcompinfo() {
 # config for base plugins
 #
 config_pcpu_usage() {
+	local rc=0
+
         local plugin="cpu_usage"
         local cfg1="uplimit"  cfg_value1="75"  cfg2="wa_uplimit" cfg_value2="20"
 	local cfg3="sy_uplimit"  cfg_value3="30"  cfg4="us_uplimit"  cfg_value4="50"
 
-        ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
-	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
-	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+        ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
+
+	return $rc
 }
 
 config_pdisk_fs() {
+	local rc=0
+
 	local plugin="disk_fs"
 	local file="/etc/mtab"	tune2fs="/sbin/tune2fs"
 	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude"  cfg_value2=
@@ -666,13 +672,17 @@ config_pdisk_fs() {
 		fi
 	fi
 
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_pdisk_space() {
+	local rc=0
+
 	local plugin="disk_space"
 	local file="/etc/mtab"
 	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
@@ -684,15 +694,19 @@ config_pdisk_space() {
 		fi
 	fi
 
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
 	fi
-	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
-	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+	${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
+	${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
+
+	return $rc
 }
 
 config_pdisk_iostat() {
+	local rc=0
+
 	local plugin="disk_iostat"
 	local file="/etc/mtab"
 	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="70"
@@ -712,12 +726,16 @@ config_pdisk_iostat() {
 	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+
+	return $rc
 }
 
 config_pmemory() {
+	local rc=0
+
 	local plugin="memory"
 	local file="/proc/meminfo"
 	local cfg1="mem_uplimit" cfg_value1="99.99"  cfg2="swp_uplimit" cfg_value2=
@@ -735,13 +753,17 @@ config_pmemory() {
         	fi
 	fi
 
-	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	if [ ! -z "${cfg_value2}" ]; then
-		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_pnotify_oom() {
+	local rc=0
+
 	local plugin="notify_oom"
 	local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"	 file=
 	local cfg="messagefile" cfg_value=
@@ -754,11 +776,15 @@ config_pnotify_oom() {
 	cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/\*\.info/){print $NF;exit;}' "${file}" 2>&-)"
 
 	if [ ! -z "${cfg_value}" ]; then
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_pnotify_syslogin() {
+	local rc=0
+
         local plugin="notify_syslogin"
         local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"  file=
         local cfg="authfile" cfg_value=
@@ -771,11 +797,15 @@ config_pnotify_syslogin() {
         cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/authpriv\.\*/){print $NF;exit;}' "${file}" 2>&-)"
 
         if [ ! -z "${cfg_value}" ]; then
-                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
         fi  
+
+	return $rc
 }
 
 config_pport() {
+	local rc=0
+
 	local plugin="port"
 	local cfg="port_list"  cfg_value=
 
@@ -805,11 +835,15 @@ config_pport() {
 	# remove duplication items.
 	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value}" ]; then
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_pprocess() {
+	local rc=0
+
 	local plugin="process"
 	local cfg="pslist_file"  cfg_value="opt/process.lst"
 
@@ -844,12 +878,16 @@ config_pprocess() {
 		return 1
 	fi
 	if [ -f "${file}" -a -s "${file}" ]; then
-		${MOLE} config-del ${plugin} ${cfg}
-		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"
+		${MOLE} config-del ${plugin} ${cfg}; ((rc+=$?))
+		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_psysload() {
+	local rc=0
+
 	local plugin="sysload"
 	local file="/proc/cpuinfo"
 	local cfg="load_uplimit"  cfg_value=
@@ -875,8 +913,10 @@ config_psysload() {
 	fi
 	
 	if [ ! -z "${cfg_value}" ]; then
-                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+                ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $?
 }
 
 config_psystem_dyninfo() {
@@ -888,6 +928,8 @@ config_psystem_fixinfo() {
 }
 
 config_ptcp_conn() {
+	local rc=0
+
 	local plugin="tcp_conn"
 	local cfg="port_list"  cfg_value=
 
@@ -923,11 +965,15 @@ config_ptcp_conn() {
 	# remove duplication items.
 	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value}" ]; then
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_ptraffic() {
+	local rc=0
+
 	local plugin="traffic"
 	local cfg="ifdev_lst"  cfg_value=
 	
@@ -936,14 +982,18 @@ config_ptraffic() {
 	
 	if [ ! -z "${netdev}" ]; then
 		cfg_value="${netdev}:${speed_limit}"
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 #
 # config for mail plugins
 #
 config_pdns_svr() {
+	local rc=0
+
 	local plugin="dns_svr"
 	local cfg1="dns_check_lst"   cfg_value1=   cfg2="max_wait_time"   cfg_value2="10"
 		
@@ -961,12 +1011,16 @@ config_pdns_svr() {
 	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+
+	return $rc
 }
 
 config_ppop_svr() {
+	local rc=0
+
 	local plugin="pop_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
 	local cfg3="pop_user"  cfg_value3="$1"  cfg4="pop_pass"  cfg_value4="$2"
@@ -1006,18 +1060,22 @@ config_ppop_svr() {
         # remove duplication items.
         cfg_value1=$(echo -e "${cfg_value1}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 	if [ ! -z "${cfg_value3}" ]; then
-		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
 	fi
 	if [ ! -z "${cfg_value4}" ]; then
-		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_phttp_svr() {
+	local rc=0
+
 	local plugin="http_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
 
@@ -1049,12 +1107,16 @@ config_phttp_svr() {
 	done
 
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
-	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+
+	return $rc
 }
 
 config_pimap_svr() {
+	local rc=0
+
 	local plugin="imap_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
 	local cfg3="imap_user"  cfg_value3="$1"  cfg4="imap_pass"  cfg_value4="$2"
@@ -1086,18 +1148,22 @@ config_pimap_svr() {
         done
 
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 	if [ ! -z "${cfg_value3}" ]; then
-		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
 	fi
 	if [ ! -z "${cfg_value4}" ]; then
-		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_psmtp_svr() {
+	local rc=0
+
 	local plugin="smtp_svr"
 	local cfg1="addr_port"  cfg_value1=  cfg2="time_out"  cfg_value2="10"
 	local cfg3="smtp_user"  cfg_value3="$1"  cfg4="smtp_pass"  cfg_value4="$2"
@@ -1129,24 +1195,30 @@ config_psmtp_svr() {
         done
 
 	if [ ! -z "${cfg_value1}" ]; then
-		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"
 	if [ ! -z "${cfg_value3}" ]; then
-		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
 	fi
 	if [ ! -z "${cfg_value4}" ]; then
-		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
 	fi
+
+	return $rc
 }
 
 config_pemp_mailqueue() {
+	local rc=0
+
 	local plugin="emp_mailqueue"
 	local cfg="uplimit"	cfg_value="1000"
 
 	if [ ! -z "${cfg_value}" ]; then
-		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"
+		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
+	
+	return $rc
 }
 
 
@@ -1157,21 +1229,20 @@ config_pemp_mailqueue() {
 ####################################
 
 
+# set _LOG/_DEBUG for write_log()
+export _LOG="${AUTOCONF_LOG}"	# set logfile
+export _DEBUG=1			# set debug flag
+
+# check {MOLE} prepared ?
 if [ ! -f "${MOLE}" -o ! -x "${MOLE}" ]; then
+	write_log "mole [${MOLE}] not prepared! exit!"
 	exit 1
 fi
 
-EM_START=( $(get_emstart) )
-EMG_SATRT=( $(get_emgstart) )
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
-PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
-PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
+# 1. process arguments
 PREFIX="config_p"
 PLUGINS=		## plugins to be processed
 
-# 1. process args
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
 [ "$#" == "0" ] && show_usage
 if [ "$1" == "rpminit" ]; then
@@ -1179,7 +1250,7 @@ if [ "$1" == "rpminit" ]; then
 	if [ -z "$2" ]; then
 		show_usage
 	elif [ "$2" == "all" ]; then
-		PLUGINS="$(${MOLE} ln 2>&-)"
+		PLUGINS="$(${MOLE} ln 2>&-|tr '\n' ' ')"
 	else
 		shift 1
 		PLUGINS="$*"
@@ -1188,110 +1259,182 @@ else
 	show_usage
 fi
 
+write_log "script autoconf start"
+write_log "received arguments: [$@]"
+write_log "plugins to be config: [${PLUGINS}]"
+
 # 2. restore old configs
+MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
+
+write_log "restoring old config files"
+
+# 2.1 restore etm_phptd.ini
 if [ -f "${PROXY_CONFIG_SAVE1}" -a -s "${PROXY_CONFIG_SAVE1}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_SAVE1}" "${PROXY_CONFIG_ORIG1}"
-	/bin/rm -f "${PROXY_CONFIG_SAVE1}" 2>&-
+	write_log "found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, continue"
+	if /bin/cp -f "${PROXY_CONFIG_SAVE1}" "${PROXY_CONFIG_ORIG1}" >/dev/null 2>&1; then
+		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} succeed!"
+		if /bin/rm -f "${PROXY_CONFIG_SAVE1}" >/dev/null 2>&1; then
+			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} succeed!"
+		else
+			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE1##*/} failed!"
+		fi
+	else
+		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG1##*/} failed!"
+	fi
+else
+	write_log "not found proxy save file: ${PROXY_CONFIG_SAVE1##*/}, skip"
 fi
+
+# 2.2 restore etm_agent.ini
 if [ -f "${PROXY_CONFIG_SAVE2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_SAVE2}" "${PROXY_CONFIG_ORIG2}"
-	/bin/rm -f "${PROXY_CONFIG_SAVE2}" 2>&-
+	write_log "found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, continue"
+	if /bin/cp -f "${PROXY_CONFIG_SAVE2}" "${PROXY_CONFIG_ORIG2}" >/dev/null 2>&1; then
+		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} succeed!"
+		if /bin/rm -f "${PROXY_CONFIG_SAVE2}" >/dev/null 2>&1; then
+			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} succeed!"
+		else
+			write_log "remove proxy save file: ${PROXY_CONFIG_SAVE2##*/} failed!"
+		fi
+	else
+		write_log "restore proxy config file: ${PROXY_CONFIG_ORIG2##*/} failed!"
+	fi
+else
+	write_log "not found proxy save file: ${PROXY_CONFIG_SAVE2##*/}, skip"
 fi
+
+# 2.3 restore mole.ini
 if [ -f "${MOLE_CONFIG_SAVE}" -a -s "${MOLE_CONFIG_SAVE}" ]; then
-
-	mole_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global id 2>&- )
-	part_id=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global parter_id 2>&- )
-	gloname=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" global name 2>&- )
-	recevie=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" default mail_receviers 2>&- )
-	postaddr=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" postlog post_server 2>&- )
-	postport=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" postlog post_server_port 2>&- )
-	smtpaddr=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail smtp_server 2>&- )
-	smtpport=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail smtp_server_port 2>&- )
-	smtpuser=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail auth_user 2>&- )
-	smtppass=$( read_mole_config -f "${MOLE_CONFIG_SAVE}" sendmail auth_pass 2>&- )
+	write_log "found mole save file: ${MOLE_CONFIG_SAVE##*/}, continue"
 	
-	nower_mole_id=$( read_mole_config global id 2>&- )
-	nower_part_id=$( read_mole_config global parter_id 2>&- )
-	nower_gloname=$( read_mole_config global name 2>&- )
-	nower_recevie=$( read_mole_config default mail_receviers 2>&- )
-	nower_postaddr=$( read_mole_config postlog post_server 2>&- )
-	nower_postport=$( read_mole_config postlog post_server_port 2>&- ) 
-	nower_smtpaddr=$( read_mole_config sendmail smtp_server 2>&- ) 
-	nower_smtpport=$( read_mole_config sendmail smtp_server_port 2>&- ) 
-	nower_smtpuser=$( read_mole_config sendmail auth_user 2>&- ) 
-	nower_smtppass=$( read_mole_config sendmail auth_pass 2>&- ) 
-	if [ -z "${nower_mole_id}" -o "${nower_mole_id}" != "${mole_id}" ]; then
-		update_mole_config force global id "${mole_id}"
-	fi
-	if [ -z "${nower_part_id}" -o "${nower_part_id}" != "${part_id}" ]; then
-		update_mole_config force global parter_id "${part_id}"
-	fi
-	if [ -z "${nower_gloname}" -o "${nower_gloname}" != "${gloname}" ]; then
-		update_mole_config force global name "${gloname}"
-	fi
-	if [ -z "${nower_recevie}" -o "${nower_recevie}" != "${recevie}" ]; then
-		update_mole_config default mail_receviers "${recevie}"
-	fi
-	if [ -z "${nower_postaddr}" -o "${nower_postaddr}" != "${postaddr}" ]; then
-		update_mole_config postlog post_server "${postaddr}"
-	fi
-	if [ -z "${nower_postport}" -o "${nower_postport}" != "${postport}" ]; then
-		update_mole_config postlog post_server_port "${postport}"
-	fi
-	if [ -z "${nower_smtpaddr}" -o "${nower_smtpaddr}" != "${smtpaddr}" ]; then
-		update_mole_config sendmail smtp_server "${smtpaddr}"
-	fi
-	if [ -z "${nower_smtpport}" -o "${nower_smtpport}" != "${smtpport}" ]; then
-		update_mole_config sendmail smtp_server_port "${smtpport}"
-	fi
-	if [ -z "${nower_smtpuser}" -o "${nower_smtpuser}" != "${smtpuser}" ]; then
-		update_mole_config sendmail auth_user "${smtpuser}"
-	fi
-	if [ -z "${nower_smtppass}" -o "${nower_smtppass}" != "${smtppass}" ]; then
-		update_mole_config sendmail auth_pass "${smtppass}"
-	fi
+	RESTORE_MOLE_CONFIG=(
+		#section	#key			#args
+		"global"	"id"			"force"
+		"global"	"parter_id"		"force"
+		"global"	"name"			"force"
+		"default"	"mail_receviers"	""
+		"postlog"	"post_server"		""
+		"postlog"	"post_server_port"	""
+		"sendmail"	"smtp_server"		""
+		"sendmail"	"smtp_server_port"	""
+		"sendmail"	"auth_user"		""
+		"sendmail"	"auth_pass"		""
+	)
+	
+	section=  key=  args=  oldvalue=  nowvalue=  rc=  n=0
+	for((i=0;i<=${#RESTORE_MOLE_CONFIG[*]}-1;i++))
+	do
+		if (( $i%3 == 0)); then
+			section="${RESTORE_MOLE_CONFIG[$i]}"
+		elif (( $i%3 == 1)); then
+			key="${RESTORE_MOLE_CONFIG[$i]}"
+		elif (( $i%3 == 2)); then
+			((n++))
+			args="${RESTORE_MOLE_CONFIG[$i]}"
+			oldvalue=$(read_mole_config -f "${MOLE_CONFIG_SAVE}" "${section}" "${key}" 2>&-)
+			nowvalue=$(read_mole_config "${section}" "${key}" 2>&-)
+			if [ "${nowvalue}" != "${oldvalue}" ]; then
+				write_log "[$n] trying to restore ${section}-${key}"
+				if [ -z "${args}" ]; then
+					update_mole_config "${section}" "${key}" "${oldvalue}"
+				else
+					update_mole_config "${args}" "${section}" "${key}" "${oldvalue}"
+				fi
+				rc=$?
+				if [ "$rc" == "0" ]; then
+					write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] succeed!($rc)"
+				else
+					write_log "[$n] restore ${section}-${key} from [${nowvalue}] to [${oldvalue}] failed!($rc)"
+				fi
+			else
+				write_log "[$n] no need to restore ${section}-${key} as [${oldvalue}], nothing changed!"
+			fi
+		fi
+	done
 
-	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
+	if /bin/rm -f "${MOLE_CONFIG_SAVE}" >/dev/null 2>&1; then
+		write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} succeed!"
+	else
+		write_log "remove mole save file: ${MOLE_CONFIG_SAVE##*/} failed!"
+	fi
+else
+	write_log "not found mole save file: ${MOLE_CONFIG_SAVE##*/}, skip"
 fi
 
 # 3. automatic config all plugins
+EM_START=( $(get_emstart) )
+EMG_START=( $(get_emgstart) )
+
+write_log "eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
+write_log "eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
+
+# inner functioin def: autoconf enable plugin
+autoconf_eplugin(){
+  local plugin="$1"
+  if ${MOLE} enable "${plugin}" >/dev/null 2>&1; then
+	write_log "${plugin} enabled succeed!"
+  else
+	write_log "${plugin} enabled failed!($?)"
+  fi
+}
 for plugin in `echo "${PLUGINS}"`
 do
 	if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
 		if [ "${MODE}" == "1" ]; then
+
 			eval "${PREFIX}${plugin} >/dev/null 2>&1"
+			write_log "${plugin} automatic configuration finished($?)"
 	
 			# enable plugins here
 			case "${plugin}" in
 			"dns_svr")
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
 				;;
 			"pop_svr")
 				if is_emstarton "pop" || is_emstarton "pop3" ; then 
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
+				else
+					write_log "${plugin} no need to be enabled"
 				fi
 				;;
 			"smtp_svr")
 				if is_emstarton "smtp" ; then
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
+				else
+					write_log "${plugin} no need to be enabled"
 				fi
 				;;
 			"imap_svr")
 				if is_emstarton "imap" ; then
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
+				else
+					write_log "${plugin} no need to be enabled"
 				fi
 				;;
 			"http_svr")
 				if is_emstarton "nginx" || is_emstarton "httpd" ; then
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
+				else
+					write_log "${plugin} no need to be enabled"
 				fi
 				;;
 			"emp_mailqueue")
 				if is_emstarton "local" || is_emstarton "remote" ; then
-					${MOLE} enable ${plugin} >/dev/null 2>&1
+					autoconf_eplugin "${plugin}"
+				else
+					write_log "${plugin} no need to be enabled"
 				fi
 				;;
 			esac
+		else
+			write_log "${plugin} skipped, as MODE(${MODE})"
 		fi
+	else
+		write_log "${plugin} skipped, as function ${PREFIX}${plugin} not defined!"
 	fi
 done
+
+write_log "script autoconf end." 
