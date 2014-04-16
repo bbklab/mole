@@ -78,7 +78,7 @@ Example:
   parted_output  {1-6}  {allof-plugin-output}
   format_toterm  {output-contain-htmlcode-htmlcolor}
   base64_encode  {strings-to-be-encode}
-  create_mailct	 {tpl_path} {plugin_name} {plugin_output} {handler_output}
+  create_mailct	 {tpl_path} {plugin_name} {eventid} {plugin_output} {handler_output}
   filter_html    {plugin_output}
 EOF
 ;
