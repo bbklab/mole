@@ -257,6 +257,27 @@ is_sub() {
         fi  
 }
 
+# Check item is int or not ? 
+# Usage:	is_int "item"
+# Return:	0,1 | yes,no
+#
+is_int() {
+	local item="$1"
+	if [ -z "${item}" -o ! -z "${item//[0-9]}" ]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+# Check item is between {min} and {max} or not ?
+# Usage:	is_between {item} {min} {max}
+# Return:	0,1 | yes,no
+#
+is_between() {
+	echo $1 $2 $3 | /bin/awk '{if($1>=$2 && $1<=$3){exit 0;} else{exit 1;}}' 2>&-
+}
+
 # Convert string as int
 # Usage:	cto_int {stuff}
 #
