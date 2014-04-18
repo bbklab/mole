@@ -16,7 +16,8 @@ PATH_EXTRACT="${BASE_DIR}/opt/extract"
 
 PATH_ESOP="/usr/local/esop/agent"
 PATH_MOLE="${PATH_ESOP}/mole"
-PATH_INSTALL="${PATH_MOLE}/opt/plmods"
+PATH_MOLE_OPT="${PATH_MOLE}/opt"
+PATH_PLINSTALL="${PATH_MOLE_OPT}/plmods"
 
 
 # Command Def
@@ -60,7 +61,7 @@ build_plmod(){
   cd $PATH_EXTRACT/$dirname
 
   CMD_CONFIG=" \
-	perl Makefile.PL PREFIX=$PATH_INSTALL \
+	perl Makefile.PL PREFIX=$PATH_PLINSTALL \
   "
 
   eval $CMD_CONFIG
@@ -134,6 +135,36 @@ build_proxy(){
   check_rc "create link for esop ctl script"
 }
 
+build_sysstat() {
+  local filename="sysstat-10.0.2.tar.gz"  dirname="sysstat-10.0.2"
+
+  ls $PATH_TARBALL/$filename
+  check_rc "check path $filename"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  CMD_CONFIG=" \
+	./configure --prefix=$PATH_MOLE_OPT\
+		--disable-nls \
+		--disable-install-cron \
+		--disable-install-isag \
+		--disable-man-group \
+		--disable-documentatio \
+  "
+
+  eval $CMD_CONFIG
+  check_rc "configure $filename"
+
+  $CMD_MAKE
+  check_rc "make $filename"
+
+  $CMD_MAKE install
+  check_rc "install $filename"
+  
+}
+
+
 ### Main Body Begin ...
 
 
@@ -143,8 +174,10 @@ build_proxy(){
    exit 0
 }
 
+# start
 echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
 
+# clear old files
 if [ -d "${PATH_MOLE}" ]; then
   rm -rf "${PATH_MOLE}"
   check_rc "remove ${PATH_MOLE}"
@@ -163,9 +196,13 @@ if [ -d "${PATH_EXTRACT}" ]; then
   check_rc "remove ${PATH_EXTRACT}"
 fi
 
+# create necessary dirs
 mkdir -p "${LOG_DIR}" "${PATH_TARBALL_PLOPT}" "${PATH_EXTRACT}"
 
+# build sysstat 
+build_sysstat
 
+# build perl modules, mole, proxy
 i=0 file= dir=
 for pm in ${PL_MODS[*]} ${MOLE[*]}
 do
@@ -185,4 +222,5 @@ do
 
 done
 
+# end
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
