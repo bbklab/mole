@@ -919,7 +919,7 @@ config_psysload() {
                 ${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
 	fi
 
-	return $?
+	return $rc
 }
 
 config_ptcp_conn() {
@@ -1386,7 +1386,7 @@ if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
 	EMG_START=( $(get_emgstart) )
 	write_log "INFO: eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
 	write_log "INFO: eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
-	write_log "INFO: plugins to be config: [${PLUGINS}](${#PLUGINS[*]})"
+	write_log "INFO: plugins to be config: [${PLUGINS}]"
 
 	# 3.2  automatic config/enable specified plugins
 	autoconf_eplugin(){
