@@ -1404,7 +1404,9 @@ if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
 
 			# config plugins here
 			eval "${PREFIX}${plugin} >/dev/null 2>&1"
-			write_log "INFO plugin ${plugin} automatic configuration finished($?)"
+			rc=$?
+			[ "$rc" == "0" ] && flag="INFO" || flag="WARN"
+			write_log "${flag}: plugin ${plugin} automatic configuration finished($rc)"
 	
 			# enable plugins here
 			case "${plugin}" in
