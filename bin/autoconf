@@ -309,7 +309,6 @@ is_supported_emversion() {
 	do
 		if [[ "${emversion}" =~  "${ARRAY_SUPPORTED_EMVERSION[$i]}" ]]; then
 			return 0
-			break
 		fi
 	done
 
