@@ -55,13 +55,13 @@ fi
 #
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
-        export LANG="zh_CN.UTF-8"               
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
 elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
-        export LANG="zh_CN.UTF-8"
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
 elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
-        export LANG="en_US.UTF-8"
+        export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
-        export LANG="zh_CN.UTF-8"
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
 fi
 
 # Return Codes
