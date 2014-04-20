@@ -114,7 +114,7 @@ MOLE_SBIN="${MOLE_PATH}/sbin"
 MOLE="${MOLE_SBIN}/mole"
 
 
-# MIN/MAX EM VERSION SUPPORTED
+# EM VERSION SUPPORTED
 ARRAY_SUPPORTED_EMVERSION=(
   "5.0.4rc4"
   "5.0.4rc4.fix1"
@@ -129,6 +129,10 @@ ARRAY_SUPPORTED_EMVERSION=(
   "8.1.0.3"
   "8.1.0.3.fix1"
   "8.1.0.4"
+)
+
+# EMG VERSION SUPPORTED
+ARRAY_SUPPORTED_EMGVERSION=(
 )
 
 # ARRAY EMCOMP
@@ -312,6 +316,13 @@ is_supported_emversion() {
 		fi
 	done
 
+	return 1
+}
+
+# is installed eyoumail gateway version supported or not ?
+# Return:	0,1	| 	yes,no
+#
+is_supported_emgversion() {
 	return 1
 }
 
@@ -838,18 +849,20 @@ config_pport() {
 		cfg_value="${sshd_bind_addr}"
 	fi
 	
-	for comp in `list_emcomp`
-	do
-		if is_emstarton "${comp}" ; then
-			if [ -z "${cfg_value}" ]; then
-				cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
-			else
-				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-				cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		for comp in `list_emcomp`
+		do
+			if is_emstarton "${comp}" ; then
+				if [ -z "${cfg_value}" ]; then
+					cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+				else
+					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+				fi
 			fi
-		fi
-	done
+		done
+	fi
 
 	# remove duplication items.
 	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
@@ -886,12 +899,14 @@ config_pprocess() {
 	if [ "$?" == "0" ]; then
         	{ 
 		echo -e "${headline}"
-		for comp in `list_emcomp`
-        	do  
-                	if is_emstarton "${comp}" ; then
+		if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+			for comp in `list_emcomp`
+        		do  
+                	   if is_emstarton "${comp}" ; then
 				echo -e "${comp}" "\t\t" "$(get_emcomp_minr "${comp}")" "\t" "$(get_emcomp_regex "${comp}")"
-                	fi  
-        	done
+                	   fi  
+        		done
+		fi
 		} > "${file}" 2>/dev/null
 	else
 		return 1
@@ -951,27 +966,29 @@ config_ptcp_conn() {
 		cfg_value="${listen_port}:50"
 	fi
 
-	local bind_addr=  port=  max_conn=
-	for comp in `list_emcomp`
-	do
-		if is_emstarton "${comp}" ; then
-			max_conn="$(get_emcomp_maxc "${comp}")"
-			if [ -n "${max_conn}" ]; then
-				bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-				for x in `echo "${bind_addr}"`
-				do
-					port=$(echo -e "${x}" | awk -F: '{print $NF}')
-					if [ -n "${port}" ]; then
-						if [ -z "${cfg_value}" ]; then
-							cfg_value="${port}:${max_conn}"
-						else
-							cfg_value="${cfg_value} ${port}:${max_conn}"
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		local bind_addr=  port=  max_conn=
+		for comp in `list_emcomp`
+		do
+			if is_emstarton "${comp}" ; then
+				max_conn="$(get_emcomp_maxc "${comp}")"
+				if [ -n "${max_conn}" ]; then
+					bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					for x in `echo "${bind_addr}"`
+					do
+						port=$(echo -e "${x}" | awk -F: '{print $NF}')
+						if [ -n "${port}" ]; then
+							if [ -z "${cfg_value}" ]; then
+								cfg_value="${port}:${max_conn}"
+							else
+								cfg_value="${cfg_value} ${port}:${max_conn}"
+							fi
 						fi
-					fi
-				done
+					done
+				fi
 			fi
-		fi
-	done
+		done
+	fi
 
 	# remove duplication items.
 	cfg_value=$(echo -e "${cfg_value}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
@@ -1041,32 +1058,34 @@ config_ppop_svr() {
 		"pop3"
          )
 
-	local bind_addr=  port=	 tls_port=
-	local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "pop3d_tls_port" "=" )
-	local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "pop3d_tls_port" "=" )
-	local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "pop3d_tls_port" "=" )
-	local tls_port4=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "popsd_tls_port" "=" )
-	local tls_port5=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "popsd_tls_port" "=" )
-	local tls_port6=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "popsd_tls_port" "=" )
-	tls_port="${tls_port1} ${tls_port2} ${tls_port3} ${tls_port4} ${tls_port5} ${tls_port6}"
-	for comp in `echo "${comps[*]}"`
-	do
-		if is_emstarton "${comp}"; then
-			bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-			for x in `echo "${bind_addr}"`
-			do
-				port=$(echo -e "${x}" | awk -F: '{print $NF}')
-				if is_sub "${port}" "${tls_port}"; then
-					continue	# skip tls port
-				fi
-				if [ -z "${cfg_value1}" ]; then
-					cfg_value1="${x}"
-				else
-					cfg_value1="${cfg_value1} ${x}"
-				fi
-			done
-		fi
-	done
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		local bind_addr=  port=	 tls_port=
+		local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "pop3d_tls_port" "=" )
+		local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "pop3d_tls_port" "=" )
+		local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "pop3d_tls_port" "=" )
+		local tls_port4=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d"     "popsd_tls_port" "=" )
+		local tls_port5=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_1"   "popsd_tls_port" "=" )
+		local tls_port6=$( read_iniconf "${EM_MTA_CONFIG}" "pop3d_2"   "popsd_tls_port" "=" )
+		tls_port="${tls_port1} ${tls_port2} ${tls_port3} ${tls_port4} ${tls_port5} ${tls_port6}"
+		for comp in `echo "${comps[*]}"`
+		do
+			if is_emstarton "${comp}"; then
+				bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+				for x in `echo "${bind_addr}"`
+				do
+					port=$(echo -e "${x}" | awk -F: '{print $NF}')
+					if is_sub "${port}" "${tls_port}"; then
+						continue	# skip tls port
+					fi
+					if [ -z "${cfg_value1}" ]; then
+						cfg_value1="${x}"
+					else
+						cfg_value1="${cfg_value1} ${x}"
+					fi
+				done
+			fi
+		done
+	fi
 
         # remove duplication items.
         cfg_value1=$(echo -e "${cfg_value1}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++' 2>&- | sed -e 's/^[ \t]*//; s/[ \t]*$//;')
@@ -1095,27 +1114,29 @@ config_phttp_svr() {
 		"nginx"
 	 )
 	
-	local bind_addr=  port=  protocal=
-	for comp in `echo "${comps[*]}"`
-	do
-		if is_emstarton "${comp}"; then
-			bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-			for x in `echo "${bind_addr}"`
-			do
-				port=$(echo -e "${x}" | awk -F: '{print $NF}')
-				if [ "${port}" == "443" ]; then
-					protocal="https"
-				else
-					protocal="http"
-				fi
-				if [ -z "${cfg_value1}" ]; then
-					cfg_value1="${protocal}:${x}"
-				else
-					cfg_value1="${cfg_value1} ${protocal}:${x}"
-				fi
-			done
-		fi
-	done
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		local bind_addr=  port=  protocal=
+		for comp in `echo "${comps[*]}"`
+		do
+			if is_emstarton "${comp}"; then
+				bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+				for x in `echo "${bind_addr}"`
+				do
+					port=$(echo -e "${x}" | awk -F: '{print $NF}')
+					if [ "${port}" == "443" ]; then
+						protocal="https"
+					else
+						protocal="http"
+					fi
+					if [ -z "${cfg_value1}" ]; then
+						cfg_value1="${protocal}:${x}"
+					else
+						cfg_value1="${cfg_value1} ${protocal}:${x}"
+					fi
+				done
+			fi
+		done
+	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
@@ -1136,27 +1157,29 @@ config_pimap_svr() {
                 "imap" 
          )   
 
-	local bind_addr=  port=  tls_port=
-        local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "imapd"     "imapd_tls_port" "=" )
-        local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_1"   "imapd_tls_port" "=" )
-        local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_2"   "imapd_tls_port" "=" )
-        tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
-        for comp in `echo "${comps[*]}"`
-        do  
-                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-                for x in `echo "${bind_addr}"`
-                do  
-			port=$(echo -e "${x}" | awk -F: '{print $NF}')
-			if is_sub "${port}" "${tls_port}"; then
-				continue        # skip tls port
-			fi
-                        if [ -z "${cfg_value1}" ]; then
-                                cfg_value1="${x}"
-                        else
-                                cfg_value1="${cfg_value1} ${x}"
-                        fi  
-                done
-        done
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		local bind_addr=  port=  tls_port=
+        	local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "imapd"     "imapd_tls_port" "=" )
+        	local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_1"   "imapd_tls_port" "=" )
+        	local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "imapd_2"   "imapd_tls_port" "=" )
+        	tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
+        	for comp in `echo "${comps[*]}"`
+        	do  
+                	bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+                	for x in `echo "${bind_addr}"`
+                	do  
+				port=$(echo -e "${x}" | awk -F: '{print $NF}')
+				if is_sub "${port}" "${tls_port}"; then
+					continue        # skip tls port
+				fi
+                        	if [ -z "${cfg_value1}" ]; then
+                                	cfg_value1="${x}"
+                        	else
+                                	cfg_value1="${cfg_value1} ${x}"
+                        	fi  
+                	done
+        	done
+	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
@@ -1183,27 +1206,29 @@ config_psmtp_svr() {
                 "smtp" 
          )   
 
-	local bind_addr=  port=  tls_port=
-        local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd"     "smtpd_tls_port" "=" )
-        local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_1"   "smtpd_tls_port" "=" )
-        local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_2"   "smtpd_tls_port" "=" )
-        tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
-        for comp in `echo "${comps[*]}"`
-        do  
-                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-                for x in `echo "${bind_addr}"`
-                do  
-			port=$(echo -e "${x}" | awk -F: '{print $NF}')
-			if is_sub "${port}" "${tls_port}"; then
-				continue        # skip tls port
-			fi
-                        if [ -z "${cfg_value1}" ]; then
-                                cfg_value1="${x}"
-                        else
-                                cfg_value1="${cfg_value1} ${x}"
-                        fi  
-                done
-        done
+	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
+		local bind_addr=  port=  tls_port=
+	        local tls_port1=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd"     "smtpd_tls_port" "=" )
+	        local tls_port2=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_1"   "smtpd_tls_port" "=" )
+	        local tls_port3=$( read_iniconf "${EM_MTA_CONFIG}" "smtpd_2"   "smtpd_tls_port" "=" )
+	        tls_port="${tls_port1} ${tls_port2} ${tls_port3}"
+	        for comp in `echo "${comps[*]}"`
+	        do  
+	                bind_addr="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+	                for x in `echo "${bind_addr}"`
+	                do  
+				port=$(echo -e "${x}" | awk -F: '{print $NF}')
+				if is_sub "${port}" "${tls_port}"; then
+					continue        # skip tls port
+				fi
+	                        if [ -z "${cfg_value1}" ]; then
+	                                cfg_value1="${x}"
+	                        else
+	                                cfg_value1="${cfg_value1} ${x}"
+	                        fi  
+	                done
+	        done
+	fi
 
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
@@ -1400,8 +1425,24 @@ if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
 	# 3.1  get eyoumail/gateway starton components
 	EM_START=( $(get_emstart) )
 	EMG_START=( $(get_emgstart) )
+	EM_VERSION=$(get_emversion)
+	EMG_VERSION=$(get_emgversion)
+	if is_supported_emversion; then
+		IS_SUPPORTED_EMVERSION=1
+	else
+		IS_SUPPORTED_EMVERSION=0
+	fi
+	if is_supported_emgversion; then
+		IS_SUPPORTED_EMGVERSION=1
+	else
+		IS_SUPPORTED_EMGVERSION=0
+	fi
 	write_log "INFO: eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
 	write_log "INFO: eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
+	write_log "INFO: eyoumail supported version: [${ARRAY_SUPPORTED_EMVERSION[*]}](${#ARRAY_SUPPORTED_EMVERSION[*]})"
+	write_log "INFO: eyoumail installed version: ${EM_VERSION}, is supported: ${IS_SUPPORTED_EMVERSION}"
+	write_log "INFO: eyougateway supported version: [${ARRAY_SUPPORTED_EMGVERSION}](${#ARRAY_SUPPORTED_EMGVERSION[*]})"
+	write_log "INFO: eyougateway installed version: ${EMG_VERSION}, is supported: ${IS_SUPPORTED_EMGVERSION}"
 	write_log "INFO: plugins to be config: [${PLUGINS}]"
 
 	# 3.2  automatic config/enable specified plugins
