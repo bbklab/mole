@@ -299,6 +299,23 @@ get_basedomain() {
 	echo -en "${result}"
 }
 
+# is installed eyoumail version supported or not ?
+# Return:	0,1	|	yes,no
+#
+is_supported_emversion() {
+	local emversion=$( get_emversion 2>&- )
+
+	for((i=0;i<=${#ARRAY_SUPPORTED_EMVERSION[*]}-1;i++))
+	do
+		if [[ "${emversion}" =~  "${ARRAY_SUPPORTED_EMVERSION[$i]}" ]]; then
+			return 0
+			break
+		fi
+	done
+
+	return 1
+}
+
 # Should em_process start or not ?
 # Usage:	is_emstarton	{process}
 # Return:	0,1	|	yes,no
