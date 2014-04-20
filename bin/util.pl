@@ -34,20 +34,10 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
 # use Smart::Comments;
-use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
 binmode(STDERR, ":encoding(utf8)");
 binmode STDOUT, ':raw';
-
-
-# set locale, bind textdomain
-our $localdir = "$basedir/share/locale/";
-our $locale = 'zh_CN.UTF-8';
-our $domain = "mole";
-nl_putenv("LANGUAGE=$locale");
-textdomain "$domain";
-bindtextdomain "$domain", "$localdir";
 
 
 # process args
