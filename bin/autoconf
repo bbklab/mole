@@ -185,6 +185,10 @@ ARRAY_EMCOMP_SPECIAL=(
   "mysql"	   ".*/mysqld.*--datadir=/usr/local/eyou/mail/data/mysql.*mysql.pid.*"				"1"	"300"
   # >=8.1.0.4
   "phpd"	   "/usr/local/eyou/mail/opt/bin/php.+bin/em_phpd.*"						"6"	""
+  "syslog"	   "/usr/local/eyou/mail/bin/em_syslogd"							"1" 	""
+  "filed"	   "/usr/local/eyou/mail/bin/em_filed.*"							"3"	"100"
+  "filedrepd"	   "/usr/local/eyou/mail/bin/em_filedrepd.*"							"1"	""
+  "filedagent"	   "/usr/local/eyou/mail/bin/em_filedagent.*"							"3"	"100"
   "bounce"	   "/usr/local/eyou/mail/bin/em_bounce"								"3"	""
   "local"	   "/usr/local/eyou/mail/bin/em_local"								"3"	""
   "remote"	   "/usr/local/eyou/mail/bin/em_remote"								"3"	""
@@ -394,7 +398,7 @@ is_should_replace() {
 			rval=0
 		fi
 		;;
-	"phpd"|"bounce"|"local"|"remote"|"mlist"|"smtp"|"pop"|"imap"|"cleanup")
+	"phpd"|"syslog"|"filed"|"filedrepd"|"filedagent"|"bounce"|"local"|"remote"|"mlist"|"smtp"|"pop"|"imap"|"cleanup")
 		if [ -d "/usr/local/eyou/mail/bin/" ]; then
 			rval=0
 		fi
