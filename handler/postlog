@@ -774,6 +774,7 @@ sub genjson_config() {
   );
 
   my %raw_global = (
+	'mole_version'		=> '',
 	'scan_interval'		=> '', 
 	'attach_ini_mail'	=> '',
 	'sysload_uplimit'	=> '',
@@ -783,6 +784,13 @@ sub genjson_config() {
 	'notify_onmisform'	=> '',
 	'locale'		=> '',
   );
+  open $fh, "$mole version 2>&- |";
+  if($fh) {
+	while(<$fh>){
+		chomp; $raw_global{'mole_version'} = $_;
+		last;
+	}
+  }
   open $fh, "$mole view global 2>&- |";
   if($fh) {
 	while(<$fh>){
