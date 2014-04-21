@@ -917,15 +917,15 @@ del_mole_config() {
 				fi
 			done
 			if [ "${flag}" == "1" ]; then
-				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
-					"section=[${section}] key=[${key}] found in config file,"\
-					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
-					 "trying to delete config [${key}]"
   				local linenum=$( cat ${config_file} | tr '\t' ' ' |\
 				 	awk -F"=" '\
 						($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
 						( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
 						( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
+				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
+					"section=[${section}] key=[${key}] found in config file,"\
+					 "line-number=[${linenum}], nower value=[${nowvalue}],"\
+					 "trying to delete config [${key}]"
 			else
 				write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config notice:"\
 					"section=[${section}] key=[${key}] not found in config file,"\
