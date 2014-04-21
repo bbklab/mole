@@ -343,6 +343,90 @@ is_emstarton() {
 	fi 
 }
 
+# Get Index of emcomp in ARRAY_EMCOMP
+# Usage:	get_emcomp_index {comp}
+# Return:	index number of {comp}
+#
+get_emcomp_index() {
+	local comp="$1"  result=
+	
+        for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=4))
+        do   
+                if [ "${ARRAY_EMCOMP[$i]}" == "${comp}" ]; then 
+                        result=${i}
+			break
+                fi   
+        done
+
+	echo -en "${result}"
+}
+
+# Replace ARRAY_EMCOMP by specified array
+# Usage:	replace_emcomp {item1} {item2} {item3} {item4}
+#
+replace_emcomp() {
+	if [ $# -eq 4 ]; then
+		local index1=$( get_emcomp_index "$1" 2>&- )
+		if [ -z "${index1}" ]; then
+			return 1
+		else
+			local index2=$(($index1+1))  index3=$(($index1+2))  index4=$(($index1+3))
+			ARRAY_EMCOMP[$index1]="$1"
+			ARRAY_EMCOMP[$index2]="$2"
+			ARRAY_EMCOMP[$index3]="$3"
+			ARRAY_EMCOMP[$index4]="$4"
+		fi
+	else
+		return 1
+	fi	
+}
+
+# Check if emcomp should be replaced or not ?
+# Usage:	is_should_replace {comp}
+# Return:	0,1	| 	yes,no
+#
+is_should_replace() {
+	local comp="$1"		rval=1
+
+	case "${comp}" in
+	"mysql")
+		if [ ! -e "/usr/local/eyou/mail/etc/mysql/my.cnf" ]; then
+			rval=0
+		fi
+		;;
+	"phpd"|"bounce"|"local"|"remote"|"mlist"|"smtp"|"pop"|"imap"|"cleanup")
+		if [ -d "/usr/local/eyou/mail/bin/" ]; then
+			rval=0
+		fi
+		;;
+	*)
+		rval=1
+		;;
+	esac
+
+	return ${rval}
+}
+
+# Replace ARRAY_EMCOMP by ARRAY_EMCOMP_SPECIAL
+# Usage:	replace_emcomp_special
+#
+replace_emcomp_special() {
+	local comp=  regex=  minrun=  maxcon=
+
+	for ((i=0;i<=${#ARRAY_EMCOMP_SPECIAL[*]}-1;i+=4))
+	do
+		i2=$(($i+1)) i3=$(($i+2)) i4=$(($i+3))
+		comp="${ARRAY_EMCOMP_SPECIAL[$i]}"
+		regex="${ARRAY_EMCOMP_SPECIAL[$i2]}"
+		minrun="${ARRAY_EMCOMP_SPECIAL[$i3]}"
+		maxcon="${ARRAY_EMCOMP_SPECIAL[$i4]}"
+
+		if is_should_replace "${comp}"; then
+			replace_emcomp "${comp}" "${regex}" "${minrun}" "${maxcon}"
+		fi
+	done
+}
+
 # List all EM_COMP
 #
 list_emcomp() {
@@ -1455,6 +1539,10 @@ if [ "${MODE}" == "1" -o "${MODE}" == "3" ]; then
   	fi
 	}
 
+	# 3.3 replace emcomp special
+	replace_emcomp_special
+
+	# 3.4 config/enable plugins
 	for plugin in `echo "${PLUGINS}"`
 	do
 		if [ "$(type -t "${PREFIX}${plugin}" 2>&-)" == "function" ]; then
