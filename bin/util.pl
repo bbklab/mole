@@ -33,6 +33,8 @@ use strict;
 use warnings;
 use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
+use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
+use POSIX qw (setlocale LC_ALL);
 # use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
@@ -50,6 +52,15 @@ my $action = shift;
 &create_mailct(@ARGV)		   if $action eq 'create_mailct';
 &filter_html(@ARGV)		   if $action eq 'filter_html';
 
+# set locale, bind textdomain
+our $localdir = "$basedir/share/locale/";
+our $locale = 'zh_CN.UTF-8';
+our $domain = "mole";
+setlocale(LC_ALL,$locale);
+nl_putenv("LANGUAGE=$locale");
+nl_putenv("LANG=$locale");
+textdomain "$domain";
+bindtextdomain "$domain", "$localdir";
 
 #
 # Sub Def
