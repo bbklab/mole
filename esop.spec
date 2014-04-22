@@ -179,7 +179,7 @@ fi
 # save original mole config file before uninstallation
 ESOP_PATH="/usr/local/%{name}/agent"
 MOLE_PATH="${ESOP_PATH}/mole"
-ESOP_CONF_PATH="${ESOP_PATH}/etc"                                                                                                   
+ESOP_CONF_PATH="${ESOP_PATH}/etc"
 MOLE_CONF_PATH="${MOLE_PATH}/conf"
 MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
 MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
@@ -214,6 +214,7 @@ fi
 - 发布: 1.0-beta3 版本
 - 新增: rpm安装后自动恢复旧版Proxy的两个配置文件, 自动恢复旧版MOLE的14个全局配置
 - 新增: 根据系统中的网卡名调整网卡的优先级, 自动调整插件traffic的自动化配置参数
+- 新增: 提醒信正文中加入事件编号字段
 - 修正: 去除pop_svr插件中的NOOP测试, 因为部分POP服务器不允许未认证就响应NOOP指令
 - 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
 - 修正: 系统root账户配置了LC_ALL(=C)环境变量时, bash和perl的gettext功能失效的问题
