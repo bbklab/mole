@@ -42,16 +42,6 @@ binmode(STDERR, ":encoding(utf8)");
 binmode STDOUT, ':raw';
 
 
-# process args
-my $action = shift;
-&help if (!$action || $action =~ m/\A\s*\Z/ || $action eq 'help');
-&unique_digest(@ARGV)		   if $action eq 'unique_digest';
-&parted_output(@ARGV)		   if $action eq 'parted_output';
-&format_toterm(@ARGV)		   if $action eq 'format_toterm';
-&base64_encode(@ARGV)		   if $action eq 'base64_encode';
-&create_mailct(@ARGV)		   if $action eq 'create_mailct';
-&filter_html(@ARGV)		   if $action eq 'filter_html';
-
 # set locale, bind textdomain
 our $localdir = "$basedir/share/locale/";
 our $locale = 'zh_CN.UTF-8';
@@ -61,6 +51,17 @@ nl_putenv("LANGUAGE=$locale");
 nl_putenv("LANG=$locale");
 textdomain "$domain";
 bindtextdomain "$domain", "$localdir";
+
+
+# process args
+my $action = shift;
+&help if (!$action || $action =~ m/\A\s*\Z/ || $action eq 'help');
+&unique_digest(@ARGV)		   if $action eq 'unique_digest';
+&parted_output(@ARGV)		   if $action eq 'parted_output';
+&format_toterm(@ARGV)		   if $action eq 'format_toterm';
+&base64_encode(@ARGV)		   if $action eq 'base64_encode';
+&create_mailct(@ARGV)		   if $action eq 'create_mailct';
+&filter_html(@ARGV)		   if $action eq 'filter_html';
 
 #
 # Sub Def
