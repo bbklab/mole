@@ -63,14 +63,9 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 %attr(0755, root, root) %{_initrddir}/%{name}
 /usr/local/%{name}
 
-#%config(noreplace)
 %config
-/usr/local/%{name}/agent/etc/etm_agent.ini
-/usr/local/%{name}/agent/etc/etm_phptd.ini
-/usr/local/%{name}/agent/mole/conf/.mole.ini
 
 %doc
-/usr/local/%{name}/agent/mole/docs/
 
 %pre
 # check instance running or not ?
@@ -112,7 +107,7 @@ if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
 else
 	:
 fi
-if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_SAVE2}" ]; then
+if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
 	/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
 else
 	:
@@ -176,34 +171,43 @@ if [ -f "/usr/local/esop/agent/mole/tmp/.smtphost.status" ]; then
 fi
 
 %preun
-# save original mole config file before uninstallation
-ESOP_PATH="/usr/local/%{name}/agent"
-MOLE_PATH="${ESOP_PATH}/mole"
-ESOP_CONF_PATH="${ESOP_PATH}/etc"
-MOLE_CONF_PATH="${MOLE_PATH}/conf"
-MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
-PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
-PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
-if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
-        /bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
+if [ "$1" == "0" ]; then	# if uninstall indeed
+	# save original mole config file
+	ESOP_PATH="/usr/local/%{name}/agent"
+	MOLE_PATH="${ESOP_PATH}/mole"
+	ESOP_CONF_PATH="${ESOP_PATH}/etc"
+	MOLE_CONF_PATH="${MOLE_PATH}/conf"
+	MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
+	MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
+	PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
+	PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
+	PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
+	PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
+	if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
+        	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
+	else
+        	:   
+	fi
+	if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
+		/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
+	else
+		:
+	fi
+	if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
+		/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
+	else
+		:
+	fi
+	
+	# stop instance
+	/sbin/service %{name} stop >/dev/null 2>&1
+	
+	# remove system startups
+	/sbin/chkconfig --del %{name} >/dev/null 2>&1
 else
-        :   
-fi
-if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
-else
+	# do nothing if update
 	:
 fi
-if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
-else
-	:
-fi
-/sbin/service %{name} stop >/dev/null 2>&1
-/sbin/chkconfig --del %{name} >/dev/null 2>&1
 :
 
 %postun
@@ -219,6 +223,7 @@ fi
 - 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
 - 修正: 系统root账户配置了LC_ALL(=C)环境变量时, bash和perl的gettext功能失效的问题
 - 修正: 兼容13个邮件版本(5.0.4rc4 - 8.1.0.4)的进程检查判断
+- 调整: 优化rpm各阶段的预置动作, 区分旧包的升级和卸载
 - 调整: 上调插件tcp_conn,disk_iostat,traffic的阈值, 上调插件cpu_usage的maxerr_times
 - 调整: 将sysstat打入安装包内, 去除sysstat的依赖关系
 - 调整: sysload,emp_mailqueue等插件的结果输出, 添加颜色输出到正文
