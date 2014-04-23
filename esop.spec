@@ -214,7 +214,7 @@ fi
 :
 
 %changelog
-* Mon Apr 21 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Mon Apr 23 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-beta3 版本
 - 新增: rpm安装后自动恢复旧版Proxy的两个配置文件, 自动恢复旧版MOLE的14个全局配置
 - 新增: 根据系统中的网卡名调整网卡的优先级, 自动调整插件traffic的自动化配置参数
@@ -223,10 +223,11 @@ fi
 - 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
 - 修正: 系统root账户配置了LC_ALL(=C)环境变量时, bash和perl的gettext功能失效的问题
 - 修正: 兼容13个邮件版本(5.0.4rc4 - 8.1.0.4)的进程检查判断
-- 调整: 优化rpm各阶段的预置动作, 区分旧包的升级和卸载
+- 调整: 优化rpm %preun 阶段的预置动作, 区分旧包的升级和卸载
 - 调整: 上调插件tcp_conn,disk_iostat,traffic的阈值, 上调插件cpu_usage的maxerr_times
 - 调整: 将sysstat打入安装包内, 去除sysstat的依赖关系
 - 调整: sysload,emp_mailqueue等插件的结果输出, 添加颜色输出到正文
+- 调整: 对部分内置插件自定义配置的非法值不再自动取默认值, 而是直接返回UNKNOWN
 * Wed Apr  9 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 1.0-beta2 版本
 - 新增: 两个自带基础插件: process, disk_iostat, 自带基础插件增加至14个
