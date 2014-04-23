@@ -225,21 +225,21 @@ sub create_mailct {
 	### after_filter_html: $content
 	### after_filter_html: $hd_content
 
-	my $level = &parted_output(1,$content,'perl') || 'level';
+	my $level = &parted_output(1,$content,'perl') || '-';
 	$level = uc $level;
 	$level = sprintf(_"$level");
 	### $level
 
-	my $type  = &parted_output(2,$content,'perl') || 'type';
+	my $type  = &parted_output(2,$content,'perl') || '-';
 	### $type
 
-	my $title = &parted_output(4,$content,'perl') || 'title';
+	my $title = &parted_output(4,$content,'perl') || '-';
 	### $title
 
-	my $summary = &parted_output(5,$content,'perl') || 'summary';
+	my $summary = &parted_output(5,$content,'perl') || '-';
 	### $summary
 
-	my $details = &parted_output(6,$content,'perl') || 'details';
+	my $details = &parted_output(6,$content,'perl') || '-';
 	$details =~ s/###/<br>\n/g;
 	### $details
 
