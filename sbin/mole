@@ -109,6 +109,8 @@ cat << EOF
 	printdef	{VAR}			$(gettext "print the value of variable name")
 	iget		{gkey}			$(gettext "print global config-value through inner function")
 	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
+	setinit		view			$(gettext "print global instance information")
+	setinit		reset			$(gettext "reset global instance information (be careful!)")
 	config					$(gettext "help stuff about mole config-*")
 	config-help				$(gettext "help stuff about mole config-* (same as above)")
 	?					$(gettext "help stuff about short args")
@@ -159,6 +161,8 @@ cat << EOF
 	mole  printdef	CONF_DIR
 	mole  iget	g_mole_id
 	mole  iget	sysload   p_debug
+	mole  setinit	view 
+	mole  setinit   reset
 	mole  config
 	mole  config-help
 
@@ -832,6 +836,13 @@ case "$#" in
 	"makedir"|"m")
 		if [ "$arg2" == "c" -o "$arg2" == "-c" ]; then
 			. ${MAKEDIR_SH} "-c"
+		fi
+			;;
+	"setinit")
+		if [ "$arg2" == "view" ]; then
+			. ${SETINIT_SH}
+		elif [ "$arg2" == "reset" ]; then
+			. ${SETINIT_SH} "reset"
 		fi
 			;;
 	*)
