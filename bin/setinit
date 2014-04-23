@@ -126,57 +126,83 @@ imac_uuid="${imac_uuid//[ ]}"
 kern_uuid=$(cat /proc/sys/kernel/random/uuid 2>&-|tr -d '\r\n')
 kern_uuid="${kern_uuid//[ ]}"
 
-# read mole global id
-mole_id=$(get_mole_id)
-
-# read mole parter id
-parter_id=$(get_parter_id)
-
-# read mole global name
-mole_name=$(get_global_name)
-
-# read default mail_receviers
-mail_receviers=$(get_mail_receviers default)
 
 
 ### Main Body Begin...
 
-if [ "${mode}" == "rpminit" ]; then
-# 1. set mole_id
-if [ "${mole_id}" == "0000000000" ]; then
-	if [ ! -z "${disk_uuid//[ ]}" ]; then
-		setby="disk_uuid: ${disk_uuid}"
-		mole_id=$(echo -n "${disk_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-	elif [ ! -z "${imac_uuid//[ ]}" ]; then
-		setby="imac_uuid: ${imac_uuid}"
-		mole_id=$(echo -n "${imac_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-	elif [ ! -z "${kern_uuid//[ ]}" ]; then
-		setby="kern_uuid: ${kern_uuid}"
-		mole_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-	fi
-	echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
-	write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}] setby=[${setby}]"
-	update_mole_config force global id "${mole_id}"
+
+if [ "${mode}" == "reset" ]; then
+	echo -en "$(gettext "clear parter id") ... "
+	write_log -f "${MOLE_LOG}" "RSTINITX clear parter id"
+	clear_mole_config force global parter_id
 	rc=$?
 	case "${rc}" in
 	"0")	echo -e "${OK}" 	;;
 	"2")	echo -e "${SKIP}"	;;
-	"5")	add_mole_config force global id "${mole_id}"
-		rc=$?
-		case "${rc}" in
-		"0") echo -e "${OK}"	;;
-		"2") echo -e "${SKIP}"	;;
-		*)   echo -e "${FAIL}"  ;;
-		esac
-		;;
-	*)	echo -e "${FAIL}"
+	*)	echo -e "${FAIL}"	;;
 	esac
-else
-	echo -en "$(gettext "mole_id already set"): [$(echo_green "${mole_id}")]";echo
+
+	echo -en "$(gettext "clear mole name") ... "
+	write_log -f "${MOLE_LOG}" "RSTINITX clear global name"
+	clear_mole_config force global name
+	case "${rc}" in
+	"0")	echo -e "${OK}" 	;;
+	"2")	echo -e "${SKIP}"	;;
+	*)	echo -e "${FAIL}"	;;
+	esac
+	
+	echo -en "$(gettext "clear mail receviers") ... "
+	write_log -f "${MOLE_LOG}" "RSTINITX clear default mail receviers"
+	clear_mole_config default mail_receviers
+	case "${rc}" in
+	"0")	echo -e "${OK}" 	;;
+	"2")	echo -e "${SKIP}"	;;
+	*)	echo -e "${FAIL}"	;;
+	esac
 fi
 
+# 1. set mole_id
+mole_id=$(get_mole_id)
+if [ "${mole_id}" == "0000000000" ]; then
+	if [ "${mode}" == "rpminit" ]; then
+		if [ ! -z "${disk_uuid//[ ]}" ]; then
+			setby="disk_uuid: ${disk_uuid}"
+			mole_id=$(echo -n "${disk_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		elif [ ! -z "${imac_uuid//[ ]}" ]; then
+			setby="imac_uuid: ${imac_uuid}"
+			mole_id=$(echo -n "${imac_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		elif [ ! -z "${kern_uuid//[ ]}" ]; then
+			setby="kern_uuid: ${kern_uuid}"
+			mole_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		fi
+		echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
+		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}] setby=[${setby}]"
+		update_mole_config force global id "${mole_id}"
+		rc=$?
+		case "${rc}" in
+		"0")	echo -e "${OK}" 	;;
+		"2")	echo -e "${SKIP}"	;;
+		"5")	add_mole_config force global id "${mole_id}"
+			rc=$?
+			case "${rc}" in
+			"0") echo -e "${OK}"	;;
+			"2") echo -e "${SKIP}"	;;
+			*)   echo -e "${FAIL}"  ;;
+			esac
+			;;
+		*)	echo -e "${FAIL}"
+		esac
+		exit 0
+	fi
 else
+	echo -en "$(gettext "mole_id already set"): [$(echo_green "${mole_id}")]";echo
+	if [ "${mode}" == "rpminit" ]; then
+		exit 0
+	fi
+fi
+
 # 2. set mole_name
+mole_name=$(get_global_name)
 if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
   	echo -en "\n\n$(gettext "Example:")  mysql-master,  web,  mta,  ldap,  memcache\n\n"
 	echo -en "$(gettext "allowed [0-9a-zA-Z.-], max length 15")\n\n"
@@ -236,6 +262,7 @@ else
 fi
 
 # 3. set parter_id
+parter_id=$(get_parter_id)
 if [ "${parter_id}" == "0000000000" ]; then
 	echo -en "\n\n$(gettext "Example:")  202cb962ac59075b964b07152d234b70\n\n"
 	valid=0
@@ -276,6 +303,7 @@ else
 fi
 
 # 4. set mail_receviers
+mail_receviers=$(get_mail_receviers default)
 if [ "${mail_receviers}" == "root_bbk@126.com" ]; then
 	echo -en "\n\n$(gettext "Example:") abc@126.com  test@test.net\n\n"
 	valid=0
@@ -326,7 +354,5 @@ if [ "${mail_receviers}" == "root_bbk@126.com" ]; then
 	
 else
 	echo -en "$(gettext "default mail_receviers already set"): [$(echo_green "${mail_receviers}")]";echo
-fi
-
 fi
 # END

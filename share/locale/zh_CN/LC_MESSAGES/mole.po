@@ -646,6 +646,15 @@ msgstr "自动处理程序结果:"
 
 ### bin/setinit
 
+msgid "clear parter id"
+msgstr "置空客户ID"
+
+msgid "clear mole name"
+msgstr "置空实例名"
+
+msgid "clear mail receviers"
+msgstr "置空默认收件人"
+
 msgid "initialized set mole_id as"
 msgstr "初始化实例ID为"
 
