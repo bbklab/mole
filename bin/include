@@ -2820,7 +2820,14 @@ process_plugin() {
 			"got event recovery, nower errcount reached maximize errtimes, [${_now_errcount} >= ${_errcount_uplimit}],"
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset level from ${part1} to ${new_level}. CONTINUE"
-		output="{${new_level}}:{${part2}}:{${part3}}"  # reset plugin {output}
+		if [ "${part2}" == "str" ]; then               # reset plugin {output}
+			local add_title="$(gettext "RECOVERY")"
+			write_log ${jid} ${plugin_name}\
+				"got event recovery, and return is [str], reset content to add title ${add_title}, CONTINUE"
+			output="{${new_level}}:{${part2}}:{(${add_title}) ${part3}}"  
+		else
+			output="{${new_level}}:{${part2}}:{${part3}}"
+		fi
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset return code from ${rc} to ${new_level}. CONTINUE"
 		rc="${new_level}"			       # reset plugin {rc}
