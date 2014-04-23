@@ -127,6 +127,7 @@ cat << EOF
 	config-view  	plugin key		$(gettext "print single config value on single plugin")
   	config-add   	plugin key value  	$(gettext "add config and set value for plugin")
 	config-del   	plugin key		$(gettext "delete config for plugin")
+	config-clear	plugin key		$(gettext "clear config for plugin")
 	config-update 	plugin key value	$(gettext "update config value for plugin")
 EOF
 }
@@ -175,6 +176,7 @@ cat << EOF
 	mole  config-add	pop_svr time_out 5
 	mole  config-update	pop_svr time_out 10
 	mole  config-del	pop_svr time_out 
+	mole  config-clear	pop_svr time_out
 
 EOF
 }
@@ -883,6 +885,24 @@ case "$#" in
 			"2") echo "$(eval_gettext "delete [\$arg2]-[\$arg3] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already not exists")")]"	;;
 			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **"					;;
 			*)   echo "$(eval_gettext "delete [\$arg2]-[\$arg3] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"    	;;
+			esac
+			exit ${rc}
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+		;;
+	"config-clear")
+		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+			clear_mole_config "$arg2" "$arg3"
+			rc=$?
+			case "$rc" in
+			"0") echo "$(eval_gettext "clear [\$arg2]-[\$arg3] success") [$(echo_green OK)]"
+			     init_plugin mole_report_conf
+				;;
+			"2") echo "$(eval_gettext "clear [\$arg2]-[\$arg3] skip") [$(echo_yellow "$(eval_gettext "NoNeed: config [\$arg3] already empty")")]"	;;
+			"9") echo "** $(echo_yellow "$(gettext "operation refused")") **"					;;
+			*)   echo "$(eval_gettext "clear [\$arg2]-[\$arg3] failed") [$(echo_red FAIL)], $(gettext "details in") ${MOLE_LOG##*/}"    	;;
 			esac
 			exit ${rc}
 		else

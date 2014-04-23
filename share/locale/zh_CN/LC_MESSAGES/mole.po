@@ -133,6 +133,9 @@ msgstr "详细信息在"
 msgid "NoNeed: config [$arg3] already not exists"
 msgstr "配置项 [$arg3] 并不存在"
 
+msgid "NoNeed: config [$arg3] already empty"
+msgstr "配置项 [$arg3] 已为空"
+
 msgid "NoNeed: config [$arg3] already exists"
 msgstr "配置项 [$arg3] 已存在"
 
@@ -177,6 +180,15 @@ msgstr "拒绝操作"
 
 msgid "delete [$arg2]-[$arg3] failed"
 msgstr "删除插件 $arg2 的配置项 $arg3 失败"
+
+msgid "clear [$arg2]-[$arg3] success"
+msgstr "置空插件 $arg2 的配置项 $arg3 成功"
+
+msgid "clear [$arg2]-[$arg3] skip"
+msgstr "置空插件 $arg2 的配置项 $arg3 跳过"
+
+msgid "clear [$arg2]-[$arg3] failed"
+msgstr "置空插件 $arg2 的配置项 $arg3 失败"
 
 msgid "add [$arg2]-[$arg3]:[$arg4] success"
 msgstr "为插件 $arg2 添加配置项 $arg3, 并设定值为 $arg4 成功"
@@ -297,6 +309,9 @@ msgstr "添加插件的一个配置参数并赋值"
 
 msgid "delete config for plugin"
 msgstr "删除插件的一个配置参数"
+
+msgid "clear config for plugin"
+msgstr "置空插件的一个配置参数"
 
 msgid "update config value for plugin"
 msgstr "更新插件的一个配置参数所设定的值"
