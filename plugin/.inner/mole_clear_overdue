@@ -40,18 +40,20 @@ tmpfile_reserve_time=$( read_mole_config mole_clear_overdue tmpfile_reserve_time
 logfile_reserve_time=$( read_mole_config mole_clear_overdue logfile_reserve_time )
 snapfile_reserve_time=$( read_mole_config mole_clear_overdue snapfile_reserve_time )
 snapdir_maxsize=$( read_mole_config mole_clear_overdue snapdir_maxsize )
+take_over_proxylog=$( read_mole_config mole_log_rotate take_over_proxylog )
 
 # if null or invalid set default.
 [ -z "${tmpfile_reserve_time}" -o ! -z "${tmpfile_reserve_time//[0-9]}" ] && tmpfile_reserve_time=7
 [ -z "${logfile_reserve_time}" -o ! -z "${logfile_reserve_time//[0-9]}" ] && logfile_reserve_time=180
 [ -z "${snapfile_reserve_time}" -o ! -z "${snapfile_reserve_time//[0-9]}" ] && snapfile_reserve_time=7
 [ -z "${snapdir_maxsize}" -o ! -z "${snapdir_maxsize//[0-9]}" ] && snapdir_maxsize=4096
+[ -z "${take_over_proxylog}" ] && take_over_proxylog="no"
 
 
 # check function here
 check() {
-  local result= dellist= tmpfile_dirlist= tmpfiles= logfiles= snapfiles=
-  local total_num=0  t_num=0  l_num=0  s_num=0
+  local result= dellist= tmpfile_dirlist= tmpfiles= logfiles= snapfiles= proxyfiles=
+  local total_num=0  t_num=0  l_num=0  s_num=0  p_num=0
 
   # First check if the top directories which to be searched is invalid or not.
   # You must take care here because it releated to deletion operations.
@@ -128,7 +130,20 @@ check() {
   dellist="${dellist} ${snapfiles} \n"   ### \n here is important
   result="${result} snapfiles: ${s_num} files ###"
 
-  total_num=$(( ${t_num} + ${l_num} + ${s_num} ))
+  # P. search proxyfiles
+  if [ "${take_over_proxylog}" == "yes" ]; then
+        local PROXY_LOGBACKDIR="/usr/local/esop/agent/log/backup"
+	proxyfiles=$( /usr/bin/find ${PROXY_LOGBACKDIR} -follow -type f -ctime +${logfile_reserve_time} -print 2>&- )
+	[ -z "${proxyfiles}" ] && {
+		p_num=0
+	} || {
+		p_num=$(echo -e "${proxyfiles}" | wc -l)
+	}
+	dellist="${dellist} ${proxyfiles} \n"	### \n here is important
+	result="${result} proxyfiles: ${p_num} files ###"
+  fi
+
+  total_num=$(( ${t_num} + ${l_num} + ${s_num} + ${p_num} ))
   [ "${total_num}" == "0" ] && {
 	result="No file to be cleaned up ###" 
   } || {

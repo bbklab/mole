@@ -37,14 +37,16 @@ CONTENT=        ### { strings | /path/to/result.file }
 
 # Read plugin config value here
 force_size_uplimit=$( read_mole_config mole_log_rotate force_size_uplimit )
+take_over_proxylog=$( read_mole_config mole_log_rotate take_over_proxylog )
 
 # if null or invalid set default.
 [ -z "${force_size_uplimit}" -o ! -z "${force_size_uplimit//[0-9]}" ] && force_size_uplimit=1024
+[ -z "${take_over_proxylog}" ] && take_over_proxylog="no"
 
 # check function here
 check() {
   local result= rollnum=0
-  array_logfiles=( 
+  local array_logfiles=( 
 		${MOLE_LOG} 
 		${INNER_LOG} 
 		${PRECHECK_LOG} 
@@ -56,16 +58,15 @@ check() {
 		"${LOG_DIR}/emp_sync_user524.log"
 		"${LOG_DIR}/emp_sync_userfail.log"
 		"${LOG_DIR}/cancle_migrate.log"
-		)
+  )
 
   for file in  ${array_logfiles[@]}
   do
 	if [ -f "${file}" ]; then
 
 		## 1. check filesize
-		local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1}' )
-		if [ -z "${size}"  -o ! -z "${size//[0-9]}" ]; then
-			[ "$( echo "${size} >= ${force_size_uplimit}" | bc )" == "1" ] &&  {
+		local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1;exit;}' )
+		if is_int "${size}" && is_between "${force_size_uplimit}" "999999999"; then
 				local basefile="${BACK_DIR}/${file##*/}.$(date +%F).${size}M"
 				local dstfile="${basefile}"
 				local seqnum=0
@@ -79,7 +80,6 @@ check() {
 				((rollnum++))
 		    		result="${result} [${file}] filesize:[${size}M >= ${force_size_uplimit}M] ### rollback:[${dstfile}] ### ### "
 		    		continue
-			}
 		fi
 
 		## 2. check current time : the begining of newday or not
@@ -87,7 +87,7 @@ check() {
 		local time_long=$( conv_time2sec "$(get_frequency mole_log_rotate)" )    ### timelong of this plugin
 		local end_time=$(( ${day_start} + ${time_long} ))
 		local now_time=$(date +%s)		### nower time
-		[ "$(echo "${now_time} < ${end_time}" | bc 2>&-)" == "1" ] && {
+		if [ "$(echo "${now_time} < ${end_time}" | bc 2>&-)" == "1" ]; then
 			local basefile="${BACK_DIR}/${file##*/}.$(date -d "-1day" +%F)"
 			local dstfile="${basefile}"
 			local seqnum=0
@@ -101,15 +101,15 @@ check() {
 			((rollnum++))
 			result="${result} [${file}] newday:[$(date +%F_%T)] ### rollback:[${dstfile}] ### ###"
 			continue
-		}
+		fi
 
 		## 3. check head and tail logitem is the same day or not?
 		local head_ts=$( head -n1 "${file}" | awk '{print $1}' )
 		local tail_ts=$( tail -n1 "${file}" | awk '{print $1}' )
-		[ -z "${head_ts}" -o ! -z "${head_ts//[0-9]}" -o -z "${tail_ts}" -o ! -z "${tail_ts//[0-9]}" ] || {
+		if is_int "${head_ts}" && is_int "${tail_ts}"; then
 			head_day=$( date -d "1970-01-01 UTC ${head_ts} seconds" +%F)
 			tail_day=$( date -d "1970-01-01 UTC ${tail_ts} seconds" +%F)
-			[ "${head_day}" != "${tail_day}" ] && {
+			if [ "${head_day}" != "${tail_day}" ]; then 
 				local basefile="${BACK_DIR}/${file##*/}.${head_day}"
 				local dstfile="${basefile}"
 				local seqnum=0
@@ -123,15 +123,15 @@ check() {
 				((rollnum++))
 			    	result="${result} [${file}] newlog:[${tail_day} <> ${head_day}] ### rollback:[${dstfile}] ### ###"
 			    	continue
-			}
-		}
+			fi
+		fi
 
 		## 4. check head logitem is today or not ?
 		local head_ts=$( head -n1 "${file}" | awk '{print $1}' )
-		[ -z "${head_ts}" -o ! -z "${head_ts//[0-9]}" ] || {
+		if is_int "${head_ts}"; then
 			head_day=$( date -d "1970-01-01 UTC ${head_ts} seconds" +%F)
 			today=$(date +%F)
-			[ "${head_day}" != "${today}" ] && {
+			if [ "${head_day}" != "${today}" ]; then
 				local basefile="${BACK_DIR}/${file##*/}.${head_day}"
 				local dstfile="${basefile}"
 				local seqnum=0
@@ -145,10 +145,67 @@ check() {
 				((rollnum++))
 				result="${result} [${file}] headday:[${head_day} <> today] ### rollback:[${dstfile}] ### ###"
 				continue
-			}
-		}
+			fi
+		fi
 	fi
   done
+
+  if [ "${take_over_proxylog}" == "yes" ]; then
+	local PROXY_LOGDIR="/usr/local/esop/agent/log"
+	local PROXY_LOGBACKDIR="/usr/local/esop/agent/log/backup"
+  	local array_proxylog=( 
+		"${PROXY_LOGDIR}/default.log"
+		"${PROXY_LOGDIR}/phptd.log"
+  	)
+
+	if mkdir -p "${PROXY_LOGBACKDIR}" >/dev/null 2>&1; then
+		for file in  ${array_proxylog[@]}
+		do
+			if [ -f "${file}" ]; then
+				## 1. check filesize
+				local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1;exit;}' )
+				if is_int "${size}" && is_between "${force_size_uplimit}" "999999999"; then
+						local basefile="${PROXY_LOGBACKDIR}/${file##*/}.$(date +%F).${size}M"
+						local dstfile="${basefile}"
+						local seqnum=0
+						while [ -f "${dstfile}" ]
+						do
+							((seqnum++))
+							dstfile="${basefile}_${seqnum}"
+						done
+	
+			    			/bin/cp -f "${file}" "${dstfile}" 2>&-
+						/bin/cp -f /dev/null "${file}" 2>&-
+						((rollnum++))
+			    			result="${result} [${file}] filesize:[${size}M >= ${force_size_uplimit}M] ### rollback:[${dstfile}] ### ### "
+			    			continue
+				fi
+	
+				## 2. check current time : the begining of newday or not
+				local day_start=$(date -d "" +%s)     ### the begining of today
+				local time_long=$( conv_time2sec "$(get_frequency mole_log_rotate)" )
+				local end_time=$(( ${day_start} + ${time_long} ))
+				local now_time=$(date +%s)		### nower time
+				if [ "$(echo "${now_time} < ${end_time}" | bc 2>&-)" == "1" ]; then
+					local basefile="${PROXY_LOGBACKDIR}/${file##*/}.$(date -d "-1day" +%F)"
+					local dstfile="${basefile}"
+					local seqnum=0
+					while [ -f "${dstfile}" ]
+					do
+						((seqnum++))
+						dstfile="${basefile}_${seqnum}"
+					done	
+					
+					/bin/cp -f "${file}" "${dstfile}" 2>&-
+					/bin/cp -f /dev/null "${file}" 2>&-
+					((rollnum++))
+					result="${result} [${file}] newday:[$(date +%F_%T)] ### rollback:[${dstfile}] ### ###"
+					continue
+				fi
+			fi
+		done
+	fi
+  fi
   
   [ -z "${result}" ] && {
   	EXIT_STATUS="${STATE_OK}"
