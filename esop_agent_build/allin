@@ -7,7 +7,9 @@ sh2="$basedir/2_src/build_src"
 sh3="$basedir/3_rpm/auto"
 
 clean(){
+	echo "clean build dirs ..."
 	${sh1} clean; ${sh2} clean; ${sh3} clean
+	echo "clean /usr/local/esop/ ..."
 	[ -d "/usr/local/esop/" ] && rm -rf "/usr/local/esop/"
 }
 
@@ -16,10 +18,18 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+if rpm -qi esop >/dev/null; then
+	echo "uninstall pre esop"
+	rpm -e esop
+else
+	echo "esop not installed"
+fi
+
 if [ -f $sh1 -a -x $sh1 -a -f $sh2 -a -x $sh2 -a -f $sh3 -a -x $sh3 ]; then
+	echo "clean all ..."
 	clean
 	[ "$1" == "clean" ] && exit 0
-
+	echo "build all ..."
 	${sh1} && ${sh2} && ${sh3}
 else
 	echo $sh1,$sh2,$sh3 not prepared.
