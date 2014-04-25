@@ -225,6 +225,7 @@ fi
 - 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
 - 修正: 系统root账户配置了LC_ALL(=C)环境变量时, bash和perl的gettext功能失效的问题
 - 修正: 兼容13个邮件版本(5.0.4rc4 - 8.1.0.4)的进程检查判断
+- 修正: 定期定大小回滚Proxy日志, 并定期清理过期的Proxy回滚文件
 - 调整: 优化rpm %preun 阶段的预置动作, 区分旧包的升级和卸载
 - 调整: 上调插件tcp_conn,disk_iostat,traffic的阈值, 上调插件cpu_usage的maxerr_times
 - 调整: 将sysstat打入安装包内, 去除sysstat的依赖关系
