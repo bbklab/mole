@@ -974,6 +974,7 @@ sub genjson_config() {
 		}
 	}
   }
+  $raw_postlog{'post_debug'}  = (defined $raw_postlog{'post_debug'} && $raw_postlog{'post_debug'} eq 'yes') ? 1 : 0;
   my $json_postlog = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_postlog);
 
   my %raw_takesnap = (
@@ -1015,6 +1016,7 @@ sub genjson_config() {
 	'frequency'		=> '',
 	'exec_tmout'		=> '',
 	'force_size_uplimit'	=> '',
+	'take_over_proxylog'	=> '',
   );
   open $fh, "$mole view mole_log_rotate 2>&- |";
   if($fh) {
@@ -1031,6 +1033,7 @@ sub genjson_config() {
 		}
 	}
   }
+  $raw_log_rotate{'take_over_proxylog'}  = (defined $raw_log_rotate{'take_over_proxylog'} && $raw_log_rotate{'take_over_proxylog'} eq 'yes') ? 1 : 0;
   my $json_log_rotate = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_log_rotate);
 
   my %raw_self_check = (
