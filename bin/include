@@ -558,7 +558,7 @@ list_section_keys(){
   # set config file
   if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
 	config_file="${CONFIG_FILE}"
-  elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
 	config_file="${CONFIG_FILE}"
   else
 	config_file="${CONF_DIR}/${section}.ini"
@@ -651,7 +651,7 @@ read_mole_config(){
 	if [ "${Mode}" == "0" ]; then		# automatic set {config_file}
 		if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
 			config_file="${CONFIG_FILE}"
-  		elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  		elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
         		config_file="${CONFIG_FILE}"
   		else 
         		config_file="${CONF_DIR}/${section}.ini"
@@ -715,7 +715,7 @@ update_mole_config() {
 	# set config_file
 	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-  	elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  	elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -807,7 +807,7 @@ clear_mole_config() {
 	# set config_file
 	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-  	elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  	elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -895,7 +895,7 @@ add_mole_config() {
 	# set config_file 
 	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-  	elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  	elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -984,7 +984,7 @@ del_mole_config() {
 	# set config_file 
 	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
         	config_file="${CONFIG_FILE}"
-  	elif [[ "${section}" =~ "${INNER_BEGIN}" ]]; then
+  	elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
         	config_file="${CONFIG_FILE}"
   	else 
         	config_file="${CONF_DIR}/${section}.ini"
@@ -1578,7 +1578,7 @@ update_lastrun_and_nextrun() {
 	return 1
   }
 
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 	local logfile="${INNER_LOG}"                                                                                   
   else
 	local logfile="${MOLE_LOG}"
@@ -1677,7 +1677,7 @@ update_status() {
         return 1
   }
 
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 	local logfile="${INNER_LOG}"                                                                                   
   else
 	local logfile="${MOLE_LOG}"
@@ -1944,7 +1944,7 @@ gen_lock() {
 	write_log -f "${MOLE_LOG}" "E0000000 gen_lock error: missing plugin name";
   	return 1
   fi
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
    	p_path="${INNER_DIR}/${plugin_name}"
 	logfile="${INNER_LOG}"
   else
@@ -1976,7 +1976,7 @@ un_lock() {
         write_log -f "${MOLE_LOG}" "E0000000 un_lock error: missing plugin name";
         return 1
   fi
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
         logfile="${INNER_LOG}"
   else
         logfile="${MOLE_LOG}"
@@ -2005,7 +2005,7 @@ del_fpid() {
         write_log -f "${MOLE_LOG}" "E0000000 del_fpid error: missing plugin name";
         return 1
   fi
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
         logfile="${INNER_LOG}"
   else
         logfile="${MOLE_LOG}"
@@ -2037,7 +2037,7 @@ check_lock() {
   # [ -e ${RUN_DIR}/${plugin_name}.lock ] && {   ###  never check broken link: never return linkerror
   if [ -L "${RUN_DIR}/${plugin_name}.lock" ]; then
 	local f=$(readlink "${RUN_DIR}/${plugin_name}.lock" 2>&-)
-	if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+	if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 		local p_path="${INNER_DIR}/${plugin_name}"
 		local logfile="${INNER_LOG}"
 	else
@@ -2087,7 +2087,7 @@ clear_dead_lock_pid() {
 		write_log -f "${MOLE_LOG}" "E0000000 clear_single_dead_lock_pid error: missing plugin name";
 		return 1
 	fi
-  	if [[ "${_p}" =~ "${INNER_BEGIN}" ]]; then
+  	if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
         	local logfile="${INNER_LOG}"
 	else
         	local logfile="${MOLE_LOG}"
@@ -2335,7 +2335,7 @@ add_runlock_on_pid_notexist(){
         write_log -f "${MOLE_LOG}" "E0000000 add_runlock_on_pid_notexist error: missing plugin name";
         return 1
   fi
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
         local logfile="${INNER_LOG}"
   else
         local logfile="${MOLE_LOG}"
@@ -2375,7 +2375,7 @@ check_runlock_on_pid_exist() {
         return 1
   fi
 
-  if [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]]; then
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 	local logfile="${INNER_LOG}"
   else
 	local logfile="${MOLE_LOG}"
@@ -2438,7 +2438,7 @@ list_plugin_status() {
 	local nextruntime=$(get_nextrun $_p)
 	local repeaterrnum=$(get_repeat_errcount "${_p}")
 
-	if [[ "${_p}" =~ "${INNER_BEGIN}" ]]; then
+	if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
 		enable="yes"
 	else
 		enable=$(get_enable "${_p}")
@@ -3133,7 +3133,7 @@ process_plugin_timeout() {
   # Step 2: stop timeout plugin 
   stop_single_plugin "${plugin_name}"
   # return here while inner plugin
-  [[ "${plugin_name}" =~ "${INNER_BEGIN}" ]] && return 0
+  [[ "${plugin_name}" =~ ${INNER_BEGIN} ]] && return 0
 
   # Step 2: take snapshot
   local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot "tmout")

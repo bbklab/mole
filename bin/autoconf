@@ -312,7 +312,7 @@ is_supported_emversion() {
 
 	for((i=0;i<=${#ARRAY_SUPPORTED_EMVERSION[*]}-1;i++))
 	do
-		if [[ "${emversion}" =~  "${ARRAY_SUPPORTED_EMVERSION[$i]}" ]]; then
+		if [[ "${emversion}" =~  ${ARRAY_SUPPORTED_EMVERSION[$i]} ]]; then
 			return 0
 		fi
 	done
