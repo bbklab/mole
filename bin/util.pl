@@ -62,6 +62,7 @@ my $action = shift;
 &base64_encode(@ARGV)		   if $action eq 'base64_encode';
 &create_mailct(@ARGV)		   if $action eq 'create_mailct';
 &filter_html(@ARGV)		   if $action eq 'filter_html';
+&read_config(@ARGV)		   if $action eq 'read_config';
 
 #
 # Sub Def
@@ -82,6 +83,7 @@ Example:
   base64_encode  {strings-to-be-encode}
   create_mailct	 {tpl_path} {plugin_name} {eventid} {plugin_output} {handler_output}
   filter_html    {plugin_output}
+  read_config	 {section} {key} {config_file}
 EOF
 ;
 exit(1);
@@ -201,6 +203,54 @@ sub filter_html {
                 return $content;
         } elsif ($mode eq 'print'){
                 print $content;
+        }
+}
+
+
+# Read INI Config File
+# Usage:	read_config {section} {key} {config_file} {mode}
+# Note:		mode ~ perl,print
+# Example:	read_config global id /usr/local/esop/agent/mole/conf/.mole.ini print
+#
+sub read_config {
+	my ($section, $key, $file, $mode) = @_;
+	return undef if (!$section || !$key || !$file);
+	$mode = 'print' unless ($mode);
+  	### section: $section
+  	### key: $key
+  	### file: $file
+
+	unless (-f $file)  {
+		return undef;
+	}
+
+  	unless (open FH, "<$file") {
+		return undef;
+  	}
+
+  	my ($result,$flag) = ('',0);
+  	while (<FH>) {
+		if (m/\A\s*\[\s*($section)\s*\]\s*\Z/) {
+			$flag = 1;
+			next;
+		}
+ 		if (m/\A\s*\[\s*(\w+)\s*\]\s*\Z/) {
+			last if $flag == 1;
+		}
+		if (m/\A\s*$key\s*=\s*(.+)\s*\Z/) {
+			if ($flag == 1) {
+				$result = $1;
+				last;
+			}
+		}
+  	}
+	close FH;
+
+  	### result: $result
+        if ($mode eq 'perl'){
+                return $result;
+        } elsif ($mode eq 'print'){
+                print $result;
         }
 }
 
