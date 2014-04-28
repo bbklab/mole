@@ -220,10 +220,6 @@ sub read_config {
   	### key: $key
   	### file: $file
 
-	unless (-f $file)  {
-		return undef;
-	}
-
   	unless (open FH, "<$file") {
 		return undef;
   	}

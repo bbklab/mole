@@ -2605,18 +2605,18 @@ view_base_config() {
   }
   echo_green "[${plugin_name}]: $(gettext "basic configuration")" ; echo
   { 
-	echo "$(gettext "config_name") ==> $(gettext "value") ==> $(gettext "is_default")"
+	echo -e "$(gettext "config_name") ^ $(gettext "value") ^ $(gettext "is_default")"
   	for cname in ${ARRAY_BASE_CONFIG[*]} 
   	do
         	cvalue=$(read_mole_config ${plugin_name} ${cname})
         	if [ -z "${cvalue}" ]; then
-                	cvalue="$(read_mole_config default ${cname}) ==> Yes"
+                	cvalue="$(read_mole_config default ${cname}) ^ Yes"
 		else
-			cvalue="${cvalue} ==> No"
+			cvalue="${cvalue} ^ No"
         	fi
-        	echo -e  "${cname} ==> ${cvalue} "
+        	echo -e  "${cname} ^ ${cvalue} "
   	done
-  } | column -t -s "==>"
+  } | column -t -s "^"
 }
 
 # List user-defined-config-name ==> config-value of plugin
@@ -2636,17 +2636,17 @@ view_extra_config() {
 	echo
   }
   {
-	local search_tag=0  headline="$(gettext "config_name(user-def)") ==> $(gettext "value")"
+	local search_tag=0  headline="$(gettext "config_name(user-def)") ^ $(gettext "value")"
   	for cname in `list_section_keys "${plugin_name}"`
   	do
 		if ! is_sub "${cname}" "${ARRAY_BASE_CONFIG[*]}"; then		### 2. user-def config
 			cvalue=$(read_mole_config ${plugin_name} ${cname})
 			[ "${silient}" == "0" -a "${search_tag}" == "0" ] && echo -e "${headline}"
-			echo -e "${cname} ==> ${cvalue}"
+			echo -e "${cname} ^ ${cvalue}"
 			search_tag=1
 		fi
   	done
-  } | column -t -s "==>"
+  } | column -t -s "^"
 }
 
 # Process plugin 
