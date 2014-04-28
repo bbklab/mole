@@ -25,5 +25,13 @@ else
 fi
 
 if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
-	/bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1
+	if /bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
+		echo "+OK"
+		exit 0
+	else
+		echo "-ERR"
+		exit 1
+	fi
+else
+	exit 2
 fi
