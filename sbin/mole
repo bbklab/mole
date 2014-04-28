@@ -111,6 +111,7 @@ cat << EOF
 	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
 	setinit		view			$(gettext "print global instance information")
 	setinit		reset			$(gettext "reset global instance information (be careful!)")
+	saveconf				$(gettext "save esop config files once")
 	config					$(gettext "help stuff about mole config-*")
 	config-help				$(gettext "help stuff about mole config-* (same as above)")
 	?					$(gettext "help stuff about short args")
@@ -163,6 +164,7 @@ cat << EOF
 	mole  iget	sysload   p_debug
 	mole  setinit	view 
 	mole  setinit   reset
+	mole  saveconf
 	mole  config
 	mole  config-help
 
@@ -617,6 +619,8 @@ case "$#" in
 		. ${MAKEDIR_SH}			;;
 	"takesnap"|"t")
 		. ${TAKESNAP_SH} 		;;
+	"saveconf")
+		. ${SAVECONF_SH}		;;
 	"reload")
 		reload_core_cron		;;
 	"config"|"config-help")

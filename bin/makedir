@@ -109,6 +109,7 @@ array_files=(
 	${SENDEMAIL}
 	${MAKEDIR_SH}
 	${SETINIT_SH}
+	${SAVECONF_SH}
 )
 
 MODE=0

@@ -60,6 +60,7 @@ SENDMAIL="${HANDLER_DIR}/sendmail"
 SENDEMAIL="${OPT_DIR}/sendEmail"
 MAKEDIR_SH="${BIN_DIR}/makedir"
 SETINIT_SH="${BIN_DIR}/setinit"
+SAVECONF_SH="${BIN_DIR}/saveconf"
 
 # UTIL DEF
 UTIL_IOSTAT="${OPT_BINDIR}/iostat"
