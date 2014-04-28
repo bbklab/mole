@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+#
+# =====================================================
+#  This Script Responsible for Save ESOP Config Files 
+# =====================================================
+#
+#
+
+# === BASE_DIR DEF
+#
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
+	/bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1
+fi
