@@ -102,6 +102,13 @@ TMP_STATUS="${TMP_DIR}/.status.dat"
 SMTPHOST_STATUS="${TMP_DIR}/.smtphost.status"
 POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
 
+# ESOP SAVEOLD DIR DEF
+ESOP_PATH="/usr/local/esop/agent"
+PROXY_CONF_PATH="${ESOP_PATH}/etc"
+MOLE_CONF_PATH="${CONF_DIR}"
+ESOP_SAVEOLD_DIR="/var/tmp/esop_rpmpreun_saveold"
+
+
 ### PLUGIN BASE CONFIG NAME
 ARRAY_BASE_CONFIG=(
   enable
