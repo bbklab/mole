@@ -133,9 +133,6 @@ if [ "$1" == "0" ]; then	# if uninstall indeed
 	
 	# remove system startups
 	/sbin/chkconfig --del %{name} >/dev/null 2>&1
-else
-	# do nothing if update
-	:
 fi
 :
 
