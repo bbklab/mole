@@ -1,13 +1,13 @@
 Summary: 	agent of esop
 Name: 		esop
-Version: 	1.0
-Release: 	beta3
+Version: 	1.0.1
+Release: 	rhel5
 License: 	GPLv3
 Group:  	Extension
 Vendor:		eYou
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	esop-1.0-beta3.tgz
+Source0: 	esop-1.0.1-rhel5.tgz
 Source1: 	esop.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
@@ -85,33 +85,6 @@ if id ${USER} >/dev/null 2>&1; then
 else
 	useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1
 fi
-
-# save original mole config file before installation
-ESOP_PATH="/usr/local/%{name}/agent"
-MOLE_PATH="${ESOP_PATH}/mole"
-ESOP_CONF_PATH="${ESOP_PATH}/etc"
-MOLE_CONF_PATH="${MOLE_PATH}/conf"
-MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
-PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
-PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
-if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
-	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
-else
-	:
-fi
-if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
-else
-	:
-fi
-if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
-	/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
-else
-	:
-fi
 :
 
 %post
@@ -120,26 +93,6 @@ fi
 
 # restore original mole configs, init all plugin configs
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
-
-# remove original mole config file after installation
-MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
-if [ -f "${MOLE_CONFIG_SAVE}" ]; then
-	/bin/rm -f "${MOLE_CONFIG_SAVE}" 2>&-
-else
-	:
-fi
-if [ -f "${PROXY_CONFIG_SAVE1}" ]; then
-	/bin/rm -f "${PROXY_CONFIG_SAVE1}" 2>&-
-else
-	:
-fi
-if [ -f "${PROXY_CONFIG_SAVE2}" ]; then
-	/bin/rm -f "${PROXY_CONFIG_SAVE2}" 2>&-
-else
-	:
-fi
 
 # register as linux startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
@@ -157,7 +110,6 @@ fi
 
 # clear remembered command caches
 hash -r >/dev/null 2>&1
-:
 
 # clear old tmp status file
 if [ -f "/usr/local/esop/agent/mole/tmp/.status.dat" ]; then
@@ -169,36 +121,19 @@ fi
 if [ -f "/usr/local/esop/agent/mole/tmp/.smtphost.status" ]; then
 	rm -f "/usr/local/esop/agent/mole/tmp/.smtphost.status" 2>&-
 fi
+:
 
 %preun
 if [ "$1" == "0" ]; then	# if uninstall indeed
 	# save original mole config file
 	ESOP_PATH="/usr/local/%{name}/agent"
-	MOLE_PATH="${ESOP_PATH}/mole"
 	ESOP_CONF_PATH="${ESOP_PATH}/etc"
-	MOLE_CONF_PATH="${MOLE_PATH}/conf"
-	MOLE_CONFIG="${MOLE_CONF_PATH}/.mole.ini"
-	MOLE_CONFIG_SAVE="/tmp/.mole.ini.saveold"
-	PROXY_CONFIG_ORIG1="${ESOP_CONF_PATH}/etm_phptd.ini"
-	PROXY_CONFIG_SAVE1="/tmp/.etm_phptd.ini.saveold"
-	PROXY_CONFIG_ORIG2="${ESOP_CONF_PATH}/etm_agent.ini"
-	PROXY_CONFIG_SAVE2="/tmp/.etm_agent.ini.saveold"
-	if [ -f "${MOLE_CONFIG}" -a -s "${MOLE_CONFIG}" ]; then
-        	/bin/cp -f "${MOLE_CONFIG}" "${MOLE_CONFIG_SAVE}"
-	else
-        	:   
+	MOLE_CONF_PATH="${ESOP_PATH}/mole/conf"
+	ESOP_SAVEOLD_DIR="/var/tmp/esop_rpmpreun_saveold"
+	if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
+		cp -ar  "${ESOP_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}"
 	fi
-	if [ -f "${PROXY_CONFIG_ORIG1}" -a -s "${PROXY_CONFIG_ORIG1}" ]; then
-		/bin/cp -f "${PROXY_CONFIG_ORIG1}" "${PROXY_CONFIG_SAVE1}"
-	else
-		:
-	fi
-	if [ -f "${PROXY_CONFIG_ORIG2}" -a -s "${PROXY_CONFIG_ORIG2}" ]; then
-		/bin/cp -f "${PROXY_CONFIG_ORIG2}" "${PROXY_CONFIG_SAVE2}"
-	else
-		:
-	fi
-	
+
 	# stop instance
 	/sbin/service %{name} stop >/dev/null 2>&1
 	
@@ -214,14 +149,13 @@ fi
 :
 
 %changelog
-* Mon Apr 23 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布: 1.0-beta3 版本
+* Mon Apr 28 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+- 发布: 1.0.1 版本
 - 新增: rpm安装后自动恢复旧版Proxy的两个配置文件, 自动恢复旧版MOLE的14个全局配置
 - 新增: 根据系统中的网卡名调整网卡的优先级, 自动调整插件traffic的自动化配置参数
 - 新增: mole新增参数config-clear, 可以清空某个插件配置段的指定配置项的值
 - 新增: mole新增参数setinit view/reset, 可以查看和重置实例的标识信息
 - 新增: 提醒信正文中加入事件编号字段
-- 修正: 去除pop_svr插件中的NOOP测试, 因为部分POP服务器不允许未认证就响应NOOP指令
 - 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
 - 修正: 系统root账户配置了LC_ALL(=C)环境变量时, bash和perl的gettext功能失效的问题
 - 修正: 兼容13个邮件版本(5.0.4rc4 - 8.1.0.4)的进程检查判断
