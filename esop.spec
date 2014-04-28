@@ -126,13 +126,7 @@ fi
 %preun
 if [ "$1" == "0" ]; then	# if uninstall indeed
 	# save original mole config file
-	ESOP_PATH="/usr/local/%{name}/agent"
-	ESOP_CONF_PATH="${ESOP_PATH}/etc"
-	MOLE_CONF_PATH="${ESOP_PATH}/mole/conf"
-	ESOP_SAVEOLD_DIR="/var/tmp/esop_rpmpreun_saveold"
-	if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
-		cp -ar  "${ESOP_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}"
-	fi
+	/usr/local/%{name}/agent/mole/sbin/mole saveconf
 
 	# stop instance
 	/sbin/service %{name} stop >/dev/null 2>&1
