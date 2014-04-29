@@ -278,6 +278,19 @@ is_int() {
 	fi
 }
 
+# Check item is float or not ?
+# Usage:	is_float "item"
+# Return	0,1 | yes,no
+#
+is_float() {
+	local item="$1"	float_regex="^[0-9]*\.[0-9]+$"
+	if [[ "${item}" =~ ${float_regex} ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
 # Check item is between {min} and {max} or not ?
 # Usage:	is_between {item} {min} {max}
 # Return:	0,1 | yes,no
@@ -3428,3 +3441,10 @@ process_plugin_misform() {
 # read_mole_config global locale
 # read_mole_config -f /tmp/123  global locale
 # clear_mole_config default enable
+#is_float  .1; echo $?
+#is_float  0; echo $?
+#is_float  9999; echo $?
+#is_float  11a.0; echo $?
+#is_float  11.1zzz; echo $?
+#is_between 99.9 1.1 100; echo $?
+#is_between .9 azdk 100; echo $?
