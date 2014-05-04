@@ -93,8 +93,6 @@ if($fh){
 	last;
   }
 }
-$hid =~ s/\D+//;
-$hid = '0000000000' if (!$hid || $hid eq '');
 
 our $hname = '0000000000__mole__ops.eyou.net';
 open $fh, "$mole view global name 2>&- | ";
@@ -105,9 +103,6 @@ if($fh){
   }
 }
 close $fh if ($fh);
-unless ($hname =~ m/__.+__/) {
-  $hname = '0000000000__mole__ops.eyou.net';
-}
 
 
 
@@ -123,7 +118,7 @@ foreach my $chinese ($output,$houtput){
 }
 
 # set initial logfrom first
-$logfrom = 'AGENT.CHECK';
+$logfrom = 'POSTLOG.INITFROM';
 
 # check arg [type] first
 unless (defined $type && $type ne '') {
@@ -166,8 +161,24 @@ if ($type eq 'post') {
   $logfrom = 'AGENT.HEARTBEAT';
 }
 
+# log start
 &log("INFO: $logfrom script postlog start ...");
 
+# check global {parter_id}, {hid}, {hname}
+if (!$parter_id || $parter_id eq '' || $parter_id eq '0000000000') {
+	&log("CRIT: $logfrom parter_id is empty, script postlog exit.");
+	exit 3;
+}
+if (!$hid || $hid eq '' || $hid eq '0000000000') {
+	&log("CRIT: $logfrom hid is empty, script postlog exit.");
+	exit 3;
+}
+if (!$hname || $hname eq '' || $hname eq '0000000000__mole__ops.eyou.net') {
+	&log("CRIT: $logfrom hname is empty, script postlog exit.");
+	exit 3;
+}
+
+# set debug flag
 if(!defined $debug || $debug eq ''){
   open my $fh, "$mole view postlog post_debug 2>&- |";
   if($fh){
