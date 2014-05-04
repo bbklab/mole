@@ -524,11 +524,9 @@ list_plugin_section() {
   for((i=0;i<=${#config_files_arr[*]};i++));
   do
 	filepath="${config_files_arr[$i]}"
-	[ "${filepath##*/}" == "" ] && continue
-	[ "${filepath##*/}" == ".mole.ini" ] && continue
 	pluginname="$(is_plugin_configfile "${filepath}")"
 	if [ "${pluginname}" != "no" ]; then
-		[ ! -z "${result}" ] && result="${result} ${pluginname}" || result="${pluginname}"
+		result="${result} ${pluginname}"
 	fi
   done
   echo "${result}"
@@ -2144,7 +2142,6 @@ clear_dead_lock_pid() {
   }
 
   if [ -z "${plugin_name}" ]; then
-	# list_plugin_section | while read p   
 	for p in `list_plugin_section`
 	do
 		clear_single_dead_lock_pid "${p}"
@@ -2519,12 +2516,8 @@ list_plugin_status() {
 		{  echo "${headline}"
 		for p in `list_plugin_section`
 		do
-			[ ! -z "${p}" ] &&  list_single_status "${p}"
+			list_single_status "${p}"
 		done 
-		#for q in `list_inner_plugin_section`
-		#do
-			#[ ! -z "${q}" ] && list_single_status "${q}"
-		#done
 		} | column -t 
   else
 		{ echo "${headline}" 
