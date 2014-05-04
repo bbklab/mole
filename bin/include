@@ -494,7 +494,8 @@ is_plugin_configfile(){
   if [ "${ftype}" != "text" ]; then
 	result="no"
   else
-	local fsize=$(echo "${filepath}" | LANG=C /usr/bin/perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
+	# local fsize=$(echo "${filepath}" | LANG=C /usr/bin/perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
+	local fsize=$(/usr/bin/stat -c "%s" "${filepath}" 2>&-)
   	if [ -z "${fsize}" -o ! -z "${fsize//[0-9]}" ]; then
 		result="no"
   	elif [ ${fsize} -ge 1048576 ]; then
@@ -674,13 +675,18 @@ read_mole_config(){
 	fi
 
 	if [ -f "${config_file}" -a -s "${config_file}" ]; then
-		value=$( ${PLUTIL} read_config "${section}" "${key}" "${config_file}" 2>&- |\
-			 sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
+		# this is too slow
+		# value=$( ${PLUTIL} read_config "${section}" "${key}" "${config_file}" 2>&- |\
+			 #sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
+                value=$( cat ${config_file} | tr '\t' ' ' |\
+                        awk -F"=" '\
+                                ($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+                                ( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+                                ( k==1 && x==1 && $1~/^'${key}'\>/ ){gsub("^'${key}' *=","",$0);print;exit;}' 2>&- |\
+                         sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
 		if [ -n "${value}" ]; then
 			echo "${value}" && return 0 
 		else
-			# this may lead to plenty of log records in {MOLE_LOG}
-			# write_log -f "${MOLE_LOG}" E0000000 read_mole_config error: "[${section}.${key}]" return NULL.
 			return 3
 		fi
 	else
