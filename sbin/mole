@@ -419,7 +419,15 @@ else
 		${MAKEDIR_SH} -c >/dev/null 2>&1
 		rc=$?
 		if [ "${rc}" != "0" ]; then
-			write_log -f "${MOLE_LOG}" "MIS00000 MOLE missing files or directories, EXIT"
+			write_log -f "${MOLE_LOG}" "MIS00000 MOLE missing files or directories, EXITING..."
+			list_running_plugin_section | while read rp
+			do
+				write_log -f "${MOLE_LOG}" "MIS00000 MOLE try to stop running plugin: [${rp}]"
+				stop_single_plugin "${rp}"
+				clear_dead_lock_pid "${rp}" 
+			done
+			/bin/rm -f "${PID_FILE}" 1>&- 2>&-
+			write_log -f "${MOLE_LOG}" "MIS00000 MOLE Main:::EXIT"
 			exit 1
 		fi
 		
