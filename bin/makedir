@@ -96,7 +96,7 @@ array_files=(
 	${INCLUDE_FILE}
 	${MOLE_FILE}
 	${CONFIG_FILE}
-	${TPL_MAIL}
+	#${TPL_MAIL}
 	${PLUTIL}
 	${PRECHECK_SH}
 	${AUTOCONF_SH}
