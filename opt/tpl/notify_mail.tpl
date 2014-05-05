@@ -7,10 +7,18 @@
 				<a href="http://esop.eyou.net" style="border:0 none;">
 					<img src="http://esop.eyou.net/mc/tpl/public/images/logo/normal.png" style="float:left;border:0 none;"/>
 				</a>
-				<a style="height:24px;width:55px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
+				<a style="height:24px;width:110px;text-decoration:none;border-radius:4px;backgroUnd:#FCB322;text-align:center;color:#FFF;font-size:10px;float:right;margin-right:50px;line-height:24px;margin-top:14px;">${MOLE-NOTIFY-MAIL_LEVEL}</a>
 			</div>
 			<br clear="both"/>
 			<div style="width:960px;">
+				<p style="width:49%;float:left;padding:0;margin:10px 0;">
+					<span style="width:100px;display:inline-block;color:#797979;">主机名称</span>
+					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_HOSTNAME}</i>
+				</p>
+				<p style="width:49%;float:left;padding:0;margin:10px 0;">
+					<span style="width:100px;display:inline-block;color:#797979;">事件编号</span>
+					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_EVENTID}</i>
+				</p>
 				<p style="width:49%;float:left;padding:0;margin:10px 0;">
 					<span style="width:100px;display:inline-block;color:#797979;">插件名称</span>
 					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_PLUGIN}</i>
@@ -26,10 +34,6 @@
 				<p style="width:49%;float:left;padding:0;margin:10px 0;">
 					<span style="width:100px;display:inline-block;color:#797979;">概要</span>
 					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_SUMMARY}</i>
-				</p>
-				<p style="width:49%;float:left;padding:0;margin:10px 0;">
-					<span style="width:100px;display:inline-block;color:#797979;">事件编号</span>
-					<i style="font-style:normal">：${MOLE-NOTIFY-MAIL_EVENTID}</i>
 				</p>
 				<p style="width:100%;float:left;margin-bottom:0;padding:0;margin:10px 0;">
 					<span style="width:100px;display:inline-block;color:#797979;">详细描述：</span>				

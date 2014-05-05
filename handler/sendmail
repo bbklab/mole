@@ -71,11 +71,11 @@ show_usage(){
 # def conv_output2mailbody
 # Convert plugin output to html mailbody
 # Output:       path of html mailbody
-# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}" "${plugin}"
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}" "${plugin}"  "${gname}"
 # Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid" "disk_fs"
 #
 conv_output2mailbody() {
-  local content=$1  hd_content=$2  jobid=$3  plugin=$4
+  local content=$1  hd_content=$2  jobid=$3  plugin=$4  gname=$5
   local level= title= summary= details= mailbody= rc=
 
   if [ "${hd_content}" == "auto handle is disabled. Nothing to do" ]; then
@@ -88,7 +88,7 @@ conv_output2mailbody() {
   mailbody="$(gen_tmpfile mailbody)"
   if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
 	{
-	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${plugin}" "${jobid}" "${content}" "${hd_content}"
+	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${gname}" "${plugin}" "${jobid}" "${content}" "${hd_content}"
 	} >> "${mailbody}" 2>&1
   else
   	title=$(${PLUTIL} parted_output 4 "${content}")
@@ -96,6 +96,7 @@ conv_output2mailbody() {
   	details=$(${PLUTIL} parted_output 6 "${content}")
 
   	{
+  	echo "$(html_green "$(gettext "Host_Name:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${gname} <br><br>"
   	echo "$(html_green "$(gettext "Notify_Type:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${level} <br><br>"
   	echo "$(html_green "$(gettext "Event_ID:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${jobid} <br><br>"
   	echo "$(html_green "$(gettext "Plugin:")")  &nbsp;&nbsp;&nbsp;&nbsp; ${plugin} <br><br>"
@@ -389,7 +390,7 @@ case "${mail_type}" in
         header_subject="Subject: =?UTF-8?B?${header_subject}?="
 
 	### 1. convert plugin output to mailbody files.
-	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}" "${plugin_name}")
+	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}" "${plugin_name}" "${gname}")
 
 	### 2. send emails.
 	n=0  t_s=0   t_e=0  result=		## total   total_succ   total_error   result

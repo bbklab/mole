@@ -81,7 +81,7 @@ Example:
   parted_output  {1-6}  {allof-plugin-output}
   format_toterm  {output-contain-htmlcode-htmlcolor}
   base64_encode  {strings-to-be-encode}
-  create_mailct	 {tpl_path} {plugin_name} {eventid} {plugin_output} {handler_output}
+  create_mailct	 {tpl_path} {host_name} {plugin_name} {eventid} {plugin_output} {handler_output}
   filter_html    {plugin_output}
   read_config	 {section} {key} {config_file}
 EOF
@@ -190,6 +190,7 @@ sub filter_html {
 	my $content = shift || return;
 	my $mode = shift || 'print';
 	### before_filter: $content
+	$content =~ s/href\s*=\s*.+?>//gi;
 	$content =~ s/href\s*=\s*.+?script\s*://gi;
 	$content =~ s/src\s*=\s*.+?script\s*://gi;
 	$content =~ s/src\s*=\s*.+?\.(js|vbs|asp|aspx|php|php4|php5|jsp)//gi;
@@ -251,16 +252,17 @@ sub read_config {
 }
 
 # Create Mail Content by Template
-# Usage:   create_mailct {tpl_path} {plugin} {eventid} {plugin_output} {handler_output}
-# Example: create_mailct "notify_mail.tpl" "disk_fs" "abcdefghi012345" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
+# Usage:   create_mailct {tpl_path} {hname} {plugin} {eventid} {plugin_output} {handler_output}
+# Example: create_mailct "notify_mail.tpl" "dev__bbklab.net" "disk_fs" "abcdefghi012345" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
 #
 sub create_mailct {
 	### @ARGV
-	my ($tpl_path,$plugin,$eventid,$content,$hd_content) = @ARGV;
-	exit(1) unless (defined $tpl_path && defined $plugin && defined $eventid && defined $content && defined $hd_content);
+	my ($tpl_path,$hname,$plugin,$eventid,$content,$hd_content) = @ARGV;
+	exit(1) unless (defined $tpl_path && defined $hname && defined $plugin && defined $eventid && defined $content && defined $hd_content);
 	exit(1) unless (-f $tpl_path && -r $tpl_path);
-	exit(1) if ( $plugin =~ m/\A\s*\Z/ || $eventid =~ m/\A\s*\Z/ || $content =~ m/\A\s*\Z/ || $hd_content =~ m/\A\s*\Z/ );
+	exit(1) if ( $hname =~ m/\A\s*\Z/ || $plugin =~ m/\A\s*\Z/ || $eventid =~ m/\A\s*\Z/ || $content =~ m/\A\s*\Z/ || $hd_content =~ m/\A\s*\Z/ );
 	### $tpl_path
+	### $hname
 	### $plugin
 	### $eventid
 	### $content
@@ -315,6 +317,9 @@ sub create_mailct {
 			}
 			if (m/\${MOLE-NOTIFY-MAIL_EVENTID}/){
 				s/\${MOLE-NOTIFY-MAIL_EVENTID}/$eventid/;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_HOSTNAME}/){
+				s/\${MOLE-NOTIFY-MAIL_HOSTNAME}/$hname/;
 			}
 			if (m/\${MOLE-NOTIFY-MAIL_DETAILS}/){
 				s/\${MOLE-NOTIFY-MAIL_DETAILS}/$details/;
