@@ -786,6 +786,7 @@ sub genjson_config() {
 
   my %raw_global = (
 	'mole_version'		=> '',
+	'proxy_version'		=> '',
 	'scan_interval'		=> '', 
 	'attach_ini_mail'	=> '',
 	'sysload_uplimit'	=> '',
@@ -795,6 +796,16 @@ sub genjson_config() {
 	'notify_onmisform'	=> '',
 	'locale'		=> '',
   );
+  my $proxy_version = '/usr/local/esop/agent/app/sbin/esop_version';
+  if (-f $proxy_version && -x $proxy_version) {
+	open $fh, "$proxy_version 2>&- |";
+	if($fh) {
+		while(<$fh>){
+			chomp; $raw_global{'proxy_version'} = $_;
+			last;
+		}
+	}
+  }
   open $fh, "$mole version 2>&- |";
   if($fh) {
 	while(<$fh>){
