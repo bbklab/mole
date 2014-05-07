@@ -188,18 +188,18 @@ charset=$(read_mole_config sendmail charset)
 }
 
 time_out=$(read_mole_config sendmail timeout)
-[ -z "${time_out}" -o ! -z "${time_out//[0-9]}" ] && {
+if ! is_int "${time_out}"; then
         write_log -f "${SENDMAIL_LOG}" "[${from}]"\
                 "WARN: invalid timeout [$time_out], set time_out=[10]"
         time_out="10"
-}
+fi
 
 smtp_server_port=$(read_mole_config sendmail smtp_server_port)
-[ -z "${smtp_server_port}" -o ! -z "${smtp_server_port//[0-9]}" ] && {
+if ! is_int "${smtp_server_port}"; then
         write_log -f "${SENDMAIL_LOG}" "[${from}]"\
                 "WARN: invalid smtp_port [${smtp_server_port}], set smtp_server_port=[25]"
         smtp_server_port="25"
-}
+fi
 
 
 faillst=
@@ -305,7 +305,7 @@ case "${mail_type}" in
 	do
 	    if [ -f "${x}" -a -s "${x}" ]; then  ### att file do exists.
 		size=$(/usr/bin/du -sk "${x}" 2>&- | awk '{print $1}')
-		[ -z "${size}" -o ! -z "${size//[0-9]}" ] && size=0
+		is_int "${size}" || size=0
 		((t_size+=${size}))  ### exist file size +${size}
 		((t_num+=1))  ### exist file number +1
 

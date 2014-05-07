@@ -496,7 +496,7 @@ is_plugin_configfile(){
   else
 	# local fsize=$(echo "${filepath}" | LANG=C /usr/bin/perl -ne 'chomp;$size=-s;print "$size"' 2>&-)
 	local fsize=$(/usr/bin/stat -c "%s" "${filepath}" 2>&-)
-  	if [ -z "${fsize}" -o ! -z "${fsize//[0-9]}" ]; then
+	if ! is_int "${fsize}"; then
 		result="no"
   	elif [ ${fsize} -ge 1048576 ]; then
 		result="no"
@@ -1102,7 +1102,7 @@ get_parter_id() {
 get_scan_interval() {
   local result= default=5 min=5
   result=$(read_mole_config global scan_interval)
-  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+  if ! is_int "${result}"; then
 	result=${default}
   else
 	[ ${result} -lt ${min} ] && result=${min}
@@ -1126,7 +1126,7 @@ get_attach_ini_mail() {
 get_sysload_uplimit() {
   local result= default=30
   result=$(read_mole_config global sysload_uplimit)
-  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+  if ! is_int "${result}"; then
 	 result=${default}
   fi
   echo "${result}"
@@ -1138,7 +1138,7 @@ get_sysload_uplimit() {
 get_max_kidsnum() {
   local result= default=50
   result=$(read_mole_config global max_kidsnum)
-  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+  if ! is_int "${result}"; then
 	 result=${default}
   fi
   echo "${result}"
@@ -1151,7 +1151,7 @@ get_max_kidsnum() {
 get_plugin_maxlen() {
   local result= default=65536 max=65536
   result=$(read_mole_config global plugin_maxlen)
-  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+  if ! is_int "${result}"; then
 	 result=${default}
   else
 	[ ${result} -gt ${max} ] && result=${max}
@@ -1166,7 +1166,7 @@ get_plugin_maxlen() {
 get_handler_maxlen() {
   local result= default=32768 max=32768
   result=$(read_mole_config global handler_maxlen)
-  if [ -z "${result}" -o ! -z "${result//[0-9]}" ]; then
+  if ! is_int "${result}"; then
 	 result=${default}
   else
 	[ ${result} -gt ${max} ] && result=${max}
@@ -1277,7 +1277,7 @@ get_frequency() {
 		"[${plugin_name}]: return is invalid:"\
 		"[${result}] ==> auto set to ${default}.";
 	result="${default}"
-  elif [ ! -z "${value}" -a -z "${value//[0-9]}" ]; then
+  elif is_int "${value}"; then
 	[ "$(echo "${value} < ${min}" | bc 2>&-)" == "1" ] && {
 		write_log -f "${MOLE_LOG}" "E0000000 get_frequency on"\
 			"[${plugin_name}]: return [${result}] is smaller than minimum"\
@@ -1527,8 +1527,8 @@ conv_time2sec(){
   local timelong=$1 result=
   local now=$(date +%s)
   local after=$(date -d "+${timelong}" +%s 2>&-)
-  if [ ! -z "${after}" -a -z "${after//[0-9]}" ]; then
-	result=$(echo "${after//[!0-9]} - ${now}" | bc 2>&-)
+  if is_int "${after}"; then
+	result=$(echo "${after} - ${now}" | bc 2>&-)
   else
 	write_log -f "${MOLE_LOG}" "E0000000 conv_time2sec error:"\
 		"input invalid: ${timelong}";
@@ -1902,7 +1902,7 @@ list_running_plugin_section() {
   for plugin_name in `list_plugin_section` `list_inner_plugin_section`
   do
 	lock_result=$(check_lock ${plugin_name})
-	[ ! -z "${lock_result}" -a -z "${lock_result//[0-9]}" ] && echo "${plugin_name}"
+	is_int "${lock_result}" && echo "${plugin_name}"
   done
 }
 
@@ -2063,12 +2063,12 @@ check_lock() {
 	fi
 	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
 		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
-		[ -z "${result}" -o ! -z "${result//[0-9]}" ] && {
+		if ! is_int "${result}"; then
 			write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
 				"runlock timestamp is not numberic: [${result}], "\
 				"return linkerror";
 			result="linkerror"
-		}
+		fi
 	else
 		write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
 				"runlock link->target is mistake or target not exist: "\
@@ -2165,7 +2165,7 @@ clear_dead_lock_pid() {
 stopps_by_pid() {
   local pid=$1 sig=$2 cmdline=
   
-  if [ -z "${pid}" -o ! -z "${pid//[0-9]}" ]; then
+  if ! is_int "${pid}"; then
         write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pid error:"\
                 "argument invalid, pid=[${pid}] must be interger";
         return 1
@@ -2460,7 +2460,7 @@ list_plugin_status() {
 		enable=$(get_enable "${_p}")
         fi
 
-	if [ -z "${lastruntime//[0-9]/}" ]; then
+	if is_int "${lastruntime}"; then
 		lastruntime=$(date -d "1970-01-01 UTC ${lastruntime} seconds" +%F_%T)
 	else
 		[ "${lastruntime}" == "never_run" ] && {
@@ -2474,7 +2474,7 @@ list_plugin_status() {
 		}
 	fi
 
-	if [ -z "${nextruntime//[0-9]/}" ]; then
+	if is_int "${nextruntime}"; then
 		nextruntime=$(date -d "1970-01-01 UTC ${nextruntime} seconds" +%F_%T)
 	else
 		[ "${nextruntime}" == "null" ] && {
@@ -2496,7 +2496,7 @@ list_plugin_status() {
 	}
 
 	local lockinfo=$(check_lock $_p)
- 	if [ -z "${lockinfo//[0-9]/}" ]; then
+	if is_int "${lockinfo}"; then
 		running="Yes"
 		starttime=$(date -d "1970-01-01 UTC ${lockinfo} seconds" +%F_%T)
 		durationtime="$( echo "$(date +%s) - ${lockinfo}" | bc 2>&- )s"

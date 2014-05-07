@@ -40,7 +40,7 @@ force_size_uplimit=$( read_mole_config mole_log_rotate force_size_uplimit )
 take_over_proxylog=$( read_mole_config mole_log_rotate take_over_proxylog )
 
 # if null or invalid set default.
-[ -z "${force_size_uplimit}" -o ! -z "${force_size_uplimit//[0-9]}" ] && force_size_uplimit=1024
+is_int "${force_size_uplimit}" || force_size_uplimit=1024
 [ -z "${take_over_proxylog}" ] && take_over_proxylog="no"
 
 # check function here

@@ -230,10 +230,10 @@ check_type_int(){
   local max=$(echo -e "${rule}"|awk -F":" '{print $3}'|tr -d ' ')
   local result=  rc=
 
-  [ -z "${min}" -o ! -z "${min//[0-9]}" -o -z "${max}" -o ! -z "${max//[0-9]}" ] && {
+  if ! is_int "${min}" || ! is_int "${max}"; then
 	echo "$(eval_gettext "rule=[\${rule}], min=[\${min}] or max=[\${max}] is not interger")"
 	return ${STATE_FAIL}
-  }
+  fi
 
   [ -z "${input//[ ]}" ] && {
 	result="$(gettext "NULL")"

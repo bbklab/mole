@@ -45,18 +45,10 @@ smtp_timeout=$(read_mole_config sendmail timeout)
 
 
 # if null or invalid set default.
-[ -z "${post_server_port}" -o ! -z "${post_server_port//[0-9]}" ] && {
-        post_server_port="8548"
-}
-[ -z "${post_timeout}" -o ! -z "${post_timeout//[0-9]}" ] && {
-        post_timeout="10"
-}
-[ -z "${smtp_server_port}" -o ! -z "${smtp_server_port//[0-9]}" ] && {
-	smtp_server_port="25"
-}
-[ -z "${smtp_timeout}" -o ! -z "$smtp_timeout//[0-9]}" ] && {
-	smtp_timeout="10"
-}
+is_int "${post_server_port}" || post_server_port="8548"
+is_int "${post_timeout}" || post_timeout="10"
+is_int "${smtp_server_port}" || smtp_server_port="25"
+is_int "${smtp_timeout}" || smtp_timeout="10"
 
 # check function here
 check() {
