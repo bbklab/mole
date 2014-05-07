@@ -344,7 +344,7 @@ unless (defined $sock) {
 sub help(){
 print <<HELP;
 
-Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -d
+Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -d
 type:    post,  plugin,  config,  heartbeat
 
 HELP
