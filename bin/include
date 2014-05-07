@@ -2438,92 +2438,93 @@ check_runlock_on_pid_exist() {
   return 5 	### condition: 5
 }
 
+
+# List single plugin status and scheduling information
+# Usage:	list_single_plugin_status  {plugin_name1}
+# Example:	list_single_plugin_status  sysload 
+#
+list_single_plugin_status() {
+  local _p=$1 enable= running= starttime= durationtime= lastruntime= frequency= nextruntime= repeaterrnum=
+  local lastruntime=$(get_lastrun "${_p}")
+  local frequency=$(get_frequency "${_p}")
+  local nextruntime=$(get_nextrun "${_p}")
+  local repeaterrnum=$(get_repeat_errcount "${_p}")
+
+  if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
+	enable="yes"
+  else
+	enable=$(get_enable "${_p}")
+  fi
+
+  if is_int "${lastruntime}"; then
+	lastruntime=$(date -d "1970-01-01 UTC ${lastruntime} seconds" +%F_%T)
+  else
+	[ "${lastruntime}" == "never_run" ] && {
+		lastruntime="Never_Run"
+	} || {
+		[ "${lastruntime}" == "invalid_lastrun" ] && {
+			lastruntime="Internal_Error"
+		} || {
+			lastruntime="Unknown"
+		}
+	}
+  fi
+
+  if is_int "${nextruntime}"; then
+	nextruntime=$(date -d "1970-01-01 UTC ${nextruntime} seconds" +%F_%T)
+  else
+	[ "${nextruntime}" == "null" ] && {
+		nextruntime="NULL"
+	} || {
+		[ "${nextruntime}" == "invalid_nextrun" ] && {
+			nextruntime="Internal_Error"
+		} || {
+			nextruntime="Unknown"
+		}
+	}
+  fi
+
+  [ "${enable}" == "yes" ] && {
+	enable="Yes"
+  } || {
+	enable="No" 
+	nextruntime="-"
+  }
+
+  local lockinfo=$(check_lock $_p)
+  if is_int "${lockinfo}"; then
+	running="Yes"
+	starttime=$(date -d "1970-01-01 UTC ${lockinfo} seconds" +%F_%T)
+	durationtime="$( echo "$(date +%s) - ${lockinfo}" | bc 2>&- )s"
+  else
+	running="No"
+	starttime="-"
+	durationtime="-"
+  fi
+
+  echo "$_p ${enable} ${running} ${starttime} ${durationtime} ${lastruntime} ${frequency} ${nextruntime} ${repeaterrnum}"
+}
+
 # List plugin status and scheduling information
-#   		include: enable status starttime durationtime lastruntime frequency nextruntime repeaterrnum
-# Usage:	list_plugin_status  [ plugin_name1 plugin_name2 plugin_name3 ... ]    
+# Usage:	list_plugin_status  plugin_name1 plugin_name2 plugin_name3 ...
 # Example1:	list_plugin_status  check_sysload  check_cpu_usage
 # Example2:	list_plugin_status  all
 #
 list_plugin_status() {
   local plugin_name="$*"
   local headline="Plugin Enable Running StartOn Duration LastRun Frequency NextRun RepeatErr"
-  list_single_status() {
-	local _p=$1 enable= running= starttime= durationtime= lastruntime= frequency= nextruntime= repeaterrnum=
-	local lastruntime=$(get_lastrun $_p) 
-    	local frequency=$(get_frequency $_p)
-	local nextruntime=$(get_nextrun $_p)
-	local repeaterrnum=$(get_repeat_errcount "${_p}")
-
-	if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
-		enable="yes"
-	else
-		enable=$(get_enable "${_p}")
-        fi
-
-	if is_int "${lastruntime}"; then
-		lastruntime=$(date -d "1970-01-01 UTC ${lastruntime} seconds" +%F_%T)
-	else
-		[ "${lastruntime}" == "never_run" ] && {
-			lastruntime="Never_Run"
-		} || {
-			[ "${lastruntime}" == "invalid_lastrun" ] && {
-				lastruntime="Internal_Error"
-			} || {
-				lastruntime="Unknown"
-			}
-		}
-	fi
-
-	if is_int "${nextruntime}"; then
-		nextruntime=$(date -d "1970-01-01 UTC ${nextruntime} seconds" +%F_%T)
-	else
-		[ "${nextruntime}" == "null" ] && {
-			nextruntime="NULL"
-		} || {
-			[ "${nextruntime}" == "invalid_nextrun" ] && {
-				nextruntime="Internal_Error"
-			} || {
-				nextruntime="Unknown"
-			}
-		}
-	fi
-
- 	[ "${enable}" == "yes" ] && {
-		enable="Yes"
-	} || {
-		enable="No" 
-		nextruntime="-"
-	}
-
-	local lockinfo=$(check_lock $_p)
-	if is_int "${lockinfo}"; then
-		running="Yes"
-		starttime=$(date -d "1970-01-01 UTC ${lockinfo} seconds" +%F_%T)
-		durationtime="$( echo "$(date +%s) - ${lockinfo}" | bc 2>&- )s"
-	else
-		running="No"
-		starttime="-"
-		durationtime="-"
-	fi
-
-	echo "$_p ${enable} ${running} ${starttime} ${durationtime} ${lastruntime} ${frequency} ${nextruntime} ${repeaterrnum}"
-	# echo "p=$_p e=${enable} r=${running} s=${starttime} d=${durationtime} l=${lastruntime} f=${frequency} n=${nextruntime} r=${repeaterrnum}"
-	
-	
-  }
-
   if [ "${plugin_name}" == "all" ]; then
 		{  echo "${headline}"
 		for p in `list_plugin_section`
 		do
-			list_single_status "${p}"
+			list_single_plugin_status "${p}"
 		done 
 		} | column -t 
   else
 		{ echo "${headline}" 
 		for o in `echo "${plugin_name}"`
 		do
-			list_single_status "${o}" 
+			list_single_plugin_status "${o}" 
 		done
 		} | column -t
   fi
