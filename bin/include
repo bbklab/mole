@@ -484,6 +484,8 @@ get_kidsnum() {
 #   2. headline of file like  [plugin-name]
 #   3. filesize must less than 1048576 bytes.(1M)
 #   4. filetype must be like Text
+#   5. plugin-name length less than 64
+#   6. plugin-name only allowed chars: [a-zA-Z0-9_-]
 # Output:  plugin-name | no  (blank space will be trimed)
 # Example:  is_plugin_conifgfile "/dev/mcelog"
 # Example:  is_plugin_configfile "/etc/abc.ini"
@@ -508,7 +510,13 @@ is_plugin_configfile(){
   		elif [ "${pname}" != "${hname}" ]; then
 			result="no"
   		else
-			result="${pname}"
+			if ! is_between "${#pname}" 0 64; then
+				result="no"
+			elif [ -n "${pname//[a-zA-Z0-9_-]}" ]; then
+				result="no"
+			else
+				result="${pname}"
+			fi
 		fi
 	fi
   fi
