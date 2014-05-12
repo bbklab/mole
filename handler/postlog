@@ -38,6 +38,7 @@ use IO::Socket::INET;
 use Benchmark ':hireswallclock';
 use JSON;
 use Time::HiRes;
+use Digest::MD5 qw(md5_hex);
 # use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
@@ -379,6 +380,14 @@ sub parted_output {
   if($8 && $part eq '6') { $result = $8; };
   $result =~ s/\A\s+//g if ($result);   # trim head \s
   return ($result);
+}
+
+sub unique_digest {
+        my @chars = (0..9,'a'..'z','A'..'Z','#','(',')','=','-','+','_','@');
+        my $rand = join "", map{ $chars[int rand @chars] } 0..14;
+        my $unique_str = $rand.time();
+        my $result = Digest::MD5::md5_hex($unique_str);
+        return ($result);
 }
 
 sub filter_html {
@@ -1180,7 +1189,7 @@ sub genjson_heartbeat() {
   &log("INFO: $logfrom set hname=[$hname]") if $debug;
 
   # set job
-  my @raw_job = ('00000000000000000000000000000000',time());
+  my @raw_job = (&unique_digest,time());
   $result{'job'} = \@raw_job;
   &log("DEBUG: $logfrom set job=[[@raw_job]]") if $debug;
 
