@@ -277,8 +277,8 @@ status(){
   	rc=$?
   	if [ "$rc" == "0" ]; then
 		local pid=$(get_pid "${fpid}")
-		local pstree=$(pstree "${pid}")
-		printf "${disname} %-${len}s $(echo_green "running") ${pid} ${pstree}"
+		local psname=$(ps -p "${pid}" -o comm=)
+		printf "${disname} %-${len}s $(echo_green "running") ${pid} ${psname}"
   	elif [ "$rc" == "1" ]; then
 		printf "${disname} %-${len}s $(echo_red "dead")"
   	elif [ "$rc" == "2" ]; then
