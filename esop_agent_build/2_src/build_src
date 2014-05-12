@@ -32,6 +32,7 @@ PL_MODS=(
   	"JSON-2.90.tar.gz" 			"JSON-2.90"
   	"libintl-perl-1.23.tar.gz"  		"libintl-perl-1.23"
   	"Time-HiRes-1.9726.tar.gz"		"Time-HiRes-1.9726"
+	"Net-SNMP-v6.0.1.tar.gz"		"Net-SNMP-v6.0.1"
 )
 
 # MOLE Def	< our dev codes >
