@@ -37,7 +37,11 @@ agent of esop
 cat << \EOF > %{_builddir}/%{name}-plreq
 #!/bin/sh
 %{__perl_requires} $* |\
-sed -e '/perl(JSON::backportPP)/d'
+sed -e '/perl(JSON::backportPP)/d' |\
+sed -e '/perl(Crypt::DES)/d' |\
+sed -e '/perl(Digest::HMAC)/d' |\
+sed -e '/perl(Digest::SHA1)/d' |\
+sed -e '/perl(Socket6)/d'
 EOF
 %define __perl_requires %{_builddir}/%{name}-plreq
 chmod 755 %{__perl_requires}
