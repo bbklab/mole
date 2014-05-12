@@ -37,18 +37,21 @@ CONTENT=        ### { strings | /path/to/result.file }
 
 # check function here
 check() {
-  ${POSTLOG_SH} -t heartbeat >/dev/null 2>&1
+
+  local jobid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
+
+  ${POSTLOG_SH} -t heartbeat -j "${jobid}" >/dev/null 2>&1
   rc=$?
   if [ "$rc" == "0" ]; then
 	EXIT_STATUS="${STATE_OK}"
 	LEVEL="ok"
 	TYPE="str"
-	CONTENT=" post heartbeat succeed | post mole heartbeat return ${rc}"
+	CONTENT=" post heartbeat succeed | post mole heartbeat return ${rc} | heartbeat jobid: ${jobid} "
   else
 	EXIT_STATUS="${STATE_WARNING}"
 	LEVEL="warn"
 	TYPE="str"
-	CONTENT=" post heartbeat failed | post mole heartbeat return ${rc}"
+	CONTENT=" post heartbeat failed | post mole heartbeat return ${rc} | heartbeat jobid: ${jobid} "
   fi
 }
 

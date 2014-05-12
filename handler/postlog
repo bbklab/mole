@@ -38,7 +38,6 @@ use IO::Socket::INET;
 use Benchmark ':hireswallclock';
 use JSON;
 use Time::HiRes;
-use Digest::MD5 qw(md5_hex);
 # use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
@@ -159,7 +158,16 @@ if ($type eq 'post') {
 } elsif ($type eq 'config') {
   $logfrom = 'AGENT.CONFIG';
 } elsif ($type eq 'heartbeat') {
-  $logfrom = 'AGENT.HEARTBEAT';
+  unless (defined $jobid) {
+	&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
+	print "jobid required on type=heartbeat\n";
+	&help;
+	exit 1;
+  } else {
+	# reset logfrom
+  	$logfrom = 'AGENT.HEARTBEAT'.'.'.$jobid;
+	&log("INFO: $logfrom type is [heartbeat]");
+  }
 }
 
 # log start
@@ -227,7 +235,7 @@ if ($type eq 'post') {
 } elsif ($type eq 'config') {
   %json_data = &genjson_config;
 } elsif ($type eq 'heartbeat') {
-  %json_data = &genjson_heartbeat;
+  %json_data = &genjson_heartbeat($jobid);
 } 
 
 $json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
@@ -347,6 +355,7 @@ print <<HELP;
 
 Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -d
 type:    post,  plugin,  config,  heartbeat
+note:	 jobid required on type is post/plugin
 
 HELP
 }
@@ -380,14 +389,6 @@ sub parted_output {
   if($8 && $part eq '6') { $result = $8; };
   $result =~ s/\A\s+//g if ($result);   # trim head \s
   return ($result);
-}
-
-sub unique_digest {
-        my @chars = (0..9,'a'..'z','A'..'Z','#','(',')','=','-','+','_','@');
-        my $rand = join "", map{ $chars[int rand @chars] } 0..14;
-        my $unique_str = $rand.time();
-        my $result = Digest::MD5::md5_hex($unique_str);
-        return ($result);
 }
 
 sub filter_html {
@@ -1174,6 +1175,9 @@ sub genjson_config() {
 }
 
 sub genjson_heartbeat() {
+
+  my ($jobid) = @_;
+
   my %result = (
         'type'                  => 'noop',
         'parter_id'             => $parter_id,
@@ -1189,7 +1193,7 @@ sub genjson_heartbeat() {
   &log("INFO: $logfrom set hname=[$hname]") if $debug;
 
   # set job
-  my @raw_job = (&unique_digest,time());
+  my @raw_job = ($jobid,time());
   $result{'job'} = \@raw_job;
   &log("DEBUG: $logfrom set job=[[@raw_job]]") if $debug;
 
