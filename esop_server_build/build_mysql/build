@@ -1,0 +1,89 @@
+#!/bin/bash
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### Global Vars Def
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOG_DIR="${BASE_DIR}/logs"
+LOGFILE="${BASE_DIR}/logs/${0##*/}.log"
+
+PATH_TARBALL="${BASE_DIR}/opt/balls"
+PATH_EXTRACT="${BASE_DIR}/opt/extract"
+
+PATH_ESOP="/usr/local/eyou/toolmail"
+
+PATH_INSTALL="${PATH_ESOP}/opt"
+
+[ "$1" == "clean" ] && {
+   rm -rf "${PATH_EXTRACT}"
+   exit 0
+}
+
+# Command Def
+CMD_UNTAR_GZ="tar -zxf"
+
+
+OS_BIT=$(getconf LONG_BIT 2>&-)
+[ -z "${OS_BIT}" -o ! -z "${OS_BIT//[0-9]}" ] && OS_BIT="32"
+
+
+
+# Global Func Def
+
+# - check_rc
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+
+# Build Func Def
+
+
+# -- build_mysql
+build_mysql() {
+  if [ "$OS_BIT" == "64" ]; then
+        local filename="mysql-5.6.12-linux-glibc2.5-x86_64.tar.gz" dirname="mysql-5.6.12-linux-glibc2.5-x86_64"
+  else
+        local filename="mysql-5.6.12-linux-glibc2.5-i686.tar.gz"  dirname="mysql-5.6.12-linux-glibc2.5-i686"
+  fi
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+
+  cp -a $PATH_EXTRACT/$dirname $PATH_INSTALL/mysql
+  check_rc "copy $dirname as mysql"
+
+  if [ "$OS_BIT" == "64" ]; then
+        cd $PATH_INSTALL/mysql
+        check_rc "change into mysql"
+
+        ln -s lib lib64
+        check_rc "create lib64 link"
+  fi
+}
+
+### Main Body Begin ...
+
+echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
+
+if [ -d "${PATH_ESOP}" ]; then
+  rm -rf "${PATH_ESOP}"
+  check_rc "remove ${PATH_ESOP}"
+fi
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
+mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}"
+
+
+build_mysql
+
+
+echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE

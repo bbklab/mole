@@ -191,42 +191,6 @@ build_libevent() {	# by pecl_event, php54
   check_rc "install $filename"
 }
 
-# -- build_mysql
-build_mysql() {
-  if [ "$OS_BIT" == "64" ]; then
-        local filename="mysql-5.6.12-linux-glibc2.5-x86_64.tar.gz" dirname="mysql-5.6.12-linux-glibc2.5-x86_64"
-  else
-        local filename="mysql-5.6.12-linux-glibc2.5-i686.tar.gz"  dirname="mysql-5.6.12-linux-glibc2.5-i686"
-  fi
-
-  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
-
-  cp -a $PATH_EXTRACT/$dirname $PATH_INSTALL/mysql
-  check_rc "copy $dirname as mysql"
-
-  if [ "$OS_BIT" == "64" ]; then
-        cd $PATH_INSTALL/mysql
-        check_rc "change into mysql"
-
-        ln -s lib lib64
-        check_rc "create lib64 link"
-  fi
-}
-
-# -- build_redis
-build_redis() {
-  local filename="redis-2.6.16.tar.gz"  dirname="redis-2.6.16"
-
-  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
-  cd $PATH_EXTRACT/$dirname
-
-  $CMD_MAKE
-  check_rc "make $filename"
-
-  PREFIX=$PATH_INSTALL $CMD_MAKE install
-  check_rc "install $filename"
-}
-
 # -- build_httpd
 build_httpd() {
   local filename="httpd-2.2.25.tar.gz"  dirname="httpd-2.2.25"
@@ -588,8 +552,6 @@ build_cronolog
 build_libiconv
 build_curl
 build_libevent
-build_mysql
-build_redis
 build_httpd
 
 build_php54
