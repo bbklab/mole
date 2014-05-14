@@ -52,10 +52,12 @@ build_mysql() {
         local filename="mysql-5.6.12-linux-glibc2.5-i686.tar.gz"  dirname="mysql-5.6.12-linux-glibc2.5-i686"
   fi
 
+  echo "extracting $filename to $PATH_EXTRACT ..."
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  check_rc "extract $filename to $PATH_EXTRACT"
 
   cp -a $PATH_EXTRACT/$dirname $PATH_INSTALL/mysql
-  check_rc "copy $dirname as mysql"
+  check_rc "copy $dirname as $PATH_INSTALL/mysql"
 
   if [ "$OS_BIT" == "64" ]; then
         cd $PATH_INSTALL/mysql
@@ -80,7 +82,7 @@ if [ -d "${PATH_EXTRACT}" ]; then
   check_rc "remove ${PATH_EXTRACT}"
 fi
 
-mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}"
+mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_INSTALL}"
 
 
 build_mysql
