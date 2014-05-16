@@ -61,7 +61,7 @@ init_db() {
 	check_rc "chaning directory into ${PATH_MYSQL}"
 
 	/bin/chown -R eyou:eyou ${MYSQL_DATA} ${PATH_LOG} ${PATH_RUN}
-	check_rc "change ower/group as eyou:eyou for ${MYSQL_DATA}" 
+	check_rc "change ower/group as eyou:eyou for ${MYSQL_DATA} ${PATH_LOG} ${PATH_RUN}" 
 
 	${SUDO} ./scripts/mysql_install_db --defaults-file=${MYSQL_CONF} --datadir=${MYSQL_DATA} >> $LOGFILE 2>&1
 	check_rc "init install mysql db to ${MYSQL_DATA}"

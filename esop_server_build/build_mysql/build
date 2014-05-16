@@ -65,13 +65,13 @@ build_mysql() {
   check_rc "create directory etc/mysql app/sbin data/mysql log run"
 
   cp -fL $PATH_TARBALL/etc/mysql/my.cnf $PATH_ESOP/etc/mysql
-  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
+  check_rc "copy etc/mysql/my.cnf to ${PATH_ESOP}/etc/mysql"
 
   cp -fL $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
-  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
+  check_rc "copy etc/etm_init_config to ${PATH_ESOP}/etc"
 
   cp -fL $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
-  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
+  check_rc "copy app/sbin/eyou_toolmail to ${PATH_ESOP}/app/sbin"
 
   if [ "$OS_BIT" == "64" ]; then
         cd $PATH_OPT/mysql
