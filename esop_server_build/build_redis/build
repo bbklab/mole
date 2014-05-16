@@ -12,7 +12,7 @@ PATH_EXTRACT="${BASE_DIR}/opt/extract"
 
 PATH_ESOP="/usr/local/eyou/toolmail"
 
-PATH_INSTALL="${PATH_ESOP}/opt"
+PATH_OPT="${PATH_ESOP}/opt"
 
 
 
@@ -54,14 +54,14 @@ build_redis() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $CMD_MAKE
+  $CMD_MAKE >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  PREFIX=$PATH_INSTALL $CMD_MAKE install
+  PREFIX=$PATH_OPT $CMD_MAKE install >> $LOGFILE 2>&1
   check_rc "install $filename"
 
-  mkdir -p $PATH_ESOP/etc/redis $PATH_ESOP/app/sbin $PATH_ESOP/data/redis $PATH_ESOP/log $PATH_ESOP/run
-  check_rc "create directory etc/mysql app/sbin data/mysql log run"
+  mkdir -p $PATH_ESOP/etc/redis $PATH_ESOP/app/sbin $PATH_ESOP/data/redis $PATH_ESOP/log/redis $PATH_ESOP/run
+  check_rc "create directory etc/mysql app/sbin data/mysql log/redis run"
 
   cp -fL $PATH_TARBALL/etc/redis/etm_redis.conf  $PATH_ESOP/etc/redis
   check_rc "copy etc/redis/etm_redis.conf to $PATH_ESOP/etc/redis"

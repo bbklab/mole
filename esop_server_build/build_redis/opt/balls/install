@@ -12,18 +12,11 @@ FILEDIR="${BASE_DIR}/files"
 PATH_ESOP="/usr/local/eyou/toolmail"
 PATH_LOG="${PATH_ESOP}/log"
 PATH_RUN="${PATH_ESOP}/run"
-PATH_APP="${PATH_ESOP}/app"
-PATH_SBIN="${PATH_APP}/sbin"
 REDIS_DATA="${PATH_ESOP}/data/redis"
 
-# FILE DEF
-INIT_SH="${PATH_SBIN}/eyou_toolmail"
-
+# USER DEF
 USER="eyou"
 USERID="12037"
-
-# SUDO DEF
-SUDO="sudo -u ${USER}"
 
 
 # Global Func Def
