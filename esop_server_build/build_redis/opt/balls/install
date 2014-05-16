@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### GLOBAL DEF
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOGFILE="${BASE_DIR}/${0##*/}.log"
+FILEDIR="${BASE_DIR}/files"
+
+# DIR DEF
+PATH_ESOP="/usr/local/eyou/toolmail"
+PATH_LOG="${PATH_ESOP}/log"
+PATH_RUN="${PATH_ESOP}/run"
+PATH_APP="${PATH_ESOP}/app"
+PATH_SBIN="${PATH_APP}/sbin"
+REDIS_DATA="${PATH_ESOP}/data/redis"
+
+# FILE DEF
+INIT_SH="${PATH_SBIN}/eyou_toolmail"
+
+USER="eyou"
+USERID="12037"
+
+# SUDO DEF
+SUDO="sudo -u ${USER}"
+
+
+# Global Func Def
+
+# - check_rc
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+# create system user
+add_user() {
+	if id ${USER} >/dev/null 2>&1; then
+		check_rc "no need to add system user ($USER)"
+	else
+        	useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1
+		check_rc "add system user $USER($USERID)"
+	fi
+}
+
+chown_path() {
+	/bin/chown -R eyou:eyou ${REDIS_DATA} ${PATH_LOG} ${PATH_RUN}
+	check_rc "change ower/group as eyou:eyou for ${REDIS_DATA} ${PATH_LOG} ${PATH_RUN}"
+}
+
+### Main Body Begin
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi 
+
+if [ -d ${PATH_ESOP} ]; then
+  echo " ${PATH_ESOP} already exist! rename or remove it! " | tee -a $LOGFILE
+  exit 1
+else
+  /bin/mkdir -p ${PATH_ESOP}
+  check_rc "create directory ${PATH_ESOP}"
+
+  /bin/cp -a $FILEDIR/* ${PATH_ESOP}
+  check_rc "copy files to ${PATH_ESOP}"
+fi
+
+
+add_user
+chown_path

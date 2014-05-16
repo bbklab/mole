@@ -59,11 +59,52 @@ build_redis() {
 
   PREFIX=$PATH_INSTALL $CMD_MAKE install
   check_rc "install $filename"
+
+  mkdir -p $PATH_ESOP/etc/redis $PATH_ESOP/app/sbin $PATH_ESOP/data/redis $PATH_ESOP/log $PATH_ESOP/run
+  check_rc "create directory etc/mysql app/sbin data/mysql log run"
+
+  cp -fL $PATH_TARBALL/etc/redis/etm_redis.conf  $PATH_ESOP/etc/redis
+  check_rc "copy etc/redis/etm_redis.conf to $PATH_ESOP/etc/redis"
+
+  cp -fL $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
+  check_rc "copy etc/etm_init_config to ${PATH_ESOP}/etc"
+
+  cp -fL $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
+  check_rc "copy app/sbin/eyou_toolmail to ${PATH_ESOP}/app/sbin"
 }
 
 
+# -- make_tarball 
+make_tarball() {
+
+  local tar_createdir="$BASE_DIR/esop_redis"
+  local tar_filename="esop_redis.tar.gz"
+
+  mkdir -p $tar_createdir/files
+  check_rc "create local $tar_createdir/files"
+  
+  cp -a ${PATH_ESOP}/*  $tar_createdir/files
+  check_rc "copy $PATH_ESOP to local $tar_createdir/files"
+
+  cp -a $PATH_TARBALL/install $tar_createdir
+  check_rc "copy $PATH_TARBALL/install  to local $tar_createdir/"
+
+  cd $BASE_DIR
+  check_rc "changing into $BASE_DIR"
+
+  tar -czf $tar_filename ${tar_createdir##*/}
+  check_rc "make tarball on $tar_createdir for $BASE_DIR/$tar_filename"
+
+  rm -rf $tar_createdir
+  check_rc "remove $tar_createdir"
+}
 
 ### Main Body Begin ...
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi
 
 echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
 
@@ -77,10 +118,11 @@ if [ -d "${PATH_EXTRACT}" ]; then
   check_rc "remove ${PATH_EXTRACT}"
 fi
 
-mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}"
+mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_OPT}"
 
 
 build_redis
+make_tarball
 
 
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
