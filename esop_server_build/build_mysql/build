@@ -58,19 +58,19 @@ build_mysql() {
   cp -a $PATH_EXTRACT/$dirname $PATH_OPT/mysql
   check_rc "copy $dirname as $PATH_OPT/mysql"
 
-  cp -a $PATH_TARBALL/tmp_install ${PATH_ESOP}
+  cp -rL $PATH_TARBALL/tmp_install ${PATH_ESOP}
   check_rc "copy tmp_install to ${PATH_ESOP}"
 
-  mkdir -p $PATH_ESOP/etc/mysql $PATH_ESOP/app/sbin $PATH_ESOP/data/mysql
-  check_rc "create directory etc app/sbin data/mysql"
+  mkdir -p $PATH_ESOP/etc/mysql $PATH_ESOP/app/sbin $PATH_ESOP/data/mysql $PATH_ESOP/log
+  check_rc "create directory etc/mysql app/sbin data/mysql log"
 
-  cp -a $PATH_TARBALL/etc/mysql/my.cnf $PATH_ESOP/etc/mysql
+  cp -fL $PATH_TARBALL/etc/mysql/my.cnf $PATH_ESOP/etc/mysql
   check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
-  cp -a $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
+  cp -fL $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
   check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
-  cp -a $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
+  cp -fL $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
   check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
   if [ "$OS_BIT" == "64" ]; then
@@ -91,7 +91,7 @@ make_tarball() {
   mkdir -p $tar_createdir/files
   check_rc "create local $tar_createdir/files"
   
-  cp -a "${PATH_ESOP}"  $tar_createdir/files
+  cp -a ${PATH_ESOP}/*  $tar_createdir/files
   check_rc "copy $PATH_ESOP to local $tar_createdir/files"
 
   cp -a $PATH_TARBALL/install $tar_createdir
@@ -100,7 +100,7 @@ make_tarball() {
   cd $BASE_DIR
   check_rc "changing into $BASE_DIR"
 
-  tar -czf $tar_filename $tar_createdir
+  tar -czf $tar_filename ${tar_createdir##*/}
   check_rc "make tarball on $tar_createdir for $BASE_DIR/$tar_filename"
 
   rm -rf $tar_createdir
@@ -108,6 +108,11 @@ make_tarball() {
 }
 
 ### Main Body Begin ...
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi
 
 echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
 
