@@ -10,7 +10,6 @@ FILEDIR="${BASE_DIR}/files"
 
 # DIR DEF
 PATH_ESOP="/usr/local/eyou/toolmail"
-PATH_LOG="${PATH_ESOP}/log"
 
 # Global Func Def
 
@@ -22,11 +21,6 @@ check_rc() {
         echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
         exit 1
   fi
-}
-
-chown_path() {
-	/bin/chown -R eyou:eyou ${PATH_LOG}
-	check_rc "change ower/group as eyou:eyou for ${PATH_LOG}"
 }
 
 ### Main Body Begin
@@ -46,6 +40,3 @@ else
   /bin/cp -a $FILEDIR/* ${PATH_ESOP}
   check_rc "copy files to ${PATH_ESOP}"
 fi
-
-
-chown_path

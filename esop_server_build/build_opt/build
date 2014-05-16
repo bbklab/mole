@@ -308,11 +308,6 @@ build_php54() {
   $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 
-  # create etc/php
-  mkdir -p $PATH_ESOP_ETC/php
-  cp -fL $PATH_TARBALL/etc/php/php.ini $PATH_ESOP_ETC/php/php.ini
-  check_rc "cp php.ini for $filename"
-
   # link php
   rm -f $PATH_BIN/php
   check_rc "remove old $PATH_BIN/php"
@@ -528,9 +523,18 @@ build_pear_install() {
 
     for pear in ${pear_check[@]}
     do
-        ls $PATH_PHP_LIBPHP/$pear
+        ls $PATH_PHP_LIBPHP/$pear >> $LOGFILE 2>&1
         check_rc "pear check exist $pear"
     done
+}
+
+# -- make_config
+make_config() {
+  mkdir -p $PATH_ESOP_ETC/php
+  check_rc "create $PATH_ESOP_ETC/php"
+
+  cp -fL $PATH_TARBALL/etc/php/php.ini $PATH_ESOP_ETC/php/php.ini
+  check_rc "cp php.ini for $PATH_ESOP_ETC/php/php.ini"
 }
 
 # -- make_tarball 
@@ -595,6 +599,9 @@ build_pecl_redis
 build_pecl_http
 build_pear_install
 
+[ -d "${PATH_ESOP_ETC}" ] && rm -rf "${PATH_ESOP_ETC}"
+
+make_config
 make_tarball
 
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
