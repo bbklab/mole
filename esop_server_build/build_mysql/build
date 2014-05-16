@@ -61,8 +61,8 @@ build_mysql() {
   cp -rL $PATH_TARBALL/tmp_install ${PATH_ESOP}
   check_rc "copy tmp_install to ${PATH_ESOP}"
 
-  mkdir -p $PATH_ESOP/etc/mysql $PATH_ESOP/app/sbin $PATH_ESOP/data/mysql $PATH_ESOP/log
-  check_rc "create directory etc/mysql app/sbin data/mysql log"
+  mkdir -p $PATH_ESOP/etc/mysql $PATH_ESOP/app/sbin $PATH_ESOP/data/mysql $PATH_ESOP/log $PATH_ESOP/run
+  check_rc "create directory etc/mysql app/sbin data/mysql log run"
 
   cp -fL $PATH_TARBALL/etc/mysql/my.cnf $PATH_ESOP/etc/mysql
   check_rc "copy etc/mysql to ${PATH_ESOP}/etc"

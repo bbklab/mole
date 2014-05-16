@@ -12,6 +12,7 @@ FILEDIR="${BASE_DIR}/files"
 PATH_ESOP="/usr/local/eyou/toolmail"
 PATH_OPT="${PATH_ESOP}/opt"
 PATH_LOG="${PATH_ESOP}/log"
+PATH_RUN="${PATH_ESOP}/run"
 PATH_MYSQL="${PATH_OPT}/mysql"
 PATH_APP="${PATH_ESOP}/app"
 PATH_SBIN="${PATH_APP}/sbin"
@@ -59,7 +60,7 @@ init_db() {
 	cd "${PATH_MYSQL}" >/dev/null 2>&1
 	check_rc "chaning directory into ${PATH_MYSQL}"
 
-	/bin/chown -R eyou:eyou ${MYSQL_DATA} ${PATH_LOG}
+	/bin/chown -R eyou:eyou ${MYSQL_DATA} ${PATH_LOG} ${PATH_RUN}
 	check_rc "change ower/group as eyou:eyou for ${MYSQL_DATA}" 
 
 	${SUDO} ./scripts/mysql_install_db --defaults-file=${MYSQL_CONF} --datadir=${MYSQL_DATA} >> $LOGFILE 2>&1
