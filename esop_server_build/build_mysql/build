@@ -11,8 +11,7 @@ PATH_TARBALL="${BASE_DIR}/opt/balls"
 PATH_EXTRACT="${BASE_DIR}/opt/extract"
 
 PATH_ESOP="/usr/local/eyou/toolmail"
-
-PATH_INSTALL="${PATH_ESOP}/opt"
+PATH_OPT="${PATH_ESOP}/opt"
 
 [ "$1" == "clean" ] && {
    rm -rf "${PATH_EXTRACT}"
@@ -56,20 +55,23 @@ build_mysql() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   check_rc "extract $filename to $PATH_EXTRACT"
 
-  cp -a $PATH_EXTRACT/$dirname $PATH_INSTALL/mysql
-  check_rc "copy $dirname as $PATH_INSTALL/mysql"
+  cp -a $PATH_EXTRACT/$dirname $PATH_OPT/mysql
+  check_rc "copy $dirname as $PATH_OPT/mysql"
 
-  mkdir -p  ${PATH_ESOP}/tmp_install/{sbin,sql}
-  check_rc "create directory ${PATH_ESOP}/tmp_install/{sbin,sql}"
+  cp -a $PATH_TARBALL/tmp_install ${PATH_ESOP}
+  check_rc "copy tmp_install to ${PATH_ESOP}"
 
-  cp -a $PATH_TARBALL/tmp_install/sbin/init_install ${PATH_ESOP}/tmp_install/sbin/
-  check_rc "copy init_install to ${PATH_ESOP}/tmp_install/sbin/"
+  mkdir -p $PATH_ESOP/etc $PATH_ESOP/app/sbin
+  check_rc "create directory ${PATH_ESOP}/etc"
 
-  cp -a $PATH_TARBALL/tmp_install/sql/*.sql ${PATH_ESOP}/tmp_install/sql/
-  check_rc "copy sql files to ${PATH_ESOP}/tmp_install/sql/"
+  mkdir -p $PATH_ESOP/data/mysql
+  check_rc "create directory ${PATH_ESOP}/data/mysql"
+
+  cp -a $PATH_TARBALL/etc_mysql $PATH_ESOP/etc
+  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
   if [ "$OS_BIT" == "64" ]; then
-        cd $PATH_INSTALL/mysql
+        cd $PATH_OPT/mysql
         check_rc "change into mysql"
 
         ln -s lib lib64
@@ -91,7 +93,7 @@ if [ -d "${PATH_EXTRACT}" ]; then
   check_rc "remove ${PATH_EXTRACT}"
 fi
 
-mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_INSTALL}"
+mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_OPT}"
 
 
 build_mysql

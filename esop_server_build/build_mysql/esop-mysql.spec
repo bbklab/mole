@@ -43,9 +43,6 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %files
 %defattr(-, root, root)
-%attr(-, eyou, eyou) /usr/local/eyou/toolmail/tmp_install/
-%attr(-, eyou, eyou) /usr/local/eyou/toolmail/etc/
-%attr(-, eyou, eyou) /usr/local/eyou/toolmail/data/mysql/
 %attr(0755, root, root) %{_initrddir}/%{name}
 /usr/local/eyou/toolmail
 
