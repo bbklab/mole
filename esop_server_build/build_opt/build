@@ -94,13 +94,13 @@ build_cronolog() {
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -124,13 +124,13 @@ build_libiconv() {      # by php54
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -155,13 +155,13 @@ build_curl() {		# by php54
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -181,13 +181,13 @@ build_libevent() {	# by pecl_event, php54
         --prefix=$PATH_INSTALL
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -234,13 +234,13 @@ build_httpd() {
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi  
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -299,22 +299,24 @@ build_php54() {
         # CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   # fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 
   # create etc/php
   mkdir -p $PATH_ESOP_ETC/php
-  cp php.ini-development $PATH_ESOP_ETC/php/php.ini
+  cp -fL $PATH_TARBALL/etc/php/php.ini $PATH_ESOP_ETC/php/php.ini
   check_rc "cp php.ini for $filename"
 
   # link php
   rm -f $PATH_BIN/php
+  check_rc "remove old $PATH_BIN/php"
+
   ln -s $PATH_PHP_BIN/php $PATH_BIN/php
   check_rc "create php link for $filename"
 }
@@ -327,7 +329,7 @@ build_pecl_event() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -343,13 +345,13 @@ build_pecl_event() {
     --with-event-libevent-dir=$PATH_INSTALL \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -364,7 +366,7 @@ build_pecl_embase() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -375,13 +377,13 @@ build_pecl_embase() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -393,7 +395,7 @@ build_pecl_dio() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -404,13 +406,13 @@ build_pecl_dio() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -422,7 +424,7 @@ build_pecl_redis() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -433,13 +435,13 @@ build_pecl_redis() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -451,7 +453,7 @@ build_pecl_http() {
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -462,13 +464,13 @@ build_pecl_http() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
 }
 
@@ -531,7 +533,38 @@ build_pear_install() {
     done
 }
 
+# -- make_tarball 
+make_tarball() {
+
+  local tar_createdir="$BASE_DIR/esop_opt"
+  local tar_filename="esop_opt.tar.gz"
+
+  mkdir -p $tar_createdir/files
+  check_rc "create local $tar_createdir/files"
+  
+  cp -a ${PATH_ESOP}/*  $tar_createdir/files
+  check_rc "copy $PATH_ESOP to local $tar_createdir/files"
+
+  cp -a $PATH_TARBALL/install $tar_createdir
+  check_rc "copy $PATH_TARBALL/install  to local $tar_createdir/"
+
+  cd $BASE_DIR
+  check_rc "changing into $BASE_DIR"
+
+  tar -czf $tar_filename ${tar_createdir##*/}
+  check_rc "make tarball on $tar_createdir for $BASE_DIR/$tar_filename"
+
+  rm -rf $tar_createdir
+  check_rc "remove $tar_createdir"
+}
+
+
 ### Main Body Begin ...
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi
 
 echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
 
@@ -560,15 +593,8 @@ build_pecl_embase
 build_pecl_dio
 build_pecl_redis
 build_pecl_http
-cat << EOF >> $PATH_ESOP_ETC/php/php.ini
-extension=event.so
-extension=embase.so
-extension=dio.so
-extension=redis.so
-extension=http.so
-EOF
 build_pear_install
 
-[ -d $PATH_ESOP_ETC ] && rm -rf $PATH_ESOP_ETC
+make_tarball
 
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE

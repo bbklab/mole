@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### GLOBAL DEF
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOGFILE="${BASE_DIR}/${0##*/}.log"
+FILEDIR="${BASE_DIR}/files"
+
+# DIR DEF
+PATH_ESOP="/usr/local/eyou/toolmail"
+PATH_LOG="${PATH_ESOP}/log"
+
+# Global Func Def
+
+# - check_rc
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+chown_path() {
+	/bin/chown -R eyou:eyou ${PATH_LOG}
+	check_rc "change ower/group as eyou:eyou for ${PATH_LOG}"
+}
+
+### Main Body Begin
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi 
+
+if [ -d ${PATH_ESOP} ]; then
+  echo " ${PATH_ESOP} already exist! rename or remove it! " | tee -a $LOGFILE
+  exit 1
+else
+  /bin/mkdir -p ${PATH_ESOP}
+  check_rc "create directory ${PATH_ESOP}"
+
+  /bin/cp -a $FILEDIR/* ${PATH_ESOP}
+  check_rc "copy files to ${PATH_ESOP}"
+fi
+
+
+chown_path
