@@ -21,8 +21,11 @@ MYSQL_CLI="${PATH_MYSQL}/bin/mysql"
 MYSQL_CONF="${PATH_ECT}/mysql/my.cnf"
 MYSQL_DATA="${PATH_ESOP}/data/mysql/"
 
+USER="eyou"
+UID="12037"
+
 # SUDO DEF
-SUDO="sudo -u eyou"
+SUDO="sudo -u ${USER}"
 
 # DATABASE DEF
 DATABASE="eyou_monitor"
@@ -48,6 +51,17 @@ else
 	echo "${MYSQL_CLI} not prepared!"
 	exit 1
 fi
+
+
+# create system user
+add_user() {
+	if id ${USER} >/dev/null 2>&1; then
+		:
+	else
+        	useradd ${USER} -m -d /usr/local/%{name}/ -u ${UID} >/dev/null 2>&1
+		check_rc "add system user $USER($UID)"
+	fi
+}
 
 # init install mysql db
 init_db() {

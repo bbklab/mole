@@ -61,13 +61,16 @@ build_mysql() {
   cp -a $PATH_TARBALL/tmp_install ${PATH_ESOP}
   check_rc "copy tmp_install to ${PATH_ESOP}"
 
-  mkdir -p $PATH_ESOP/etc $PATH_ESOP/app/sbin
-  check_rc "create directory ${PATH_ESOP}/etc"
+  mkdir -p $PATH_ESOP/etc/mysql $PATH_ESOP/app/sbin $PATH_ESOP/data/mysql
+  check_rc "create directory etc app/sbin data/mysql"
 
-  mkdir -p $PATH_ESOP/data/mysql
-  check_rc "create directory ${PATH_ESOP}/data/mysql"
+  cp -a $PATH_TARBALL/etc/mysql/my.cnf $PATH_ESOP/etc/mysql
+  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
-  cp -a $PATH_TARBALL/etc_mysql $PATH_ESOP/etc
+  cp -a $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
+  check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
+
+  cp -a $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
   check_rc "copy etc/mysql to ${PATH_ESOP}/etc"
 
   if [ "$OS_BIT" == "64" ]; then
@@ -77,6 +80,31 @@ build_mysql() {
         ln -s lib lib64
         check_rc "create lib64 link"
   fi
+}
+
+# -- make_tarball 
+make_tarball() {
+
+  local tar_createdir="$BASE_DIR/esop_mysql"
+  local tar_filename="esop_mysql.tar.gz"
+
+  mkdir -p $tar_createdir/files
+  check_rc "create local $tar_createdir/files"
+  
+  cp -a "${PATH_ESOP}"  $tar_createdir/files
+  check_rc "copy $PATH_ESOP to local $tar_createdir/files"
+
+  cp -a $PATH_TARBALL/install $tar_createdir
+  check_rc "copy $PATH_TARBALL/install  to local $tar_createdir/"
+
+  cd $BASE_DIR
+  check_rc "changing into $BASE_DIR"
+
+  tar -czf $tar_filename $tar_createdir
+  check_rc "make tarball on $tar_createdir for $BASE_DIR/$tar_filename"
+
+  rm -rf $tar_createdir
+  check_rc "remove $tar_createdir"
 }
 
 ### Main Body Begin ...
@@ -97,6 +125,7 @@ mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_OPT}"
 
 
 build_mysql
+make_tarball
 
 
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
