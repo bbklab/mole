@@ -87,7 +87,12 @@ USERID="12037"
 if id ${USER} >/dev/null 2>&1; then
 	:
 else
-	useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1
+	if useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1; then
+		:
+	else
+		echo -e "\033[1;31mcreate system user ${USER}(${USERID}) failed!\033[0m\n" 
+		exit 1		# exit with non-zero so rpm installation progress won't continue.
+	fi
 fi
 :
 
@@ -95,27 +100,18 @@ fi
 # init mole id
 /bin/bash /usr/local/%{name}/agent/mole/bin/setinit rpminit
 
-# restore original mole configs, init all plugin configs
+# init all basic plugins' configs
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
 
-# register as linux startups
+# register as linux system startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
 /sbin/chkconfig --level 345 %{name} on >/dev/null 2>&1
 
 # create symbolic link for esop,mole
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /bin/%{name} >/dev/null 2>&1
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /bin/mole >/dev/null 2>&1
-if [ -L /usr/bin/mole ]; then
-	rm -f /usr/bin/mole 2>&-
-fi
-if [ -L /usr/bin/%{name} ]; then
-	rm -f /usr/bin/%{name} 2>&-
-fi
 
-# clear remembered command caches
-hash -r >/dev/null 2>&1
-
-# clear old tmp status file
+# clear old tmp status file if exists
 if [ -f "/usr/local/esop/agent/mole/tmp/.status.dat" ]; then
 	rm -f "/usr/local/esop/agent/mole/tmp/.status.dat" 2>&-
 fi
@@ -144,42 +140,7 @@ fi
 :
 
 %changelog
-* Mon Apr 28 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布: 1.0.1 版本
-- 新增: mole新增参数config-clear, 可以清空某个插件配置段的指定配置项的值
-- 新增: mole新增参数setinit view/reset, 可以查看和重置(慎重)实例的标识信息
-- 新增: 调整提醒信模板, 正文中加入事件编号和主机名称字段, 加宽级别的显示
-- 新增: 根据系统中的网卡名调整网卡的优先级, 自动调整插件traffic的自动化配置参数
-- 修正: 操作系统root环境变量LC_ALL=C时, bash和perl的gettext功能失效的问题
-- 修正: mole因为MIS00000事件退出DAEMON的时候, 做必要的清理工作
-- 修正: 定期定大小回滚Proxy日志, 并定期清理过期的Proxy回滚文件
-- 修正: 兼容13个亿邮邮件版本的进程检查判断(5.0.4rc4 - 8.1.0.4)
-- 修正: 调整disk_iostat插件的输出, 将不存在或未挂载的设备作为异常输出而不是自动忽略
-- 调整: 优化rpm %preun 阶段的预置动作, 区分旧包的升级和卸载
-- 调整: 自动化配置时, 上调部分内置插件的阈值和maxerr_times, 减少不必要的告警通知
-- 调整: 将sysstat打入安装包内, 去除sysstat的依赖关系, 并输出UTIL_IOSTAT/UTIL_MPSTAT
-- 调整: sysload,emp_mailqueue等插件的结果输出, 添加颜色输出到正文使结果更醒目
-- 调整: 对部分内置插件自定义配置的非法值不再自动取默认值, 而是直接返回UNKNOWN
-- 调整: 当主机ID,客户ID,主机名称为空时,不再取默认值上报,而是终止上报并记录日志
-* Wed Apr  9 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布: 1.0-beta2 版本
-- 新增: 两个自带基础插件: process, disk_iostat, 自带基础插件增加至14个
-- 新增: DAEMON运行定期检查目录文件完整性, 文件丢失则自动退出, 事件标志:MIS00000
-- 新增: rpm安装后自动化配置插件参数, 根据eYou邮件8版的配置和系统配置自动调整和激活插件参数
-- 新增: rpm安装后自动恢复旧版MOLE的部分(10个)全局配置, 启动新版后不需再重新配置填写
-- 修正: rpm包的依赖关系, 新增sysstat,redhat-lsb依赖, 将gmp打入包内, 去除gmp依赖
-- 修正: 插件配置maxerr_times大于1时偶尔误发"恢复"(recovery)类型邮件的问题
-- 调整: 上报地址和发邮件地址统一为 mole.eyousop.com, 端口分别为8538,5210
-- 调整: 若干插件的结果输出, 使更方便阅读和理解: disk_fs,memory,sysload,traffic,tcp_conn
-- 调整: 增强函数文件中的若干函数: is_sub, read_mole_config, init_plugin
-* Wed Mar 19 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布: 1.0-beta1 版本
-- 新增: 重启proxy时增加em_dynamic_config刷新配置的动作
-- 新增: 首次启动mole初始化的时候, 对用户输入的服务器角色, 客户ID做合法性检查
-- 新增: 对插件返回结果进行安全性过滤, 过滤部分有安全风险的HTML字符
-- 新增: 添加"恢复"(recovery)事件的响应, 包括发信,上报,快照,自动响应处理等配置
-- 新增: 基础插件disk_fs增加参数exclude, 允许跳过某些设备或挂载点的检查或测试
-- 修正: mole的DAEMON启动流程标准化
-- 调整: mole发送的信件套用HTML模板来生成
-* Mon Mar  3 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 发布: 1.0-rc1 版本
+* Fri May 16 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+- 发布: 正式版 1.0.1
+- 新增: 插件调度主程序(mole)和14个基础运维插件
+- 新增: 增加客户端数据上报代理通道功能(proxy)
