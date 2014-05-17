@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+basedir="$(cd $(dirname $0); pwd)"
+
+array=(
+  mysql
+  redis
+  opt
+  api
+  web
+)
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi
+
+for((i=0;i<${#array[*]};i++))
+do
+	dirname="build_${array[$i]}"
+	if [ -d $dirname ]; then
+		if cd $dirname >/dev/null 2>&1; then
+			echo -e "\n\nchanged into $dirname, begin to build ${array[$i]} ...\n\n"
+			./build; wait;
+			filename="esop_${array[$i]}.tar.gz"
+			if [ -f "${filename}" ]; then
+				echo -e "\n\nbuild succeed! $dirname/$filename"
+				if /bin/mv -f $filename /tmp/ >/dev/null 2>&1; then
+					echo "publish succeed! /tmp/$filename"
+				else
+					echo "publish failed to /tmp/$filename"
+				fi
+			else
+				echo -e "\n\nbuild failed for $dirname/$filename"
+			fi
+		else
+			echo -e "\n\nchanging into $dirname failed!\n\n"
+		fi
+
+		cd $basedir
+	else
+		echo "directory $dirname not prepared!"
+	fi
+done
