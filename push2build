@@ -14,61 +14,54 @@ check_rc() {
 
 
 ### Main Body Begin ...
-if [ "$1" == "server" -o "$1" == "2" ]; then
-  filename="${basedir}/esop_server_build/2_src/init/init_install"
-  specfile="${basedir}/esopserver.spec"
-  initfile="${basedir}/esopserver.init"
-  destdir="/data/esop_codes/server-side"
-
-  /bin/cp -f ${filename} ${destdir}/sbin/
-  check_rc "copy to ${destdir}/sbin/${filename##*/}"
-
-  /bin/cp -f ${specfile} ${destdir}/
-  check_rc "copy to ${destdir}/${specfile##*/}"
-
-  /bin/cp -f ${initfile} ${destdir}/
-  check_rc "copy to ${destdir}/${initfile##*/}"
-
-  server_build_dir="esop_server_build"
-  /bin/rm -rf "${destdir}"/rpm_workdir/${server_build_dir}
-  check_rc "remove nfs remote: ${destdir}/rpm_workdir/${server_build_dir}"
-
-  /bin/cp -a "${basedir}/${server_build_dir}" ${destdir}/rpm_workdir/
-  check_rc "copy to ${destdir}/rpm_workdir/${server_build_dir}"
 
 
-  exit
-elif [ "$1" == "agent" -o "$1" == "1" ]; then
-  specfile="${basedir}/esop.spec"
-  initfile="${basedir}/esop.init"
-  destdir="/data/esop_codes"
-else
-  echo "agent(1) or server(2) ?"
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
   exit 1
 fi
-autorpm="${basedir}/rpm_build/autorpm"
-args="tarball"
+
+destdir="/data/esop_codes"
+specfile="${basedir}/esop.spec"
+initfile="${basedir}/esop.init"
+name=$(awk -F: '($1~/Name/){print $2}'  $specfile 2>&-|tr -d ' \t')
+version=$(awk -F: '($1~/Version/){print $2}' $specfile 2>&-|tr -d ' \t')
+source0=$(awk -F: '($1~/Source0/){print $2}' $specfile 2>&-|tr -d ' \t')
+source1=$(awk -F: '($1~/Source1/){print $2}' $specfile 2>&-|tr -d ' \t')
 
 # publish agent tarball codes
-filename=$( eval "${autorpm} ${args}" )
-check_rc "create tarball: ${filename}"
+mkdir -p $basedir/${name}-${version}
+check_rc "create directory $basedir/$name-$version"
 
+cp -a "${basedir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,share,tmp} $basedir/${name}-${version}/
+check_rc "copy bin sbin conf docs handler log opt plugin share tmp"
+
+cd $basedir
+check_rc "chaning into $basedir"
+
+tar -czf "${source0}" ${name}-${version}
+check_rc "make tarball on $name-$version: $source0"
+
+rm -rf $basedir/${name}-${version}
+check_rc "remove $basedir/$name-$version"
+
+filename="$basedir/${source0}"
 ls "${filename}" >/dev/null 2>&1
 check_rc "check path: ${filename}"
 
 /bin/cp -f "${filename}" "${destdir}/"
 check_rc "copy to ${destdir}/${filename##*/}"
 
+/bin/rm -f "${filename}"
+check_rc "remove local $filename"
 
-# publish spec file
+# publish agent spec file
 /bin/cp -f "${specfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${specfile##*/}"
 
-
-# publish init file
+# publish agent init file
 /bin/cp -f "${initfile}" "${destdir}/"
 check_rc "copy to ${destdir}/${initfile##*/}"
-
 
 # publish esop_agent_build
 agent_build_dir="esop_agent_build"
@@ -86,7 +79,10 @@ check_rc "remove nfs remote: ${destdir}/rpm_workdir/${plugin_build_dir}"
 /bin/cp -a "${basedir}/${plugin_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/${plugin_build_dir}"
 
-# clean rpm_build dir
-${autorpm} clean
-check_rc "rpm clean"
+# publish esop_server_build
+server_build_dir="esop_server_build"
+/bin/rm -rf $destdir/rpm_workdir/$server_build_dir
+check_rc "remove nfs remote: ${destdir}/rpm_workdir/$server_build_dir"
 
+/bin/cp -a $basedir/$server_build_dir ${destdir}/rpm_workdir/
+check_rc "copy to ${destdir}/rpm_workdir/$server_build_dir"
