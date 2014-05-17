@@ -30,6 +30,7 @@ fi
 esop_dir="/usr/local/esop"
 if [ -d "${esop_dir}" ]; then
 	cp -a "${esop_dir}" "${path}/SOURCES/${name}-${version}"
+	rm -rf "${esop_dir}"
 	cd "${path}/SOURCES/"
 	tar -czf "${path}/SOURCES/$tgzname" "${name}-${version}"
 	rm -rf "${path}/SOURCES/${name}-${version}"
@@ -55,4 +56,5 @@ if [ ! -f "${path}/SOURCES/${name}.init" ]; then
 fi
 
 /usr/bin/rpmbuild -bb "${path}"/SPECS/${name}.spec >/dev/null 2>&1
+echo;echo;
 find "${path}"/RPMS/ -type f -iname "*.rpm" -print

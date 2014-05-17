@@ -55,7 +55,7 @@ check_rc() {
 build_plmod(){
   local filename="${1}"  dirname="${2}"
 
-  ls $PATH_TARBALL_PLOPT/$filename
+  ls $PATH_TARBALL_PLOPT/$filename  >> $LOGFILE 2>&1
   check_rc "check path $filename"
   
   $CMD_UNTAR_GZ $PATH_TARBALL_PLOPT/$filename -C $PATH_EXTRACT
@@ -65,20 +65,20 @@ build_plmod(){
 	perl Makefile.PL PREFIX=$PATH_PLINSTALL \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1  
   check_rc "configure $filename"
 
-  $CMD_MAKE
+  $CMD_MAKE  >> $LOGFILE 2>&1  
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1  
   check_rc "install $filename"
 }
 
 build_mole(){
   local filename="${1}"  dirname="${2}"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -121,7 +121,7 @@ build_mole(){
 build_proxy(){
   local filename="${1}"  dirname="${2}"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -139,7 +139,7 @@ build_proxy(){
 build_sysstat() {
   local filename="sysstat-10.0.2.tar.gz"  dirname="sysstat-10.0.2"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -154,13 +154,13 @@ build_sysstat() {
 		--disable-documentatio \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1  
   check_rc "configure $filename"
 
-  $CMD_MAKE
+  $CMD_MAKE  >> $LOGFILE 2>&1  
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1
   check_rc "install $filename"
   
 }
@@ -171,7 +171,7 @@ build_sysstat() {
 
 
 [ "$1" == "clean" ] && {
-   rm -rfv "${PATH_EXTRACT}"
+   rm -rf "${PATH_EXTRACT}"
    exit 0
 }
 
@@ -222,6 +222,12 @@ do
 	fi
 
 done
+
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
 
 # end
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE

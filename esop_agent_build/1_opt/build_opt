@@ -75,7 +75,7 @@ check_rc() {
 build_gmp() {		# by: php54
   local filename="gmp-4.3.0.tar.bz2"  dirname="gmp-4.3.0"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename >> $LOGFILE 2>&1
   check_rc "check path $filename"
 
   $CMD_UNTAR_BZ2 $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -95,13 +95,13 @@ build_gmp() {		# by: php54
 	CMD_CONFIG="ABI=32 $CMD_CONFIG "
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -109,7 +109,7 @@ build_gmp() {		# by: php54
 build_libiconv() {      # by:  php54
   local filename="libiconv-1.14.tar.gz"  dirname="libiconv-1.14"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -128,13 +128,13 @@ build_libiconv() {      # by:  php54
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -142,7 +142,7 @@ build_libiconv() {      # by:  php54
 build_curl() {		# by php54
   local filename="curl-7.19.5.tar.gz"  dirname="curl-7.19.5"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -162,13 +162,13 @@ build_curl() {		# by php54
         CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   fi
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -178,7 +178,7 @@ build_libevent() {	# by pecl_event
   local filename="libevent-2.0.21-stable.tar.gz"  dirname="libevent-2.0.21-stable"
   # local filename="libevent-2.0.21-stable-eyoumod.tgz"  dirname="libevent-2.0.21-stable-eyoumod"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -192,13 +192,13 @@ build_libevent() {	# by pecl_event
         --prefix=$PATH_INSTALL
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -208,7 +208,7 @@ build_php54() {
 
   rm -rf $PATH_INSTALL/php/
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -253,14 +253,14 @@ build_php54() {
         # CMD_CONFIG="$CMD_CONFIG --with-libdir=lib64"
   # fi
 
-  echo $CMD_CONFIG
-  eval $CMD_CONFIG
+  echo $CMD_CONFIG  >> $LOGFILE 2>&1 
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 
   # create etc/php
@@ -279,13 +279,13 @@ build_pecl_event() {
   local filename="pecl/event-1.9.0.tgz"  dirname="event-1.9.0"
   local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1 
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -301,13 +301,13 @@ build_pecl_event() {
     --with-event-libevent-dir=$PATH_INSTALL \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -316,13 +316,13 @@ build_pecl_embase() {
   local filename="pecl/embase.tgz"  dirname="embase"
   local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1 
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -333,13 +333,13 @@ build_pecl_embase() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
@@ -348,13 +348,13 @@ build_pecl_dio() {
   local filename="pecl/dio-0.0.7.tgz"  dirname="dio-0.0.7"
   local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
 
-  ls $PATH_TARBALL/$filename
+  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1 
   check_rc "check path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
 
-  $PATH_PHP_BIN/phpize
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1 
   check_rc "phpize for $filename"
 
   CMD_CONFIG=" \
@@ -365,20 +365,20 @@ build_pecl_dio() {
     --with-php-config=$PATH_PHP_BIN/php-config \
   "
 
-  eval $CMD_CONFIG
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1 
   check_rc "configure $filename"
 
-  $CMD_MAKE_J
+  $CMD_MAKE_J  >> $LOGFILE 2>&1 
   check_rc "make $filename"
 
-  $CMD_MAKE install
+  $CMD_MAKE install  >> $LOGFILE 2>&1 
   check_rc "make install $filename"
 }
 
 ### Main Body Begin ...
 
 if [ "$1" == "clean" ]; then
-   [ -d "${PATH_EXTRACT}" ] && rm -rfv "${PATH_EXTRACT}"
+   [ -d "${PATH_EXTRACT}" ] && rm -rf "${PATH_EXTRACT}"
    exit 0
 fi
 
@@ -416,5 +416,12 @@ extension=dio.so
 EOF
 
 [ -d $PATH_ESOP_ETC ] && rm -rf $PATH_ESOP_ETC
+
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
 
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
