@@ -106,15 +106,17 @@ if [ "$(id -u)" != "0" ]; then
 fi 
 
 if [ -d ${PATH_ESOP} ]; then
-  echo " ${PATH_ESOP} already exist! rename or remove it! " | tee -a $LOGFILE
-  exit 1
-else
-  /bin/mkdir -p ${PATH_ESOP}
-  check_rc "create directory ${PATH_ESOP}"
-
-  /bin/cp -a $FILEDIR/* ${PATH_ESOP}
-  check_rc "copy files to ${PATH_ESOP}"
+  read -p " ${PATH_ESOP} already exist, continue ? [yes|no]: "  response
+  if [ "${response}" != "yes" ]; then
+        exit 1
+  fi  
 fi
+
+/bin/mkdir -p ${PATH_ESOP}                                                                                                   
+check_rc "create directory ${PATH_ESOP}"
+
+/bin/cp -a $FILEDIR/* ${PATH_ESOP}
+check_rc "copy files to ${PATH_ESOP}"
 
 
 if [ -f ${MYSQL_CLI} -a -x ${MYSQL_CLI} ]; then
