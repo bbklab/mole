@@ -12,6 +12,7 @@ FILEDIR="${BASE_DIR}/files"
 PATH_ESOP="/usr/local/eyou/toolmail"
 PATH_LOG="${PATH_ESOP}/log"
 PATH_RUN="${PATH_ESOP}/run"
+PATH_DYN="${PATH_ESOP}/app/inc/dynamic"
 
 # USER DEF
 USER="eyou"
@@ -41,8 +42,8 @@ add_user() {
 }
 
 chown_path() {
-	/bin/chown -R eyou:eyou ${PATH_LOG} ${PATH_RUN}
-	check_rc "change ower/group as eyou:eyou for ${PATH_LOG} ${PATH_RUN}"
+	/bin/chown -R eyou:eyou ${PATH_LOG} ${PATH_RUN} ${PATH_DYN}
+	check_rc "change ower/group as eyou:eyou for ${PATH_LOG} ${PATH_RUN} ${PATH_DYN}"
 }
 
 ### Main Body Begin
