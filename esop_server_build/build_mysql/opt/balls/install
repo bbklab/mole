@@ -97,6 +97,12 @@ init_eyoumonitor() {
 	check_rc "grant eyou@localhost"
 }
 
+# stop mysql db
+stop_mysql() {
+	${INIT_SH} stop mysql >> $LOGFILE 2>&1
+	check_rc "stop mysql"
+}
+
 
 ### Main Body Begin
 
@@ -132,3 +138,4 @@ init_db
 start_mysql
 clean_mysql
 init_eyoumonitor
+stop_mysql
