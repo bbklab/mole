@@ -132,7 +132,7 @@ build_proxy(){
   cd $PATH_ESOP/app/sbin/
   check_rc "change into $PATH_ESOP/app/sbin/"
 
-  ln -sv ../../mole/sbin/esop .
+  ln -sv ../../mole/sbin/esop . >> $LOGFILE 2>&1
   check_rc "create link for esop ctl script"
 }
 
