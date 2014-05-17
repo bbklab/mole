@@ -40,7 +40,8 @@ build_apicode() {
   mkdir -p $PATH_ESOP/etc $PATH_ESOP/app $PATH_ESOP/log $PATH_ESOP/run
   check_rc "create directory etc app log run"
 
-  cp -a $PATH_TARBALL/implements $PATH_ESOP
+  # cp -a $PATH_TARBALL/implements $PATH_ESOP
+  cp -a $PATH_TARBALL/implements/ $PATH_ESOP
   check_rc "copy implements to $PATH_ESOP"
 
   cp -a $PATH_TARBALL/app/bin/  $PATH_ESOP/app
