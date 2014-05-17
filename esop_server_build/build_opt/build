@@ -604,4 +604,15 @@ build_pear_install
 make_config
 make_tarball
 
+
+if [ -d "${PATH_ESOP}" ]; then
+  rm -rf "${PATH_ESOP}"
+  check_rc "remove ${PATH_ESOP}"
+fi
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
 echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE
