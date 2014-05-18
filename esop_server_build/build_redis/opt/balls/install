@@ -47,10 +47,11 @@ chown_path() {
 }
 
 create_link() {
-        local link="/usr/local/eyou/toolmail"   dest="/usr/local/eyou/toolmail/app/sbin/eyou_toolmail"
+        local link="/usr/bin/eyou_toolmail"   dest="/usr/local/eyou/toolmail/app/sbin/eyou_toolmail"
         if [ -L $link -a -e $link ]; then
  		check_rc "no need to create link for $link"
         else
+		rm -f $link >/dev/null 2>&1  
                 ln -s $dest $link >/dev/null 2>&1
                 check_rc "create symbol link for $link"
                 
