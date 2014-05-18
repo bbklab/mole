@@ -104,6 +104,17 @@ stop_mysql() {
 }
 
 
+create_link() {
+        local link="/usr/local/eyou/toolmail"   dest="/usr/local/eyou/toolmail/app/sbin/eyou_toolmail"
+        if [ -L $link -a -e $link ]; then
+                check_rc "no need to create link for $link"
+        else
+                ln -s $dest $link >/dev/null 2>&1
+                check_rc "create symbol link for $link"
+                
+        fi
+}
+
 ### Main Body Begin
 
 if [ "$(id -u)" != "0" ]; then
@@ -139,3 +150,4 @@ start_mysql
 clean_mysql
 init_eyoumonitor
 stop_mysql
+create_link

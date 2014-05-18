@@ -47,6 +47,17 @@ chown_path() {
 	check_rc "change ower/group as eyou:eyou for ${PATH_LOG} ${PATH_RUN} ${PATH_TMP} ${PATH_DYN}"
 }
 
+create_link() {
+        local link="/usr/local/eyou/toolmail"   dest="/usr/local/eyou/toolmail/app/sbin/eyou_toolmail"
+        if [ -L $link -a -e $link ]; then
+		check_rc "no need to create link for $link"
+        else
+                ln -s $dest $link >/dev/null 2>&1
+                check_rc "create symbol link for $link"
+                
+        fi
+}
+
 ### Main Body Begin
 
 if [ "$(id -u)" != "0" ]; then
@@ -69,3 +80,4 @@ check_rc "copy files to ${PATH_ESOP}"
 
 add_user
 chown_path
+create_link
