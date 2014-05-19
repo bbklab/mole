@@ -24,10 +24,9 @@ fi
 destdir="/data/esop_codes"
 specfile="${basedir}/esop.spec"
 initfile="${basedir}/esop.init"
-name=$(awk -F: '($1~/Name/){print $2}'  $specfile 2>&-|tr -d ' \t')
-version=$(awk -F: '($1~/Version/){print $2}' $specfile 2>&-|tr -d ' \t')
-source0=$(awk -F: '($1~/Source0/){print $2}' $specfile 2>&-|tr -d ' \t')
-source1=$(awk -F: '($1~/Source1/){print $2}' $specfile 2>&-|tr -d ' \t')
+name="mole"
+version="1.0"
+source0="mole-1.0-beta1.tgz"
 
 # publish agent tarball codes
 mkdir -p $basedir/${name}-${version}
