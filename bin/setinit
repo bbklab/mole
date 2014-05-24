@@ -223,7 +223,7 @@ if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
 			valid=1
 		fi
 	done
-	valid=0
+	valid=0  maxlen=120
 	while [ "${valid}" == "0" ]
 	do
 		if [ -z "${base_domain}" ]; then
@@ -232,7 +232,13 @@ if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
 			read -p "$(gettext "base domain of this box") [${base_domain}]: " input_domain
 			[ -z "${input_domain//[ ]}" ] && input_domain="${base_domain}" 
 		fi
-		if [ -z "${input_domain//[ ]}" ]; then
+		length=${#input_domain}
+		if [ ${length} -gt ${maxlen} ]; then
+			echo -en "$(echo_red "$(eval_gettext "length exceed: \$length")")\n"
+			valid=0
+			continue
+		elif [ -z "${input_domain//[ ]}" -o ! -z "${input_domain//[0-9a-zA-Z.-]}" ]; then
+			echo -en "$(echo_red "$(gettext "input invalid")")\n"
 			valid=0
 			continue
 		else
