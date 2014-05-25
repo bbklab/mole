@@ -122,10 +122,6 @@ imac_uuid=$(/usr/bin/uuidgen -t 2>&-|tr -d '\r\n')
 imac_uuid="${imac_uuid##*-}"
 imac_uuid="${imac_uuid//[ ]}"
 
-# try to search kernel uuid  (random, not recommanded)
-kern_uuid=$(cat /proc/sys/kernel/random/uuid 2>&-|tr -d '\r\n')
-kern_uuid="${kern_uuid//[ ]}"
-
 
 
 ### Main Body Begin...
@@ -165,18 +161,21 @@ fi
 mole_id=$(get_mole_id)
 if [ "${mole_id}" == "0000000000" ]; then
 	if [ "${mode}" == "rpminit" ]; then
-		if [ ! -z "${disk_uuid//[ ]}" ]; then
-			setby="disk_uuid: ${disk_uuid}"
-			mole_id=$(echo -n "${disk_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-		elif [ ! -z "${imac_uuid//[ ]}" ]; then
-			setby="imac_uuid: ${imac_uuid}"
-			mole_id=$(echo -n "${imac_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-		elif [ ! -z "${kern_uuid//[ ]}" ]; then
-			setby="kern_uuid: ${kern_uuid}"
-			mole_id=$(echo -n "${kern_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		mole_uuid="${disk_uuid}${imac_uuid}"
+		if [ -z "${mole_uuid//[ ]}" ]; then
+			echo -en "$(gettext "cann't initialize mole_id as mole_uuid null")"
+			echo -e "${FAIL}"
+			write_log -f "${MOLE_LOG}" "SETINITX cann't initialize mole_id as mole_uuid null"
+			exit 0
 		fi
+
+		mole_id=$(echo -n "${mole_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		write_log -f "${MOLE_LOG}" "disk_uuid ${disk_uuid}"
+		write_log -f "${MOLE_LOG}" "imac_uuid ${imac_uuid}"
+		write_log -f "${MOLE_LOG}" "mole_uuid ${mole_uuid}"
+		
 		echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
-		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}] setby=[${setby}]"
+		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}], set by mole_uuid=[${mole_uuid}]"
 		update_mole_config force global id "${mole_id}"
 		rc=$?
 		case "${rc}" in
