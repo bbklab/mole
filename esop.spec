@@ -140,7 +140,7 @@ fi
 :
 
 %changelog
-* Fri May 16 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Mon May 26 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 正式版 1.0.1
 - 新增: 插件调度主程序(mole)和14个基础运维插件
 - 新增: 增加客户端数据上报代理通道功能(proxy)
