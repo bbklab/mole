@@ -9,8 +9,15 @@ sh3="$basedir/3_rpm/auto"
 clean(){
 	echo "clean build dirs ..."
 	${sh1} clean; ${sh2} clean; ${sh3} clean
-	echo "clean /usr/local/esop/ ..."
-	[ -d "/usr/local/esop/" ] && rm -rf "/usr/local/esop/"
+	echo -en "clean /usr/local/esop/ ... \c "
+	if [ -d "/usr/local/esop/" ]; then
+		if rm -rf "/usr/local/esop/" ; then
+			echo "succeed!"
+		else
+			echo "failed!"
+			exit 1
+		fi
+	fi
 }
 
 if [ "$(id -u)" != "0" ]; then
@@ -19,8 +26,13 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 if rpm -qi esop >/dev/null; then
-	echo "uninstall pre esop"
-	rpm -e esop
+	echo -en "uninstall pre esop ... \c "
+	if rpm -e esop ; then
+		echo "succeed!"
+	else
+		echo "failed!"
+		exit 1
+	fi
 else
 	echo "esop not installed"
 fi
