@@ -163,18 +163,18 @@ if [ "${mole_id}" == "0000000000" ]; then
 	if [ "${mode}" == "rpminit" ]; then
 		mole_uuid="${disk_uuid}${imac_uuid}"
 		if [ -z "${mole_uuid//[ ]}" ]; then
-			echo -en "$(gettext "cann't initialize mole_id as mole_uuid null")"
+			echo -en "$(gettext "cann't initialize mole_id as mole_uuid null")  "
 			echo -e "${FAIL}"
 			write_log -f "${MOLE_LOG}" "SETINITX cann't initialize mole_id as mole_uuid null"
 			exit 0
 		fi
 
 		mole_id=$(echo -n "${mole_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
-		write_log -f "${MOLE_LOG}" "disk_uuid ${disk_uuid}"
-		write_log -f "${MOLE_LOG}" "imac_uuid ${imac_uuid}"
-		write_log -f "${MOLE_LOG}" "mole_uuid ${mole_uuid}"
+		write_log -f "${MOLE_LOG}" "SETINITX disk_uuid ${disk_uuid}"
+		write_log -f "${MOLE_LOG}" "SETINITX imac_uuid ${imac_uuid}"
+		write_log -f "${MOLE_LOG}" "SETINITX mole_uuid ${mole_uuid}"
 
-		echo -en "${mole_uuid}\n${mole_id}" > "${UUID_FILE}" 2>&-
+		echo -en "${mole_uuid}\n${mole_id}\n" > "${UUID_FILE}" 2>&-
 		
 		echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
 		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}], set by mole_uuid=[${mole_uuid}]"
