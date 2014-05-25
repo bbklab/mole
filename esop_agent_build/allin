@@ -9,8 +9,8 @@ sh3="$basedir/3_rpm/auto"
 clean(){
 	echo "clean build dirs ..."
 	${sh1} clean; ${sh2} clean; ${sh3} clean
-	echo -en "clean /usr/local/esop/ ... \c "
 	if [ -d "/usr/local/esop/" ]; then
+		echo -en "clean /usr/local/esop/ ... \c "
 		if rm -rf "/usr/local/esop/" ; then
 			echo "succeed!"
 		else
