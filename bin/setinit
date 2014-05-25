@@ -173,6 +173,8 @@ if [ "${mole_id}" == "0000000000" ]; then
 		write_log -f "${MOLE_LOG}" "disk_uuid ${disk_uuid}"
 		write_log -f "${MOLE_LOG}" "imac_uuid ${imac_uuid}"
 		write_log -f "${MOLE_LOG}" "mole_uuid ${mole_uuid}"
+
+		echo -en "${mole_uuid}\n${mole_id}" > "${UUID_FILE}" 2>&-
 		
 		echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
 		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}], set by mole_uuid=[${mole_uuid}]"

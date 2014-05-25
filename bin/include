@@ -86,6 +86,9 @@ ERRLOG="${LOG_DIR}/error.log"
 # CFG DEF
 CONFIG_FILE="${CONF_DIR}/.mole.ini"
 
+# UUID DEF
+UUID_FILE="${CONF_DIR}/.mole.uuid"
+
 # INC DEF
 INCLUDE_FILE="${BIN_DIR}/include"
 
