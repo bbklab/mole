@@ -82,6 +82,12 @@ msgstr "6. 运行内部功能插件       ... "
 msgid "7. starting mole cron        ... "
 msgstr "7. 启动插件任务调度       ... "
 
+msgid "changing into / failed!"
+msgstr "切换到/目录失败!"
+
+msgid "changing umask failed!"
+msgstr "设定文件掩码失败!"
+
 msgid "trying to stop mole ... "
 msgstr "正在停止实例 ... "
 

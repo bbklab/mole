@@ -370,13 +370,12 @@ else
 	cd / >/dev/null 2>&1;
 	if [ "$?" != "0" -o "$(pwd -P)" != "/" ]; then
 		echo -e "[$(echo_red "$(gettext "changing into / failed!")")]"
-		echo "123"
 		exit 1;
 	fi
 
 	umask 0000 >/dev/null 2>&1;
 	if [ "$?" != "0" -o "$(umask)" != "0000" ]; then
-		echo -e "[$(echo_red "$(gettext "chaning umask failed!")")]"
+		echo -e "[$(echo_red "$(gettext "changing umask failed!")")]"
 		exit 1;
 	fi
 
