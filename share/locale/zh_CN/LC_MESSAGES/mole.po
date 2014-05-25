@@ -676,6 +676,9 @@ msgstr "置空默认收件人"
 msgid "initialized set mole_id as"
 msgstr "初始化实例ID为"
 
+msgid "cann't initialize mole_id as mole_uuid null"
+msgstr "无法初始化实例ID, 因为无法获取磁盘和网卡标识信息"
+
 msgid "mole_id already set"
 msgstr "实例ID已设定"
 
