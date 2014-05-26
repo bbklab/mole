@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+
+export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin"
+
+# BASE DIR DEF
+BASE_DIR=$( cd $(dirname $0) && pwd)
+
+# DIR DEF
+FILES_DIR="${BASE_DIR}/files"
+LOGS_DIR="${BASE_DIR}/logs"
+VAR_DIR="${BASE_DIR}/var"
+
+# FILE DEF
+LOGFILE="${LOGS_DIR}/${0##*/}.log"
+
+
+# UPGRADE DEF
+SYS_HOSTS="/etc/hosts"
+ESOP_PATH="/usr/local/esop/agent"
+MOLE_PATH="${ESOP_PATH}/mole"
+MOLECONF_PATH="${MOLE_PATH}/conf"
+PROXYETC_PATH="${ESOP_PATH}/etc"
+MOLECONF_SAVE="${VAR_DIR}/conf"
+PROXYETC_SAVE="${VAR_DIR}/etc"
+ESOP_RPMNAME="esop"
+PGMAIL_RPMNAME="esop-plugingroup-mail"
+REQUIRED_UTILS=(
+	"/bin/awk"
+	"/bin/sed"
+	"/bin/rpm"
+	"/bin/cp"
+	"/bin/rm"
+)
+RECOVERY_MOLECOMM_FILES=(
+        ".mole.ini"
+        "cpu_usage.ini"
+        "disk_fs.ini"
+        "disk_space.ini"
+        "memory.ini"
+        "notify_oom.ini"
+        "notify_syslogin.ini"
+        "port.ini"
+        "sysload.ini"
+        "system_dyninfo.ini"
+        "system_fixinfo.ini"
+        "tcp_conn.ini"
+        "traffic.ini"
+)
+RECOVERY_MOLESPEC_FILES=(
+	"disk_iostat.ini"
+	"process.ini"
+)
+RECOVERY_PROXY_FILES=(
+	"etm_agent.ini"
+	"etm_phptd.ini"
+)
+CLEANED_FILES=(
+	"/tmp/.etm_phptd.ini.saveold"
+	"/tmp/.etm_agent.ini.saveold"
+	"/tmp/.mole.ini.saveold"
+)
+CLEANED_LINKS=(
+	"/usr/bin/mole"
+	"/usr/bin/esop"
+)
+
+
+
+# FUNC DEF
+
+# Terminal color
+echo_green() {
+  local content=$*
+  echo -e "\033[1;32m${content}\033[0m\c "
+}
+echo_yellow() {
+  local content=$*
+  echo -e "\033[1;33m${content}\033[0m\c "
+}
+echo_red() {
+  local content=$* 
+  echo -e "\033[1;31m${content}\033[0m\c "
+}
+
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi  
+}
+
+is_esop_installed() {
+	if /bin/rpm -qi $ESOP_RPMNAME >/dev/null 2>&1; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+is_pgmail_installed() {
+	if /bin/rpm -qi $PGMAIL_RPMNAME >/dev/null 2>&1; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+get_esopver() {
+	local result=
+	if is_esop_installed;  then
+		result=$( /bin/rpm -q --queryformat "%{version}-%{release}" $ESOP_RPMNAME 2>&- )
+	fi
+	echo -en "${result}"
+}
+
+get_pgmailver() {
+	local result=
+	if is_pgmail_installed; then
+        	result=$( /bin/rpm -q --queryformat "%{version}-%{release}" $PGMAIL_RPMNAME 2>&- )
+        fi
+        echo -en "${result}"
+}
+
+get_osrelease() {
+	local lsb_release="/usr/bin/lsb_release" file1="/etc/redhat-release" file2="/etc/issue" 
+	local result=
+	if [ -f "${lsb_release}" -a -x "${lsb_release}" ]; then
+		result=$( $lsb_release -d 2>&- | awk '(/Description:/) {gsub("Description:[ \t]*","",$0);print;exit;}' )
+	elif [ -f "${file1}" -a -s "${file1}" ]; then
+		result=$( head -n1 "${file1}" )
+	elif [ -f "${file2}" -a -s "${file2}" ]; then
+		result=$( head -n1 "${file2}" )
+	fi
+	echo -en "${result}"
+}
+
+get_rhel56() {
+	local osrelease="$(get_osrelease)"
+	local result=
+	if ( echo "${osrelease}" | grep -E -i "release[ \t]*5" ) >/dev/null 2>&1; then
+		result="rhel5"
+	elif ( echo "${osrelease}" | grep -E -i "release[ \t]*6" ) >/dev/null 2>&1; then
+		result="rhel6"
+	fi
+	echo -en "${result}"
+}
+
+save_configs() {
+	/bin/cp -af "${MOLECONF_PATH}" "${MOLECONF_SAVE}"
+	check_rc "save ${MOLECONF_PATH}"
+
+	/bin/cp -af "${PROXYETC_PATH}" "${PROXYETC_SAVE}"
+	check_rc "save ${PROXYETC_PATH}"
+}
+
+rpm_uninstall() {
+:
+}
+
+clean_oldfiles() {
+:
+}
+
+rpm_install() {
+:
+}
+
+restore_configs() {
+:
+}
+
+upgrade_configs() {
+:
+}
+
+upgrade_cksum() {
+:
+}
+
+
+#
+### Main Body Begin ...
+#
+
+if [ "$(/usr/bin/id -u 2>&-)" != "0" ]; then
+  echo_red "root privilege required!";echo
+  exit 1
+fi
