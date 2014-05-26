@@ -82,13 +82,21 @@ echo_red() {
   echo -e "\033[1;31m${content}\033[0m\c "
 }
 
-check_rc() {
+_check() {
   if [ $? == 0 ]; then
         echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
   else
         echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
         exit 1
   fi  
+}
+
+_notice() {
+	echo -e " -- $(date +%F_%T)  notice!  ${*} " | tee -a $LOGFILE
+}
+
+_info() {
+	echo -e " -- $(date +%F_%T)  info!  ${*} " | tee -a $LOGFILE
 }
 
 is_esop_installed() {
@@ -147,20 +155,125 @@ get_rhel56() {
 	echo -en "${result}"
 }
 
+read_ini_config() {
+	local config_file=$1  section=$2  key=$3
+	local result=
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		result=$( cat ${config_file} | tr '\t' ' ' |\
+                        awk -F"=" '\
+                                ($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+                                ( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+                                ( k==1 && x==1 && $1~/^'${key}'\>/ ){gsub("^'${key}' *=","",$0);print;exit;}' 2>&- |\
+                         sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
+	fi
+	echo -en "${result}"
+}
+
+update_ini_config() {
+	local config_file=$1  section=$2  key=$3;
+	shift 3;
+	local value=$*
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
+			awk -F"=" '\
+				($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+				( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+				( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
+		if [ -z "${linenum}" ]; then
+			return 2
+		else
+			sed -i ''${linenum}'c'"${key}"' = '"${value}"'' "${config_file}" >/dev/null 2>&1
+			if [ "$?" == "0" ]; then
+				return 0
+			else
+				return 1
+			fi
+		fi
+	else
+		return 3
+	fi
+}
+
+add_ini_config() {
+	local config_file=$1  section=$2  key=$3;
+	shift 3;
+	local value=$*
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
+			awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
+		if [ -z "${section_linenum}" ]; then
+			return 2
+		else
+			sed -i ''${section_linenum}'a'"${key}"' = '"${value}"'' "${config_file}" >/dev/null 2>&1
+			if [ "$?" == "0" ]; then
+				return 0
+			else
+				return 1
+			fi
+		fi
+	else
+		return 3
+	fi
+}
+
+del_ini_config() {
+	local config_file=$1  section=$2  key=$3;
+	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
+			awk -F"=" '\
+				($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
+				( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit}\
+				( k==1 && x==1 && $1~/^'${key}'\>/ ){print NR;exit;}' )
+		if [ -z "${linenum}" ]; then
+			return 2
+		else
+			sed -i ''${linenum}'d' "${config_file}" >/dev/null 2>&1
+			if [ "$?" == "0" ]; then
+				return 0
+			else
+				return 1
+			fi
+		fi
+	else
+		return 3
+	fi
+}
+
 save_configs() {
 	/bin/cp -af "${MOLECONF_PATH}" "${MOLECONF_SAVE}"
-	check_rc "save ${MOLECONF_PATH}"
+	_check "save ${MOLECONF_PATH}"
 
 	/bin/cp -af "${PROXYETC_PATH}" "${PROXYETC_SAVE}"
-	check_rc "save ${PROXYETC_PATH}"
+	_check "save ${PROXYETC_PATH}"
 }
 
 rpm_uninstall() {
-:
+	/bin/rpm -e $ESOP_RPMNAME 2>&-
+	_check "uninstall $ESOP_RPMNAME"
+
+	/bin/rpm -e $PGMAIL_RPMNAME 2>&-
+	_check "uninstall $PGMAIL_RPMNAME"
 }
 
 clean_oldfiles() {
-:
+	for file in ${CLEANED_FILES[*]}
+	do
+		if [ -f "${file}" ]; then
+			/bin/rm -f "${file}"
+			_check "remove ${file}"
+		else
+			_info "file $file not exist, nothing to do"
+		fi
+	done
+	for file in ${CLEANED_LINKS[*]}
+	do
+		if [ -L "${file}" ]; then
+			/bin/rm -f "${file}"
+			_check "remove ${file}"
+		else
+			_info "link $file not exist, nothing to do"
+		fi
+	done
 }
 
 rpm_install() {
@@ -186,5 +299,13 @@ upgrade_cksum() {
 
 if [ "$(/usr/bin/id -u 2>&-)" != "0" ]; then
   echo_red "root privilege required!";echo
+  exit 1
+fi
+
+ESOP_VERSION=$( get_esopver )
+PGMAIL_VERSION=$( get_pgmailver )
+
+if [ -z "$ESOP_VERSION" ]; then
+  echo_red "rpm $ESOP_RPMNAME not installed!";echo
   exit 1
 fi
