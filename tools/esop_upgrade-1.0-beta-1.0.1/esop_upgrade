@@ -21,6 +21,8 @@ EL5_64FILE="${EL5_64DIR}/esop-1.0.1-rhel5.x86_64.rpm"
 EL5_32FILE="${EL5_32DIR}/esop-1.0.1-rhel5.i386.rpm"
 PGMAILFILE="${PGMAILDIR}/esop-plugingroup-mail-0.1.rhel.noarch.rpm"
 
+ESOP_MD5LST="${FILES_DIR}/esop/md5sum.lst"
+PGMAIL_MD5LST="${FILES_DIR}/pgmail/md5sum.lst"
 
 # UPGRADE DEF
 SYS_HOSTS="/etc/hosts"
@@ -39,6 +41,7 @@ REQUIRED_UTILS=(
 	"/bin/cp"
 	"/bin/rm"
 	"/bin/mv"
+	"/usr/bin/md5sum"
 )
 RESTORE_MOLECOMM_FILES=(
         ".mole.ini"
@@ -101,30 +104,30 @@ echo_red() {
 
 _check() {
   if [ $? == 0 ]; then
-        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+        echo -e " -- $(date +%F_%T)  [SUCC]  ${*} " | tee -a $LOGFILE
   else
-        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        echo -e " -- $(date +%F_%T)  [FAIL]  ${*} " | tee -a $LOGFILE
         exit 1
   fi  
 }
 
 _notice() {
-	echo -e " -- $(date +%F_%T)  notice!  ${*} " | tee -a $LOGFILE
+	echo -e " -- $(date +%F_%T)  [NOTE]  ${*} " | tee -a $LOGFILE
 }
 
 _info() {
-	echo -e " -- $(date +%F_%T)  info!  ${*} " | tee -a $LOGFILE
+	echo -e " -- $(date +%F_%T)  [INFO]  ${*} " | tee -a $LOGFILE
 }
 
 util_check() {
-	local total=0 err=0 succ=0
+	local total=0 err=0
 	local lacklst=
 
 	for util in ${REQUIRED_UTILS[*]}
 	do
 		((total++))
 		if [ -f "${util}" -a -x "${util}" ]; then
-			((succ++))
+			:
 		else
 			((err++))
 			lacklst="${lacklst} ${util}"
@@ -390,11 +393,116 @@ restore_configs() {
 }
 
 upgrade_configs() {
-:
+	local etm_phptd_ini="${PROXYETC_PATH}/etm_phptd.ini"
+	local mole_ini="${MOLECONF_PATH}/.mole.ini"
+	local cpu_usage_ini="${MOLECONF_PATH}/cpu_usage.ini"
+	local notify_oom_ini="${MOLECONF_PATH}/notify_oom.ini"
+	local tcp_conn_ini="${MOLECONF_PATH}/tcp_conn.ini"
+
+	# process file: etm_phptd_ini
+	local vof_max_dest_buffer_len=$( read_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_len )
+	del_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_len
+	_check "rename -> 1. remove max_dest_buffer_len"
+
+	add_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_num "${vof_max_dest_buffer_len}"
+	_check "remove -> 2. add max_dest_buffer_num "
+
+	del_ini_config ${etm_phptd_ini} agent_client noop_interval
+	_check "remove noop_interval"
+	
+	del_ini_config ${etm_phptd_ini} agent_client retry_connect_dest_interval
+	_check "remove retry_connect_dest_interval"
+
+	add_ini_config ${etm_phptd_ini} agent_client connect_dest_interval 3
+	_check "add connect_dest_interval = 3"
+
+	# process file: mole.ini
+	local smtp_server=$( read_ini_config ${mole_ini} sendmail smtp_server )
+	if [ "${smtp_server}" == "esop.eyou.net" ]; then
+		update_ini_config ${mole_ini} sendmail smtp_server "mole.eyousop.com"
+		_check "update sendmail -> smtp_server = mole.eyousop.com"
+	else
+		_info "no need to update sendmail -> smtp_server ($smtp_server)"
+	fi
+
+	local logfile_reserve_time=$( read_ini_config ${mole_ini} mole_clear_overdue logfile_reserve_time )
+	if [ "${logfile_reserve_time}" == "180" ]; then
+		update_ini_config ${mole_ini} mole_clear_overdue logfile_reserve_time "30"
+		_check "update mole_clear_overdue -> logfile_reserve_time = 30"
+	else
+		_info "no need to update mole_clear_overdue -> logfile_reserve_time ($logfile_reserve_time)"
+	fi
+
+	local debug=$( read_ini_config ${mole_ini} default debug )
+	if [ "${debug}" == "no" ]; then
+		update_ini_config ${mole_ini} default debug "yes"
+		_check "update default -> debug = yes"
+	else
+		_info "no need to update default -> debug ($debug)"
+	fi
+
+	add_ini_config ${mole_ini} mole_log_rotate take_over_proxylog "yes"
+	_check "add mole_log_rotate -> take_over_proxylog = yes"
+
+	# process file: cpu_usage.ini
+	local maxerr_times=$( read_ini_config ${cpu_usage_ini} cpu_usage maxerr_times )
+	if [ "${maxerr_times}" == "3" ]; then
+		update_ini_config ${cpu_usage_ini} cpu_usage maxerr_times "5"
+		_check "update cpu_usage -> maxerr_times = 5"
+	else
+		_info "no need to update cpu_usage -> maxerr_times ($maxerr_times)"
+	fi
+
+	# process file: notify_oom.ini
+	local mail_notify=$( read_ini_config ${notify_oom_ini} notify_oom mail_notify )
+	if [ "${mail_notify}" == "all" ]; then
+		update_ini_config ${notify_oom_ini} notify_oom mail_notify "default"
+		_check "update notify_oom -> mail_notify = default"
+	else
+		_info "no need to update notify_oom -> mail_notify ($mail_notify)"
+	fi
+
+	# process file: tcp_conn.ini
+	local exec_tmout=$( read_ini_config ${tcp_conn_ini} tcp_conn exec_tmout )
+	if [ "${exec_tmout}" == "2min" ]; then
+		update_ini_config ${tcp_conn_ini} tcp_conn exec_tmout "5min"
+		_check "update tcp_conn -> exec_tmout = 5min"
+	else
+		_info "no need to update tcp_conn -> exec_tmout ($exec_tmout)"
+	fi
+
 }
 
 upgrade_cksum() {
-:
+	local md5sum_2=  mismatch_lst=
+
+	while read md5sum_1 filepath
+	do
+		md5sum_2=$( /usr/bin/md5sum "${filepath}" 2>&- | awk '{print $1;exit}' )
+		if [ "${md5sum_2}" == "${md5sum_1}" ]; then
+			_info "md5 check for ${filepath} passed!"
+		else
+			mismatch_lst="${mismatch_lst} ${filepath}"
+			_notice "md5 check for ${filepath} not passed!"
+		fi
+	done < "${ESOP_MD5LST}"
+
+	if [ -z "${PGMAIL_VERSION}" ]; then
+		_notice "md5 check for $PGMAIL_RPMNAME skip, as not installed before"
+	else
+		while read md5sum_1 filepath
+		do
+			md5sum_2=$( /usr/bin/md5sum "${filepath}" 2>&- | awk '{print $1;exit}' )
+			if [ "${md5sum_2}" == "${md5sum_1}" ]; then
+				_info "md5 check for ${filepath} passed!"
+			else
+				mismatch_lst="${mismatch_lst} ${filepath}"
+				_notice "md5 check for ${filepath} not passed!"
+			fi
+		done < "${PGMAIL_MD5LST}"
+	fi
+
+	echo -en "${mismatch_lst}"
 }
 
 
@@ -425,3 +533,13 @@ if [ -n "${UTIL_LACK}" ]; then
   echo_red "lack utils: [${UTIL_LACK}]";echo
   exit 1
 fi
+
+
+
+save_configs
+rpm_uninstall
+clean_oldfiles
+rpm_install
+restore_configs
+upgrade_configs
+upgrade_cksum
