@@ -71,6 +71,9 @@ build_redis() {
 
   cp -fL $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
   check_rc "copy app/sbin/eyou_toolmail to ${PATH_ESOP}/app/sbin"
+
+  cp -fL $PATH_TARBALL/app/sbin/redis.sh $PATH_ESOP/app/sbin
+  check_rc "copy app/sbin/redis.sh to ${PATH_ESOP}/app/sbin"
 }
 
 
