@@ -7,19 +7,27 @@ BASE_DIR=$( cd $(dirname $0) && pwd)
 
 # DIR DEF
 FILES_DIR="${BASE_DIR}/files"
+EL6_64DIR="${FILES_DIR}/esop/rhel6_x86_64"
+EL5_64DIR="${FILES_DIR}/esop/rhel5_x86_64"
+EL5_32DIR="${FILES_DIR}/esop/rhel5_i386"
+PGMAILDIR="${FILES_DIR}/pgmail"
 LOGS_DIR="${BASE_DIR}/logs"
 VAR_DIR="${BASE_DIR}/var"
 
 # FILE DEF
 LOGFILE="${LOGS_DIR}/${0##*/}.log"
+EL6_64FILE="${EL6_64DIR}/esop-1.0.1-rhel6.x86_64.rpm"
+EL5_64FILE="${EL5_64DIR}/esop-1.0.1-rhel5.x86_64.rpm"
+EL5_32FILE="${EL5_32DIR}/esop-1.0.1-rhel5.i386.rpm"
+PGMAILFILE="${PGMAILDIR}/esop-plugingroup-mail-0.1.rhel.noarch.rpm"
 
 
 # UPGRADE DEF
 SYS_HOSTS="/etc/hosts"
-ESOP_PATH="/usr/local/esop/agent"
-MOLE_PATH="${ESOP_PATH}/mole"
+ESOP_PATH="/usr/local/esop"
+MOLE_PATH="${ESOP_PATH}/agent/mole"
 MOLECONF_PATH="${MOLE_PATH}/conf"
-PROXYETC_PATH="${ESOP_PATH}/etc"
+PROXYETC_PATH="${ESOP_PATH}/agent/etc"
 MOLECONF_SAVE="${VAR_DIR}/conf"
 PROXYETC_SAVE="${VAR_DIR}/etc"
 ESOP_RPMNAME="esop"
@@ -30,8 +38,9 @@ REQUIRED_UTILS=(
 	"/bin/rpm"
 	"/bin/cp"
 	"/bin/rm"
+	"/bin/mv"
 )
-RECOVERY_MOLECOMM_FILES=(
+RESTORE_MOLECOMM_FILES=(
         ".mole.ini"
         "cpu_usage.ini"
         "disk_fs.ini"
@@ -46,13 +55,21 @@ RECOVERY_MOLECOMM_FILES=(
         "tcp_conn.ini"
         "traffic.ini"
 )
-RECOVERY_MOLESPEC_FILES=(
+RESTORE_MOLESPEC_FILES=(
 	"disk_iostat.ini"
 	"process.ini"
 )
-RECOVERY_PROXY_FILES=(
+RESTORE_PROXY_FILES=(
 	"etm_agent.ini"
 	"etm_phptd.ini"
+)
+RESTORE_PGMAIL_FILES=(
+	"http_svr.ini"
+	"imap_svr.ini"
+	"smtp_svr.ini"
+	"pop_svr.ini"
+	"dns_svr.ini"
+	"emp_mailqueue.ini"
 )
 CLEANED_FILES=(
 	"/tmp/.etm_phptd.ini.saveold"
@@ -97,6 +114,26 @@ _notice() {
 
 _info() {
 	echo -e " -- $(date +%F_%T)  info!  ${*} " | tee -a $LOGFILE
+}
+
+util_check() {
+	local total=0 err=0 succ=0
+	local lacklst=
+
+	for util in ${REQUIRED_UTILS[*]}
+	do
+		((total++))
+		if [ -f "${util}" -a -x "${util}" ]; then
+			((succ++))
+		else
+			((err++))
+			lacklst="${lacklst} ${util}"
+		fi
+	done
+
+	if [ $err -ne 0 ]; then
+		echo -en "${lacklst}"
+	fi
 }
 
 is_esop_installed() {
@@ -182,7 +219,7 @@ update_ini_config() {
 		if [ -z "${linenum}" ]; then
 			return 2
 		else
-			sed -i ''${linenum}'c'"${key}"' = '"${value}"'' "${config_file}" >/dev/null 2>&1
+			sed -i ''${linenum}'c'"${key}"' = '"${value}"'' "${config_file}" >> $LOGFILE 2>&1
 			if [ "$?" == "0" ]; then
 				return 0
 			else
@@ -204,7 +241,7 @@ add_ini_config() {
 		if [ -z "${section_linenum}" ]; then
 			return 2
 		else
-			sed -i ''${section_linenum}'a'"${key}"' = '"${value}"'' "${config_file}" >/dev/null 2>&1
+			sed -i ''${section_linenum}'a'"${key}"' = '"${value}"'' "${config_file}" >> $LOGFILE 2>&1
 			if [ "$?" == "0" ]; then
 				return 0
 			else
@@ -227,7 +264,7 @@ del_ini_config() {
 		if [ -z "${linenum}" ]; then
 			return 2
 		else
-			sed -i ''${linenum}'d' "${config_file}" >/dev/null 2>&1
+			sed -i ''${linenum}'d' "${config_file}" >> $LOGFILE 2>&1
 			if [ "$?" == "0" ]; then
 				return 0
 			else
@@ -240,26 +277,35 @@ del_ini_config() {
 }
 
 save_configs() {
-	/bin/cp -af "${MOLECONF_PATH}" "${MOLECONF_SAVE}"
-	_check "save ${MOLECONF_PATH}"
+	/bin/cp -af "${MOLECONF_PATH}" "${MOLECONF_SAVE}" >> $LOGFILE 2>&1
+	_check "save mole configs"
 
-	/bin/cp -af "${PROXYETC_PATH}" "${PROXYETC_SAVE}"
-	_check "save ${PROXYETC_PATH}"
+	/bin/cp -af "${PROXYETC_PATH}" "${PROXYETC_SAVE}" >> $LOGFILE 2>&1
+	_check "save proxy configs"
 }
 
 rpm_uninstall() {
-	/bin/rpm -e $ESOP_RPMNAME 2>&-
+	/bin/rpm -e $ESOP_RPMNAME  >> $LOGFILE 2>&1
 	_check "uninstall $ESOP_RPMNAME"
 
-	/bin/rpm -e $PGMAIL_RPMNAME 2>&-
-	_check "uninstall $PGMAIL_RPMNAME"
+	if [ -z "${PGMAIL_VERSION}" ]; then
+		_notice "uninstall $PGMAIL_RPMNAME skip, as not installed before"
+	else
+		/bin/rpm -e $PGMAIL_RPMNAME >> $LOGFILE 2>&1
+		_check "uninstall $PGMAIL_RPMNAME"
+	fi
 }
 
 clean_oldfiles() {
+	if [ -d "${ESOP_PATH}" ]; then
+		/bin/mv -f "${ESOP_PATH}" "${ESOP_PATH}_${ESOP_VERSION}_${OS_RHEL56}" >> $LOGFILE 2>&1
+		_check "backup old installation directories"
+
+	fi
 	for file in ${CLEANED_FILES[*]}
 	do
 		if [ -f "${file}" ]; then
-			/bin/rm -f "${file}"
+			/bin/rm -f "${file}" >> $LOGFILE 2>&1
 			_check "remove ${file}"
 		else
 			_info "file $file not exist, nothing to do"
@@ -268,7 +314,7 @@ clean_oldfiles() {
 	for file in ${CLEANED_LINKS[*]}
 	do
 		if [ -L "${file}" ]; then
-			/bin/rm -f "${file}"
+			/bin/rm -f "${file}" >> $LOGFILE 2>&1
 			_check "remove ${file}"
 		else
 			_info "link $file not exist, nothing to do"
@@ -277,11 +323,70 @@ clean_oldfiles() {
 }
 
 rpm_install() {
-:
+	
+	local rpmfile=
+
+	if [ "${OS_RHEL56}" == "rhel5" ]; then
+		if [ "$(/bin/uname -a 2>&- | grep -E -o "x86_64")" != "" ]; then
+			rpmfile="${EL5_64FILE}"
+		else
+			rpmfile="${EL5_32FILE}"
+		fi
+	elif [ "${OS_RHEL56}" == "rhel6" ]; then
+		if [ "$(/bin/uname -a 2>&- | grep -E -o "x86_64")" != "" ]; then
+			rpmfile="${EL6_64FILE}"
+		fi
+	fi
+
+	/bin/rpm -ivh "${rpmfile}"  >> $LOGFILE 2>&1
+	_check "install ${ESOP_RPMNAME}"
+
+	if [ -z "${PGMAIL_VERSION}" ]; then
+		_notice "install $PGMAIL_RPMNAME skip, as not installed before"
+	else
+		/bin/rpm -ivh ${PGMAILFILE} >> $LOGFILE 2>&1
+		_check "install ${PGMAIL_RPMNAME}"
+	fi
 }
 
 restore_configs() {
-:
+	
+	# restore mole common config files
+	for file in ${RESTORE_MOLECOMM_FILES[*]}
+	do
+		/bin/cp -f "${MOLECONF_SAVE}/${file}"  "${MOLECONF_PATH}/${file}"
+        	_check "restore mole common configs ${file}"
+	done
+
+	# restore mole special config files if esop version = 1.0-beta2
+	if [ "${ESOP_VERSION}" == "1.0-beta1" ]; then
+		_notice "restore mole special configs skip, as esop version ${ESOP_VERSION}"
+	elif [ "${ESOP_VERSION}" == "1.0-beta2" ]; then
+		_notice "restore mole special configs continue, as esop version ${ESOP_VERSION}"
+		for file in ${RESTORE_MOLESPEC_FILES[*]}
+		do
+			/bin/cp -f "${MOLECONF_SAVE}/${file}"  "${MOLECONF_PATH}/${file}"
+			_check "restore mole special configs ${file}"
+		done
+	fi
+
+	# restore pgmail config files if pgmail installed
+	if [ -z "${PGMAIL_VERSION}" ]; then
+		_notice "restore $PGMAIL_RPMNAME configs skip, as not installed before"
+	else
+		for file in ${RESTORE_PGMAIL_FILES[*]}
+		do
+			/bin/cp -f "${MOLECONF_SAVE}/${file}"  "${MOLECONF_PATH}/${file}"
+			_check "restore $PGMAIL_RPMNAME configs ${file}"
+		done
+	fi
+
+	# restore proxy config files
+	for file in ${RESTORE_PROXY_FILES[*]}
+	do
+		/bin/cp -f "${PROXYETC_SAVE}/${file}"  "${PROXYETC_PATH}/${file}"
+        	_check "restore proxy configs"
+	done
 }
 
 upgrade_configs() {
@@ -304,8 +409,19 @@ fi
 
 ESOP_VERSION=$( get_esopver )
 PGMAIL_VERSION=$( get_pgmailver )
-
 if [ -z "$ESOP_VERSION" ]; then
   echo_red "rpm $ESOP_RPMNAME not installed!";echo
+  exit 1
+fi
+
+OS_RHEL56=$( get_rhel56 )
+if [ -z "$OS_RHEL56" ]; then
+  echo_red "can't get os release 5/6 ?";echo
+  exit 1
+fi
+
+UTIL_LACK=$( util_check )
+if [ -n "${UTIL_LACK}" ]; then
+  echo_red "lack utils: [${UTIL_LACK}]";echo
   exit 1
 fi
