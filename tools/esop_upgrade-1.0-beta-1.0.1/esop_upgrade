@@ -104,15 +104,15 @@ echo_red() {
 
 _check() {
   if [ $? == 0 ]; then
-        echo -e " -- $(date +%F_%T)  [SUCC]  ${*} " | tee -a $LOGFILE
+        echo -e " -- $(date +%F_%T)  [$(echo_green "SUCC")]  ${*} " | tee -a $LOGFILE
   else
-        echo -e " -- $(date +%F_%T)  [FAIL]  ${*} " | tee -a $LOGFILE
+        echo -e " -- $(date +%F_%T)  [$(echo_red "FAIL")]  ${*} " | tee -a $LOGFILE
         exit 1
   fi  
 }
 
 _notice() {
-	echo -e " -- $(date +%F_%T)  [NOTE]  ${*} " | tee -a $LOGFILE
+	echo -e " -- $(date +%F_%T)  [$(echo_yellow "NOTE")]  ${*} " | tee -a $LOGFILE
 }
 
 _info() {
@@ -362,15 +362,15 @@ restore_configs() {
 	done
 
 	# restore mole special config files if esop version = 1.0-beta2
-	if [ "${ESOP_VERSION}" == "1.0-beta1" ]; then
-		_notice "restore mole special configs skip, as esop version ${ESOP_VERSION}"
-	elif [ "${ESOP_VERSION}" == "1.0-beta2" ]; then
+	if [ "${ESOP_VERSION}" == "1.0-beta2" ]; then
 		_notice "restore mole special configs continue, as esop version ${ESOP_VERSION}"
 		for file in ${RESTORE_MOLESPEC_FILES[*]}
 		do
 			/bin/cp -f "${MOLECONF_SAVE}/${file}"  "${MOLECONF_PATH}/${file}"
 			_check "restore mole special configs ${file}"
 		done
+	else
+		_notice "restore mole special configs skip, as esop version ${ESOP_VERSION}"
 	fi
 
 	# restore pgmail config files if pgmail installed
@@ -511,27 +511,34 @@ upgrade_cksum() {
 #
 
 if [ "$(/usr/bin/id -u 2>&-)" != "0" ]; then
-  echo_red "root privilege required!";echo
-  exit 1
+	echo_red "root privilege required!";echo
+	exit 1
 fi
 
 ESOP_VERSION=$( get_esopver )
 PGMAIL_VERSION=$( get_pgmailver )
 if [ -z "$ESOP_VERSION" ]; then
-  echo_red "rpm $ESOP_RPMNAME not installed!";echo
-  exit 1
+	echo_red "rpm $ESOP_RPMNAME not installed!";echo
+	exit 1
+else
+  	if [ "${ESOP_VERSION}" == "1.0-beta1" -o "${ESOP_VERSION}" == "1.0-beta2" ]; then
+		:
+	else
+		echo_red "only $ESOP_RPMNAME 1.0-beta1 or 1.0-beta2 supported! nower version $ESOP_VERSION";echo;
+		exit 1
+	fi
 fi
 
 OS_RHEL56=$( get_rhel56 )
 if [ -z "$OS_RHEL56" ]; then
-  echo_red "can't get os release 5/6 ?";echo
-  exit 1
+	echo_red "can't get os release 5/6 ?";echo
+	exit 1
 fi
 
 UTIL_LACK=$( util_check )
 if [ -n "${UTIL_LACK}" ]; then
-  echo_red "lack utils: [${UTIL_LACK}]";echo
-  exit 1
+	echo_red "lack utils: [${UTIL_LACK}]";echo
+	exit 1
 fi
 
 
