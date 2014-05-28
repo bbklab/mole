@@ -19,7 +19,7 @@ LOGFILE="${LOGS_DIR}/${0##*/}.log"
 EL6_64FILE="${EL6_64DIR}/esop-1.0.1-rhel6.x86_64.rpm"
 EL5_64FILE="${EL5_64DIR}/esop-1.0.1-rhel5.x86_64.rpm"
 EL5_32FILE="${EL5_32DIR}/esop-1.0.1-rhel5.i386.rpm"
-PGMAILFILE="${PGMAILDIR}/esop-plugingroup-mail-0.1.rhel.noarch.rpm"
+PGMAILFILE="${PGMAILDIR}/esop-plugingroup-mail-0.1-rhel.noarch.rpm"
 
 ESOP_MD5LST="${FILES_DIR}/esop/md5sum.lst"
 PGMAIL_MD5LST="${FILES_DIR}/pgmail/md5sum.lst"
@@ -116,7 +116,7 @@ _notice() {
 }
 
 _info() {
-	echo -e " -- $(date +%F_%T)  [INFO]  ${*} " | tee -a $LOGFILE
+	echo -e " -- $(date +%F_%T)  [$(echo_green "INFO")]  ${*} " | tee -a $LOGFILE
 }
 
 util_check() {
@@ -288,20 +288,21 @@ save_configs() {
 }
 
 rpm_uninstall() {
-	/bin/rpm -e $ESOP_RPMNAME  >> $LOGFILE 2>&1
-	_check "uninstall $ESOP_RPMNAME"
-
 	if [ -z "${PGMAIL_VERSION}" ]; then
 		_notice "uninstall $PGMAIL_RPMNAME skip, as not installed before"
 	else
 		/bin/rpm -e $PGMAIL_RPMNAME >> $LOGFILE 2>&1
 		_check "uninstall $PGMAIL_RPMNAME"
 	fi
+
+	/bin/rpm -e $ESOP_RPMNAME  >> $LOGFILE 2>&1
+	_check "uninstall $ESOP_RPMNAME"
+
 }
 
 clean_oldfiles() {
 	if [ -d "${ESOP_PATH}" ]; then
-		/bin/mv -f "${ESOP_PATH}" "${ESOP_PATH}_${ESOP_VERSION}_${OS_RHEL56}" >> $LOGFILE 2>&1
+		/bin/mv -f "${ESOP_PATH}" "${ESOP_PATH}_${ESOP_VERSION}_${OS_RHEL56}_$(date +%s)" >> $LOGFILE 2>&1
 		_check "backup old installation directories"
 
 	fi
@@ -400,12 +401,8 @@ upgrade_configs() {
 	local tcp_conn_ini="${MOLECONF_PATH}/tcp_conn.ini"
 
 	# process file: etm_phptd_ini
-	local vof_max_dest_buffer_len=$( read_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_len )
-	del_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_len
-	_check "rename -> 1. remove max_dest_buffer_len"
-
-	add_ini_config ${etm_phptd_ini} agent_client max_dest_buffer_num "${vof_max_dest_buffer_len}"
-	_check "remove -> 2. add max_dest_buffer_num "
+	sed -i 's/max_dest_buffer_len = 10000/max_dest_buffer_num = 10000/' ${etm_phptd_ini} >> $LOGFILE 2>&1
+	_check "rename max_dest_buffer_len as max_dest_buffer_num"
 
 	del_ini_config ${etm_phptd_ini} agent_client noop_interval
 	_check "remove noop_interval"
@@ -475,41 +472,61 @@ upgrade_configs() {
 
 upgrade_cksum() {
 	local md5sum_2=  mismatch_lst=
+	local total=0  err=0
 
 	while read md5sum_1 filepath
 	do
+		((total++))
 		md5sum_2=$( /usr/bin/md5sum "${filepath}" 2>&- | awk '{print $1;exit}' )
 		if [ "${md5sum_2}" == "${md5sum_1}" ]; then
-			_info "md5 check for ${filepath} passed!"
+			_info "md5 check for ${filepath} passed!" >/dev/null
 		else
+			((err++))
 			mismatch_lst="${mismatch_lst} ${filepath}"
-			_notice "md5 check for ${filepath} not passed!"
+			_notice "md5 check for ${filepath} not passed!" >/dev/null
 		fi
 	done < "${ESOP_MD5LST}"
 
 	if [ -z "${PGMAIL_VERSION}" ]; then
-		_notice "md5 check for $PGMAIL_RPMNAME skip, as not installed before"
+		_notice "md5 check for $PGMAIL_RPMNAME skip, as not installed before" >/dev/null
 	else
 		while read md5sum_1 filepath
 		do
+			((total++))
 			md5sum_2=$( /usr/bin/md5sum "${filepath}" 2>&- | awk '{print $1;exit}' )
 			if [ "${md5sum_2}" == "${md5sum_1}" ]; then
-				_info "md5 check for ${filepath} passed!"
+				_info "md5 check for ${filepath} passed!" >/dev/null
 			else
+				((err++))
 				mismatch_lst="${mismatch_lst} ${filepath}"
-				_notice "md5 check for ${filepath} not passed!"
+				_notice "md5 check for ${filepath} not passed!" >/dev/null
 			fi
 		done < "${PGMAIL_MD5LST}"
 	fi
 
-	echo -en "${mismatch_lst}"
+	if [ $err -ne 0 ]; then
+		echo -en "${err}/${total} files failed! ${mismatch_lst}"
+		return 1
+	else
+		echo -en "${total}/${total} files cksum passed!"
+		return 0
+	fi
 }
 
+check_syshosts() {
+	if grep -E "esop.eyou.net|mole.eyousop.com" $SYS_HOSTS >/dev/null 2>&1; then
+		_notice "! $(echo_red "Please remove [esop.eyou.net] or [mole.eyousop.com] from $SYS_HOSTS") !"
+	else
+		_info "no need to remove dns-ip map from $SYS_HOSTS"
+	fi
+}
 
 #
 ### Main Body Begin ...
 #
 
+
+### previous check
 if [ "$(/usr/bin/id -u 2>&-)" != "0" ]; then
 	echo_red "root privilege required!";echo
 	exit 1
@@ -541,7 +558,10 @@ if [ -n "${UTIL_LACK}" ]; then
 	exit 1
 fi
 
-
+### agent upgrade
+_info
+_info
+_info "esop upgrade start"
 
 save_configs
 rpm_uninstall
@@ -549,4 +569,12 @@ clean_oldfiles
 rpm_install
 restore_configs
 upgrade_configs
-upgrade_cksum
+
+### at last
+info=$( upgrade_cksum )
+_check "$info"
+check_syshosts
+
+_info "esop upgrade finished"
+_info
+_info
