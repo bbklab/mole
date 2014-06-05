@@ -609,7 +609,7 @@ sub genjson_post {
 		$raw_auto{'enabled'} = 0;
 	} else {
 		$raw_auto{'enabled'} = 1;
-		my @json_auto_result = '';
+		my @json_auto_result = ();
 		for (@lines) {
 			my %line = (
 				'color'		=> '',
