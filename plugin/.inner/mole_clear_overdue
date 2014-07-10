@@ -57,7 +57,7 @@ check() {
 
   # First check if the top directories which to be searched is invalid or not.
   # You must take care here because it releated to deletion operations.
-  # If one of the following three variables is invalid, exit.
+  # If one of the three variables is invalid, exit.
   [ "$( sub_str "${TMP_DIR}" "mole/tmp" )" == "no" ] && {
 	EXIT_STATUS=${STATE_CRIT};
 	LEVEL="unknown";
@@ -80,10 +80,9 @@ check() {
 	return
   }
 
-  # Search files by /usr/bin/find with option -follow  (this maybe dangerous)
-  # This may be very dangerous if somebody created a symbolic link like this:
+  # Search files by /usr/bin/find ** without ** option -follow, instead, use -P
+  # Because it may be very dangerous if somebody created a symbolic link like this:
   # ln -sv /etc/  mole/log/snapshot/
-  # Hope nobody would be stupid like that
 
   # 1. search tmpfiles
 
@@ -91,70 +90,79 @@ check() {
   for plugin_name in `list_plugin_section`
   do
 	[ -d "${TMP_DIR}/${plugin_name}" ] && {
-		tmpfile_dirlist="${tmpfile_dirlist} ${TMP_DIR}/${plugin_name}"
+		# / after directory is important, so no need to use find option -follow
+		tmpfile_dirlist="${tmpfile_dirlist} ${TMP_DIR}/${plugin_name}/"
 	}
   done
-  [ -d "${TMP_DIR}/mailbody" ] && tmpfile_dirlist="${tmpfile_dirlist} ${TMP_DIR}/mailbody"
+  [ -d "${TMP_DIR}/mailbody" ] && tmpfile_dirlist="${tmpfile_dirlist} ${TMP_DIR}/mailbody/"
 
   # search tmpfiles in tmpdirs.
   [ -z "${tmpfile_dirlist//[ ]/}" ] && {
 	result="${result} tmpfile: No temperary directories be searched ###" 
   } || {
-	tmpfiles=$( /usr/bin/find ${tmpfile_dirlist} -follow -type f -ctime +${tmpfile_reserve_time} -print 2>&- )
+	tmpfiles=$( /usr/bin/find -P ${tmpfile_dirlist} -type f -ctime +${tmpfile_reserve_time} -print 2>&- )
 	[ -z "${tmpfiles}" ] && {
 		t_num=0
 	} || {
 		t_num=$(echo -e "${tmpfiles}" | wc -l)
 	}
 	dellist="${dellist} ${tmpfiles} \n"   ### \n here is important
-  	result="${result} tmpfile: ${t_num} files ###"
+  	result="${result} ${t_num} tmp_files ###"
   }
 
   # 2. search logfiles
-  logfiles=$( /usr/bin/find ${BACK_DIR} -follow -type f -ctime +${logfile_reserve_time} -print 2>&- )
+  # / after directory is important, so no need to use find option -follow
+  logfiles=$( /usr/bin/find -P ${BACK_DIR}/ -type f -ctime +${logfile_reserve_time} -print 2>&- )
   [ -z "${logfiles}" ] && {
 	l_num=0
   } || {
   	l_num=$(echo -e "${logfiles}" | wc -l)
   }
   dellist="${dellist} ${logfiles} \n"   ### \n here is important
-  result="${result} logfile: ${l_num} files ###"
+  result="${result} ${l_num} log_files ###"
 
   # 3. search snapfiles
-  snapfiles=$( /usr/bin/find ${SNAPSHOT_DIR} -follow -type f -ctime +${snapfile_reserve_time} -print 2>&- )
+  # / after directory is important, so no need to use find option -follow
+  snapfiles=$( /usr/bin/find -P ${SNAPSHOT_DIR}/ -type f -ctime +${snapfile_reserve_time} -print 2>&- )
   [ -z "${snapfiles}" ] && {
 	s_num=0
   } || {
   	s_num=$(echo -e "${snapfiles}" | wc -l)
   }
   dellist="${dellist} ${snapfiles} \n"   ### \n here is important
-  result="${result} snapfiles: ${s_num} files ###"
+  result="${result} ${s_num} snap_files ###"
 
   # P. search proxyfiles
   if [ "${take_over_proxylog}" == "yes" ]; then
         local PROXY_LOGBACKDIR="/usr/local/esop/agent/log/backup"
-	proxyfiles=$( /usr/bin/find ${PROXY_LOGBACKDIR} -follow -type f -ctime +${logfile_reserve_time} -print 2>&- )
+	# / after directory is important, so no need to use find option -follow
+	proxyfiles=$( /usr/bin/find -P ${PROXY_LOGBACKDIR}/ -type f -ctime +${logfile_reserve_time} -print 2>&- )
 	[ -z "${proxyfiles}" ] && {
 		p_num=0
 	} || {
 		p_num=$(echo -e "${proxyfiles}" | wc -l)
 	}
 	dellist="${dellist} ${proxyfiles} \n"	### \n here is important
-	result="${result} proxyfiles: ${p_num} files ###"
+	result="${result} ${p_num} proxy_files ###"
   fi
 
   total_num=$(( ${t_num} + ${l_num} + ${s_num} + ${p_num} ))
   [ "${total_num}" == "0" ] && {
 	result="No file to be cleaned up ###" 
   } || {
-	result="${result} total: ${total_num} files to be cleaned up: $(echo -e "${dellist}" | tr '\n' ' ') ###"
+	result="${result} total ${total_num} files to be cleaned up: $(echo -e "${dellist}" | tr '\n' ' ') ###"
   }
 
   # 4. delete files
   # for line in `echo -e "${dellist}"`     ### can't deal filename with space.
   echo -e "${dellist}" | while read line
   do
-	[ ! -z "${line//[ ]}" -a -f "${line}" ] && /bin/rm -f "${line}" 2>&-
+	# skip symbolic link
+	[ -L "${line}" ] && continue 1
+	# skip empty line
+	[ -z "${line//[ ]}" ] && continue 1
+	# remove indeed files
+	[ -f "${line}" ] && /bin/rm -f "${line}" 2>&-
   done
 
   # 5. check snapdir_maxsize
@@ -165,14 +173,20 @@ check() {
   else
   	if [ $snap_dirsize -gt ${snapdir_maxsize} ]; then
 		result="${result} snap directory size [${snap_dirsize}M] >= [${snapdir_maxsize}M], cleaning up ###"
-		oldestdir=$( /usr/bin/find "${SNAPSHOT_DIR}" -mindepth 1 -maxdepth 1 2>&- | sort -n | head -n1)
+		# / after directory is important, so no need to use find option -follow
+		oldestdir=$( /usr/bin/find -P ${SNAPSHOT_DIR}/ -mindepth 1 -maxdepth 1 -type d 2>&- | sort -n | head -n1)
+		# check again: dirpath is invalid or not, this must be very cautious
 		if [ "$( sub_str "${oldestdir}" "mole/log/snapshot/" )" == "yes" ]; then
-			result="${result} oldest dir: [${oldestdir}] will be removed ###"
-			rmerr=$( /bin/rm -rf "${oldestdir}" 2>&1 1>/dev/null )
-			if [ "$?" == "0" ]; then
-				result="${result} remove [${oldestdir}] success ###"
+			if [ -L "${oldestdir}" ]; then
+				result="${result} oldest dir: [${oldestdir}] is symbolic link, skip removing ###"
 			else
-				result="${result} remove [${oldestdir}] failed: [${rmerr}] ###"
+				result="${result} oldest dir: [${oldestdir}] not symbolic link, will be removed ###"
+				rmerr=$( /bin/rm -rf "${oldestdir}" 2>&1 1>/dev/null )
+				if [ "$?" == "0" ]; then
+					result="${result} remove [${oldestdir}] success ###"
+				else
+					result="${result} remove [${oldestdir}] failed: [${rmerr}] ###"
+				fi
 			fi
 		else
        			result="${result} oldest dir: [${oldestdir}] is invalid, nothing to do ###"
