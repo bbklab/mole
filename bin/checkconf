@@ -154,10 +154,13 @@ ARRAY_CONFIG_RULES=(
 	"mole_check_remote=>exec_tmout"	      "time"
 
 	# handler
+	"sendmail=>smtp_server"			"str"
 	"sendmail=>smtp_server_port"		"int:1:65535"
+	"sendmail=>auth_user"			"emls"
+	"sendmail=>auth_pass"			"str"
 	"sendmail=>timeout"			"int:1:300"
 	"sendmail=>charset"			"cbset:[utf8|gbk|gb2312|big5]"
-	"sendmail=>auth_user"			"emls"
+	"postlog=>post_server"			"str:127.0.0.1"
 	"postlog=>post_server_port"		"int:1:65535"
 	"postlog=>post_port_type"		"set:[tcp|udp]"
 	"postlog=>post_timeout"			"int:1:300"

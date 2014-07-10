@@ -256,7 +256,7 @@ if ($json_result) {
 
 # set post address
 our %post_server = (
-  'post_server'		=> '',
+  'post_server'		=> '127.0.0.1',
   'post_server_port'	=> '',
   'post_port_type'	=> '',
   'post_timeout'	=> '',
