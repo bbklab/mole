@@ -999,8 +999,8 @@ config_pprocess() {
 		return 1
 	fi
 	if [ -f "${file}" -a -s "${file}" ]; then
-		${MOLE} config-del ${plugin} ${cfg}; ((rc+=$?))
-		${MOLE} config-add ${plugin} ${cfg} "file:${cfg_value}"; ((rc+=$?))
+		${MOLE} config-clear ${plugin} ${cfg}; ((rc+=$?))
+		${MOLE} config-update ${plugin} ${cfg} "file:${cfg_value}"; ((rc+=$?))
 	fi
 
 	return $rc
