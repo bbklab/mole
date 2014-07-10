@@ -114,6 +114,7 @@ ARRAY_CONFIG_RULES=(
 	#"global=>name" 			"str:mole__ops.eyou.net"
 	#"global=>parter_id"			"int:0:9999999999"
 	"global=>scan_interval"  		"int:5:999"
+	"global=>notify_by"			"set:[client|server]"
 	"global=>attach_ini_mail"		"set:[yes|no]"
 	"global=>sysload_uplimit"		"int:0:999"
 	"global=>max_kidsnum"			"int:0:999"
