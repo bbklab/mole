@@ -269,6 +269,8 @@ get_emversion() {
 		version_file="${conf_phpfile}"
 	elif [ -f "${conf_phpfile_new}" -a -s "${conf_phpfile_new}" ]; then
 		version_file="${conf_phpfile_new}"
+	else
+		return
 	fi
 	result=$( awk -F"," '(/^[ \t]*define.+EYOUM_VERSION/){print $2;exit;}' "${version_file}" 2>&- | tr -d "'); " )
 	echo -en "${result}"
@@ -1405,7 +1407,7 @@ if [ "$1" == "rpminit" ]; then
 	write_log "INFO: eyoumail starton components: [${EM_START[*]}](${#EM_START[*]})"
 	#write_log "INFO: eyougateway starton components: [${EMG_START[*]}](${#EMG_START[*]})"
 	write_log "INFO: eyoumail supported version: [${ARRAY_SUPPORTED_EMVERSION[*]}](${#ARRAY_SUPPORTED_EMVERSION[*]})"
-	write_log "INFO: eyoumail installed version: ${EM_VERSION}, is supported: ${IS_SUPPORTED_EMVERSION}"
+	write_log "INFO: eyoumail installed version: [${EM_VERSION}], is supported: ${IS_SUPPORTED_EMVERSION}"
 	#write_log "INFO: eyougateway supported version: [${ARRAY_SUPPORTED_EMGVERSION}](${#ARRAY_SUPPORTED_EMGVERSION[*]})"
 	#write_log "INFO: eyougateway installed version: ${EMG_VERSION}, is supported: ${IS_SUPPORTED_EMGVERSION}"
 	write_log "INFO: plugins to be config: [${PLUGINS}]"
