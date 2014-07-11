@@ -1,3 +1,4 @@
+<html>
 <head>
 	<meta charset="UTF-8">
 </head>
@@ -56,3 +57,4 @@
 			<p style="color:#797979;">该邮件为智能运维平台系统邮件，请勿直接回复！</p>
 	</div>
 </body>
+</html>
