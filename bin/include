@@ -1205,6 +1205,26 @@ get_global_locale() {
   echo "${result}"
 }
 
+# Get global logo_link					config-name:  logo_link
+# Note: if returned config-value is empty, return http://esop.eyou.net
+#
+get_logo_link() {
+  local result= default="http://esop.eyou.net"
+  result=$(read_mole_config global logo_link)
+  [ -z "${result}" ] && result=${default}
+  echo "${result}"
+}
+
+# Get global logo_url					config-name:  logo_url
+# Note: if returned config-value is empty, return  http://esop.eyou.net/mc/tpl/public/images/logo/normal.png
+#
+get_logo_url() {
+  local result= default="http://esop.eyou.net/mc/tpl/public/images/logo/normal.png"
+  result=$(read_mole_config global logo_url)
+  [ -z "${result}" ] && result=${default}
+  echo "${result}"
+}
+
 # Get plugin enable status		config-name:  enable
 # Note: if returned config-value is invalid, return no
 #

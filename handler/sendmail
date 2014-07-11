@@ -78,6 +78,9 @@ conv_output2mailbody() {
   local content=$1  hd_content=$2  jobid=$3  plugin=$4  gname=$5
   local level= title= summary= details= mailbody= rc=
 
+  local logo_link=$(get_logo_link)
+  local logo_url=$(get_logo_url)
+
   if [ "${hd_content}" == "auto handle is disabled. Nothing to do" ]; then
 	hd_content="$(gettext "auto handle is disabled. Nothing to do")" 	# translate on fix string
   fi
@@ -88,7 +91,9 @@ conv_output2mailbody() {
   mailbody="$(gen_tmpfile mailbody)"
   if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
 	{
-	${PLUTIL} "create_mailct" "${TPL_MAIL}" "${gname}" "${plugin}" "${jobid}" "${content}" "${hd_content}"
+		${PLUTIL} "create_mailct" "${TPL_MAIL}" "${gname}" \
+				"${plugin}" "${jobid}" "${content}" \
+				"${hd_content}" "${logo_link}" "${logo_url}"
 	} >> "${mailbody}" 2>&1
   else
   	title=$(${PLUTIL} parted_output 4 "${content}")
