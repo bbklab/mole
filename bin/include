@@ -1576,6 +1576,10 @@ get_policy_analysize() {
   echo "${result}"
 }
 
+# Check now hit plugin's notify policy range or not ?
+# Usage:        hit_policy_range_ornot {notify_plicy_config}
+# Example:      hit_policy_range_ornot "0-09,07-11,13-20,10-19  5"  
+#
 hit_policy_range_ornot() {
   local notify_policy=$1
   [ -z "${notify_policy//[ ]}" ] && {
@@ -3223,17 +3227,21 @@ process_plugin() {
 
   # Step 11: check action: mail_notify
   local m_alert=$(take_action_ornot "${plugin_name}" mail_notify ${rc})
-  local failed_eml_flag=0  result_emllst=
+  local result_emllst=
   if [ "${m_alert}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
-	# eval  will return syntax error. why ?
-	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
-	result_emllst=" ${m_alert} ### ${result_emllst} " 
-	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
-	write_log ${jid} ${plugin_name} "mail notify finished, failed_eml_flag=[${failed_eml_flag}]."\
-		"details in ${SENDMAIL_LOG##*/}. CONTINUE";
+	local mail_policy=$(get_mail_policy ${plugin_name})
+	write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+	if hit_policy_range_ornot "${mail_policy}"; then
+		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
+		result_emllst=" ${m_alert} ### ${result_emllst} " 
+		write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
+	else
+		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
+		write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
+	fi
   fi
 
   # Step 12: check action: post_notify
@@ -3397,18 +3405,24 @@ process_plugin_timeout() {
 
   # Step 5: send timeout notify mail
   local m_alert=$(take_action_ornot "${plugin_name}" mail_notify "tmout")
-  local failed_eml_flag=0  result_emllst=
+  local result_emllst=
   if [ "${m_alert}" != "yes" ]; then
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"mail notify disabled. SKIP"
   else
 	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"mail notify enabled. CONTINUE"
-	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
-	result_emllst=" ${m_alert} ### ${result_emllst} "
-	[ "$?" == "0" ] && failed_eml_flag=0 || failed_eml_flag=1
-	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
-		"send timeout mail finished, failed_eml_flag=[${failed_eml_flag}], details in ${SENDMAIL_LOG##*/}. CONTINUE"
+        local mail_policy=$(get_mail_policy ${plugin_name})
+        write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+        if hit_policy_range_ornot "${mail_policy}"; then
+		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+		result_emllst=" ${m_alert} ### ${result_emllst} "
+		write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+			"send timeout mail finished, details in ${SENDMAIL_LOG##*/}. CONTINUE"
+	else 
+		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
+		write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
+        fi 
   fi
 
   # Step 6: post timeout information
@@ -3470,9 +3484,16 @@ process_sysoverload() {
   # Step 4: send alert mail whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
 	"sending alert mail"
-  local failed_eml_flag=0  result_emllst=
-  result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
-  result_emllst=" yes ### ${result_emllst} "
+  local result_emllst=
+  local mail_policy=$(get_mail_policy ${plugin_name})
+  write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+  if hit_policy_range_ornot "${mail_policy}"; then
+ 	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+  	result_emllst=" yes ### ${result_emllst} "
+  else 
+	result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
+	write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
+  fi 
 
   # Step 5: post alert information whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
@@ -3524,9 +3545,16 @@ process_kidsexceed() {
   # Step 4: send alert mail whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
 	"sending alert mail"
-  local failed_eml_flag=0  result_emllst=
-  result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
-  result_emllst=" yes ### ${result_emllst} "
+  local result_emllst=
+  local mail_policy=$(get_mail_policy ${plugin_name})
+  write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+  if hit_policy_range_ornot "${mail_policy}"; then
+  	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+  	result_emllst=" yes ### ${result_emllst} "
+  else
+	result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
+	write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
+  fi
 
   # Step 5: post alert information whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
@@ -3586,8 +3614,15 @@ process_plugin_misform() {
   if [ "${notify_onmisform}" == "yes" ]; then
   	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
         	"sending notify mail"
-  	result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
-	result_emllst=" yes ### ${result_emllst} "
+	local mail_policy=$(get_mail_policy ${plugin_name})
+	write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+        if hit_policy_range_ornot "${mail_policy}"; then
+  		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "$jid" -i "${output}" -h "${hd_output}" 2>&1 )
+		result_emllst=" yes ### ${result_emllst} "
+	else 
+		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
+		write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
+        fi 
 
 	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"sending notify sms"

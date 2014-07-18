@@ -447,42 +447,62 @@ sub genjson_post {
   );
 
   # set data-> {res / act}
-  my ($mailflag,$smsflag) = (0,0);
+  my ($mailflag,$smsflag,$mail_banreason,$sms_banreason) = (0,0,'','');
   my @arrsucceml = ();
   my @arrfaileml = ();
   my @arrsuccsms = ();
   my @arrfailsms = ();
   if (defined $eml && $eml ne '') {
 	&log("DEBUG: $logfrom receive args eml=[$eml]") if $debug;
-  	my ($s_mail,$succeml,$faileml) = split(/\s+###/,$eml);
-  	$s_mail =~ s/\A\s+//; $succeml =~ s/\A\s+//; $faileml =~ s/\A\s+//;
-  	if (defined $faileml && $faileml ne ''){
-		$raw_data{'res'} = 1;
-  	}
-	$mailflag = (defined $s_mail && $s_mail eq 'yes') ? 1 : 0;
-  	@arrsucceml = split(/\s+/,$succeml) if ($succeml);
-  	@arrfaileml = split(/\s+/,$faileml) if ($faileml);
+	my $s_mail = (split(/\s+###/,$eml))[0];		# yes,no,banned	=> enabled: 1,0,2
+	if (defined $s_mail && $s_mail ne '') {
+		$s_mail =~ s/\A\s+//;
+		if ($s_mail eq 'banned') {
+			$mailflag = 2;
+			my $mail_banreason = (split(/\s+###/,$eml))[1];
+		} else {
+			$mailflag = ($s_mail eq 'yes') ? 1 : 0;
+			my ($succeml,$faileml) = (split(/\s+###/,$eml))[1,2];
+			$succeml =~ s/\A\s+//; $faileml =~ s/\A\s+//;
+  			if (defined $faileml && $faileml ne ''){
+				$raw_data{'res'} = 1;
+  			}
+  			@arrsucceml = split(/\s+/,$succeml) if ($succeml);
+  			@arrfaileml = split(/\s+/,$faileml) if ($faileml);
+		}
+	}
   }
   if (defined $sms && $sms ne '') {
 	&log("DEBUG: $logfrom receive args sms=[$sms]") if $debug;
-  	my ($s_sms,$succsms,$failsms) = split(/\s+###/,$sms);
-  	$s_sms =~ s/\A\s+//; $succsms =~ s/\A\s+//; $failsms =~ s/\A\s+//;
-  	if (defined $failsms && $failsms ne ''){
-		$raw_data{'res'} = 1;
-  	}
-	$smsflag = (defined $s_sms && $s_sms eq 'yes') ? 1 : 0;
-  	@arrsuccsms = split(/\s+/,$succsms) if ($succsms);
-  	@arrfailsms = split(/\s+/,$failsms) if ($failsms);
+	my $s_sms = (split(/\s+###/,$sms))[0];
+	if (defined $s_sms && $s_sms ne '') {
+		$s_sms =~ s/\A\s+//;
+		if ($s_sms eq 'banned') {
+			$smsflag = 2;
+			my $sms_banreason = (split(/\s+###/,$sms))[1];
+		} else {
+			$smsflag = ($s_sms eq 'yes') ? 1 : 0;
+  			my ($succsms,$failsms) = (split(/\s+###/,$sms))[1,2];
+  			$succsms =~ s/\A\s+//; $failsms =~ s/\A\s+//;
+  			if (defined $failsms && $failsms ne ''){
+				$raw_data{'res'} = 1;
+  			}
+  			@arrsuccsms = split(/\s+/,$succsms) if ($succsms);
+  			@arrfailsms = split(/\s+/,$failsms) if ($failsms);
+		}
+	}
   }
   my %raw_eml = (
 	'enabled'	=> $mailflag,
 	'succ'		=> \@arrsucceml,
 	'fail'		=> \@arrfaileml,
+	'reason'	=> $mail_banreason,
   );
   my %raw_sms = (
 	'enabled'	=> $smsflag,
 	'succ'		=> \@arrsuccsms,
 	'fail'		=> \@arrfailsms,
+	'reason'	=> $sms_banreason,
   );
   my %raw_act = (
 	'mail'		=> \%raw_eml,
