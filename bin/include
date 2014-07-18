@@ -1447,6 +1447,135 @@ get_maxerr_times() {
   echo "${result}"
 }
 
+# Check Notify Policy is valid or not ?
+# Note:	return 0 means valid, otherwise invalid
+# Return Code:
+# 	0	valid
+#	1	empty policy 
+#	2	policy not combined by two part which seperated by blank
+#	3	max_repeat_time not integer
+#	4	max_repeat_time not between 0-99999
+#	5	one of range_pair not combined by two part which seperated by -
+#	6	one of range_start not integer or not between 0-23
+#	7	one of range_stop not integer or not between 1-24
+#	8	one of range_start larger or equal range_stop
+# 
+valid_notify_policy() {
+  local policy="${1}"	v="${2}"
+  [ -z "${policy//[ ]}" ] && return 1
+
+  local policy_array=( ${policy} )
+  [ ${#policy_array[*]} -ne 2 ] && return 2
+
+  local p1=${policy_array[0]} p2=${policy_array[1]}
+  if [ "${p2}" == "-1" ]; then
+	:
+  elif ! is_int "${p2}"; then
+	return 3
+  elif ! is_between "${p2}" 0 99999; then
+	return 4
+  fi
+
+  local range_array=(  ${p1//,/ }  )
+  for ((i=0;i<${#range_array[*]};i++))
+  do
+	local range_pair=${range_array[$i]}
+	local pair_array=( ${range_pair//-/ } )
+	[ ${#pair_array[*]} -ne 2 ] && return 5
+	
+	local s=${pair_array[0]} e=${pair_array[1]}
+	if ! is_int "${s}" || ! is_between "${s}" 0 23; then
+		return 6
+	fi
+
+	if ! is_int "${e}" || ! is_between "${e}" 1 24; then
+		return 7
+	fi
+
+	if [ ${s} -ge ${e} ]; then
+		return 8
+	fi
+  done
+
+  return 0
+}
+
+# Get plugin mail notify policy		config-name:  mail_policy
+# Note: if returned config-value is invalid, return  0-24 3
+#
+get_mail_policy() {
+  local plugin_name=$1  result=  default="0-24 3"
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_mail_policy error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} mail_policy)
+  [ -z "${result}" ] && result=$(read_mole_config default mail_policy)
+
+  # check valid or not 
+  valid_notify_policy "${result}" || result=${default}
+
+  echo "${result}"
+}
+
+# Get plugin SMS notify policy		config-name:  sms_policy
+# Note: if returned config-value is invalid, return  0-24 3
+#
+get_sms_policy() {
+  local plugin_name=$1  result=  default="0-24 3"
+  [ -z "${plugin_name}" ] && {
+        write_log -f "${MOLE_LOG}" "E0000000 get_sms_policy error: missing plugin name";
+        return 1
+  }
+  result=$(read_mole_config ${plugin_name} sms_policy)
+  [ -z "${result}" ] && result=$(read_mole_config default sms_policy)
+
+  # check valid or not 
+  valid_notify_policy "${result}" || result=${default}
+
+  echo "${result}"
+}
+
+# Get plugin notify analysization
+# Usage: 	get_policy_analysize {notify_plicy_config} {part}
+# Note:	 	{part}		~ range | rtime
+# Example:	get_policy_analysize  "0-9,7-11,13-20,10-19  5"  range
+#
+get_policy_analysize() {
+  local notify_policy="${1}"  part="${2}"  result=
+
+  [ -z "${notify_policy//[ ]}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_policy_analysize error: missing notify policy to be analysized.";
+	return 1
+  }
+  [ "${part}" != "range" -a "${part}" != "rtime" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 get_policy_analysize error: required part [${part}] not recognized.";
+	return 2
+  }
+
+  local policy_array=( ${notify_policy} )
+  if [ "${part}" == "range" ]; then
+  	local p1=${policy_array[0]}
+  	local range_array=(  ${p1//,/ }  )
+  	for ((i=0;i<${#range_array[*]};i++))
+  	do
+		local range_pair=${range_array[$i]}
+		local pair_array=( ${range_pair//-/ } )
+		local s=${pair_array[0]} e=${pair_array[1]}
+		for ((x=${s};x<${e};x++))
+		do
+			result="${result} ${x}"
+		done
+  	done
+	# remove duplication items on part=range
+	result=$(echo "${result}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++')
+  elif [ "${part}" == "rtime" ]; then
+	result=${policy_array[1]}
+  fi
+
+  echo "${result}"
+}
+
 # Get plugin's xxxx_action_type value.		
 # allowed action_type ==> [ take_snapshot | mail_notify | sms_notify | post_notify | auto_handle ]
 # Usage:      get_action_type  plugin-name  xxxx_action_type
@@ -3479,3 +3608,11 @@ process_plugin_misform() {
 #is_float  11.1zzz; echo $?
 #is_between 99.9 1.1 100; echo $?
 #is_between .9 azdk 100; echo $?
+#valid_notify_policy " abc 3 "
+#echo $?
+#valid_notify_policy " 0-24,1-1,1-100,abc-def,,  12 "
+#echo $?
+#get_mail_policy abc
+#get_sms_policy abc
+#get_policy_analysize " 0-24,1-1,1-100,3-108,10000-10007,abc-def,,  12  "  "range"
+#get_policy_analysize  "0-9,7-11,13-20,10-19  5"  range
