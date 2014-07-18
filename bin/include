@@ -1467,12 +1467,12 @@ valid_notify_policy() {
   local policy_array=( ${policy} )
   [ ${#policy_array[*]} -ne 2 ] && return 2
 
-  local p1=${policy_array[0]} p2=${policy_array[1]}
+  local p1=${policy_array[0]} p2=$((10#${policy_array[1]}))
   if [ "${p2}" == "-1" ]; then
 	:
   elif ! is_int "${p2}"; then
 	return 3
-  elif ! is_between "${p2}" 0 99999; then
+  elif ! is_between "${p2}" 0 9999; then
 	return 4
   fi
 
@@ -1483,7 +1483,7 @@ valid_notify_policy() {
 	local pair_array=( ${range_pair//-/ } )
 	[ ${#pair_array[*]} -ne 2 ] && return 5
 	
-	local s=${pair_array[0]} e=${pair_array[1]}
+	local s=$((10#${pair_array[0]})) e=$((10#${pair_array[1]}))
 	if ! is_int "${s}" || ! is_between "${s}" 0 23; then
 		return 6
 	fi
@@ -1539,7 +1539,7 @@ get_sms_policy() {
 # Get plugin notify analysization
 # Usage: 	get_policy_analysize {notify_plicy_config} {part}
 # Note:	 	{part}		~ range | rtime
-# Example:	get_policy_analysize  "0-9,7-11,13-20,10-19  5"  range
+# Example:	get_policy_analysize  "0-09,07-11,13-20,10-19  5"  range
 #
 get_policy_analysize() {
   local notify_policy="${1}"  part="${2}"  result=
@@ -1562,7 +1562,7 @@ get_policy_analysize() {
 		local range_pair=${range_array[$i]}
 		local pair_array=( ${range_pair//-/ } )
 		local s=${pair_array[0]} e=${pair_array[1]}
-		for ((x=${s};x<${e};x++))
+		for ((x=$((10#${s}));x<$((10#${e}));x++))
 		do
 			result="${result} ${x}"
 		done
@@ -1570,10 +1570,27 @@ get_policy_analysize() {
 	# remove duplication items on part=range
 	result=$(echo "${result}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++')
   elif [ "${part}" == "rtime" ]; then
-	result=${policy_array[1]}
+	result=$((10#${policy_array[1]}))
   fi
 
   echo "${result}"
+}
+
+hit_policy_range_ornot() {
+  local notify_policy=$1
+  [ -z "${notify_policy//[ ]}" ] && {
+	write_log -f "${MOLE_LOG}" "E0000000 hit_policy_range_ornot error: missing notify policy to be analysized.";
+	return 1
+  }
+
+  local nower_H=$(/bin/date +%H 2>&-)
+  local range_H=$( get_policy_analysize "${notify_policy}" "range" )
+
+  if is_sub "$((10#${nower_H}))" "${range_H}" ; then
+	return 0
+  else
+	return 1
+  fi
 }
 
 # Get plugin's xxxx_action_type value.		
@@ -3615,4 +3632,5 @@ process_plugin_misform() {
 #get_mail_policy abc
 #get_sms_policy abc
 #get_policy_analysize " 0-24,1-1,1-100,3-108,10000-10007,abc-def,,  12  "  "range"
-#get_policy_analysize  "0-9,7-11,13-20,10-19  5"  range
+#get_policy_analysize  "0-9,07-08,13-18,15-17  5"  range
+#hit_policy_range_ornot "0-9,07-08,13-16  5";echo $?
