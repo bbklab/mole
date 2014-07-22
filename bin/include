@@ -2067,7 +2067,8 @@ reset_repeat_errcount() {
 # Get plugin's heaped up rc number
 # Usage:        get_heapuprc_count plugin_name plugin_rc
 # Example:      get_heapuprc_count check_sysload succ
-# Return:       noplugin, noheaprc:{nower_rc}, null, invalid, [0-9]+
+# Return:       nottoday, noplugin, noheaprc:{nower_rc}, null, invalid, [0-9]+
+#	nottoday:	not today data
 #	noplugin:	no such plugin
 #	noheaprc:	no such rc and nower rc
 #	null:		result empty
@@ -2075,7 +2076,7 @@ reset_repeat_errcount() {
 #	[0-9]+		result normal (numberic)
 #
 get_heapuprc_count() {
-  local plugin_name=$1  plugin_rc=$2  result=
+  local plugin_name=$1  plugin_rc=$2  result=  today_date=
 
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_heapuprc_count error: missing plugin name"
@@ -2087,23 +2088,28 @@ get_heapuprc_count() {
         return 1
   }
 
-  result=$(awk '($1~/'${plugin_name}'\>/) {print $1;exit}' ${TMP_HEAPUP} 2>&-)
-  if [ -z "${result}" ]; then
-	result="noplugin"
+  today_date="$(/bin/date +%F 2>&-)"
+  result=$(awk '($1~/'${plugin_name}'\>/) {print $NF;exit}' ${TMP_HEAPUP} 2>&-)
+  if [ "${today_date}" != "${result}" ]; then
+	result="nottoday"
   else
-	local nowerrc_array=( $(awk '($1~/'${plugin_name}'\>/) {print $2,$3;exit}' ${TMP_HEAPUP} 2>&-) )
-	local nower_rc=${nowerrc_array[0]}  nower_count=${nowerrc_array[1]}
-	
-	if [ "${nower_rc}" != "${plugin_rc}" ]; then
-		result="noheaprc:${nower_rc}"
-	else
-  		result=${nower_count}
-  		if [ -z "${result}" ]; then
-			result="null"
-  		elif [ ! -z "${result//[0-9]}" ]; then
-			result="invalid"
-  		fi
-	fi
+  	result=$(awk '($1~/'${plugin_name}'\>/) {print $1;exit}' ${TMP_HEAPUP} 2>&-)
+  	if [ -z "${result}" ]; then
+		result="noplugin"
+  	else
+		local nowerrc_array=( $(awk '($1~/'${plugin_name}'\>/) {print $2,$3;exit}' ${TMP_HEAPUP} 2>&-) )
+		local nower_rc=${nowerrc_array[0]}  nower_count=${nowerrc_array[1]}
+		if [ "${nower_rc}" != "${plugin_rc}" ]; then
+			result="noheaprc:${nower_rc}"
+		else
+  			result=${nower_count}
+  			if [ -z "${result}" ]; then
+				result="null"
+  			elif [ ! -z "${result//[0-9]}" ]; then
+				result="invalid"
+  			fi
+		fi
+  	fi
   fi
 
   echo -e "${result}"
@@ -2115,7 +2121,8 @@ get_heapuprc_count() {
 # Example:      add_heapuprc_count sysload succ [jobid]
 # Note:   null          =>   update to 1
 #         invalid       =>   update to 1
-#	  noheaprc	=>   update to 1, this lead to clearing accumulated value on plugin status changed
+#	  noheaprc	=>   update to 1, this lead to clearing accumulated number on plugin status changed
+#	  nottoday	=>   update to 1, this lead to clearing accumulated number on a new day
 #         numberic      =>   update to +1
 #	  noplugin	=>   add new item as 1
 #
@@ -2147,6 +2154,10 @@ add_heapuprc_count() {
 	num=1;
 	mode="update"
 	change_from="${heaped_upcount##*:}"
+  elif [ "${heaped_upcount}" == "nottoday" ]; then	# not today's data, reset.
+							# this lead to clearing accumulated number on a new day
+	num=1;
+	mode="update"
   elif [ "${heaped_upcount}" == "null" ]; then		# exist but null, reset
        	num=1;
        	mode="update"
@@ -2160,7 +2171,7 @@ add_heapuprc_count() {
 
   # only collect stderr output
   if [ "${mode}" == "update" ]; then
-        # update old
+        # update old, update the whole plugin's line, only one continuously status remaining 
         errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${plugin_rc}"' '"${num}"'' ${TMP_HEAPUP} 2>&1 1>/dev/null )
   elif [ "${mode}" == "add" ]; then
         # add new
