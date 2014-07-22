@@ -2971,10 +2971,9 @@ view_extra_config() {
 #
 process_plugin() {
 
-  local plugin_name=$1
+  local plugin_name=$1  jid=$2
 
-  # Step 1: set jid / set debug flag / set logfile
-  local jid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
+  # Step 1: set debug flag / set logfile
   export _LOG="${MOLE_LOG}"          ### set logfile 
   local debug=$(get_debug "${plugin_name}")   ### set debug flag
   [ "${debug}" == "yes" ] && export _DEBUG="1" || export _DEBUG="0"
@@ -3389,8 +3388,8 @@ process_plugin() {
 process_inner_plugin() {
   local plugin_name=$1  mode=$2 output=
 
-  # Step 1: set random/unique jid
-  local jid=$( ${PLUTIL} unique_digest ) 
+  # Step 1: set jid
+  local jid="${mode}"
 
   # Step 2: check plugin script 
   write_log -f ${INNER_LOG} ${jid} ${plugin_name} "START"
