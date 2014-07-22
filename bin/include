@@ -2067,9 +2067,9 @@ reset_repeat_errcount() {
 # Get plugin's heaped up rc number
 # Usage:        get_heapuprc_count plugin_name plugin_rc
 # Example:      get_heapuprc_count check_sysload succ
-# Return:       noplugin, noheaprc, null, invalid, [0-9]+
+# Return:       noplugin, noheaprc:{nower_rc}, null, invalid, [0-9]+
 #	noplugin:	no such plugin
-#	noheaprc:	no such rc
+#	noheaprc:	no such rc and nower rc
 #	null:		result empty
 #	invalid:	result not numberic
 #	[0-9]+		result normal (numberic)
@@ -2091,11 +2091,13 @@ get_heapuprc_count() {
   if [ -z "${result}" ]; then
 	result="noplugin"
   else
-  	result=$(awk '($1~/'${plugin_name}'\>/ && $2~/'${plugin_rc}'\>/) {print $2;exit}' ${TMP_HEAPUP} 2>&-)
-	if [ -z "${result}" ]; then
-		result="noheaprc"
+	local nowerrc_array=( $(awk '($1~/'${plugin_name}'\>/) {print $2,$3;exit}' ${TMP_HEAPUP} 2>&-) )
+	local nower_rc=${nowerrc_array[0]}  nower_count=${nowerrc_array[1]}
+	
+	if [ "${nower_rc}" != "${plugin_rc}" ]; then
+		result="noheaprc:${nower_rc}"
 	else
-  		result=$(awk '($1~/'${plugin_name}'\>/ && $2~/'${plugin_rc}'\>/) {print $3;exit}' ${TMP_HEAPUP} 2>&-)
+  		result=${nower_count}
   		if [ -z "${result}" ]; then
 			result="null"
   		elif [ ! -z "${result//[0-9]}" ]; then
@@ -2135,15 +2137,16 @@ add_heapuprc_count() {
   touch ${TMP_HEAPUP}
   [ ! -s ${TMP_HEAPUP} ] && echo -e "${headline}" > ${TMP_HEAPUP}
 
-  local heaped_upcount=  num=  mode=
+  local heaped_upcount=  num=  mode=  change_from=
   heaped_upcount=$(get_heapuprc_count "${plugin_name}" "${plugin_rc}")
   if [ "${heaped_upcount}" == "noplugin" ]; then	# plugin item not exist, add a new one
 	num=1;
 	mode="add"
-  elif [ "${heaped_upcount}" == "noheaprc" ]; then	# exist but not on required status, reset.
-							# this lead to clearing accumulated value on plugin status changed
+  elif [[ "${heaped_upcount}" =~ "noheaprc" ]]; then	# exist but not on required status, reset.
+							# this lead to clearing accumulated number on plugin status changed
 	num=1;
 	mode="update"
+	change_from="${heaped_upcount##*:}"
   elif [ "${heaped_upcount}" == "null" ]; then		# exist but null, reset
        	num=1;
        	mode="update"
@@ -2167,9 +2170,17 @@ add_heapuprc_count() {
   if [ "${rc}" == "0" ]; then
 	write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
 		"[${plugin_name}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] success."
+	if [ -n "${change_from}" ]; then
+		write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
+			"[${plugin_name}] status changing from [${change_from}] to [${plugin_rc}] success."
+	fi
   else
 	write_log -f "${MOLE_LOG}" "E0000000 add_heapuprc_count (mode=${mode}) on"\
 		"[${plugin_name}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] error: [${errinfo}]"
+	if [ -n "${change_from}" ]; then
+		write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
+			"[${plugin_name}] status changing from [${change_from}] to [${plugin_rc}] failed."
+	fi
   fi
 
   return "${rc}"
