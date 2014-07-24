@@ -423,6 +423,20 @@ msgstr "邮件通知被插件的时间范围策略禁止"
 msgid "banned by mail notify nower heapuprc number"
 msgstr "邮件通知被插件的重复通知策略禁止"
 
+msgid "according by plugin's policy settings,"
+msgstr "根据该插件的策略设定,"
+
+msgid "will continuously send mail noitfy,"
+msgstr "智能运维平台将连续向您发送通知,"
+
+msgid "will send no more than ${m} mail notify, now for the ${n} times,"
+msgstr "智能运维平台最多向您连续发送${m}次通知，该邮件为第${n}次"
+
+msgid "will send no more than ${m} mail notify, now for the last time,"
+msgstr "智能运维平台最多向您连续发送${m}次通知，该邮件为最后一次"
+
+msgid "mail notify range: ${hit_range_detail}"
+msgstr "发送时间范围: ${hit_range_detail}"
 
 ### bin/checkconf
 
