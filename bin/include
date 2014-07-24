@@ -1540,9 +1540,11 @@ get_sms_policy() {
 # Get plugin notify analysization
 # Note:		args {notify_policy_config} must have been valid checked to avoid error occurs.
 # 		you shoule pass {notify_policy_config} through function get_sms/mail_policy()
-# Usage: 	get_policy_analysize {notify_plicy_config} {part}
+# Usage: 	get_policy_analysize {notify_plicy_config} {part}  [hrformat]
 # Note:	 	{part}		~ range | rtime
+# Note:		[hrformat] is only used on {part} = range to format range as human-reabable
 # Example:	get_policy_analysize  "0-09,07-11,13-20,10-19  5"  range
+# Example:	get_policy_analysize  "0-09,07-11,13-20,10-19  5"  range  hrformat
 #
 get_policy_analysize() {
   local notify_policy="${1}"  part="${2}"  result=
@@ -1572,6 +1574,26 @@ get_policy_analysize() {
   	done
 	# remove duplication items on part=range
 	result=$(echo "${result}" | awk -vRS="[\n ]" -vORS=" " '!a[$0]++')
+
+	# [hrformat] is only used on {part} = range
+	if [ "${3}" == "hrformat" ]; then
+		# sort result items first
+		local sorted_result=( $( echo "${result}" |\
+			 awk '{split($0,A," "); len=asort(A,tA); for(i=1;i<=len;i++){printf "%d ",tA[i]} }' 2>&- ) )
+		# merge sequenced items as time range
+		if [ ${#sorted_result[*]} -eq 0 ]; then
+			result=
+		else
+			result="${sorted_result[0]}:00"
+			for((i=1;i<${#sorted_result[*]}-1;i++))
+			do
+				if (( ${sorted_result[${i}]} - ${sorted_result[${i}-1]} > 1 )); then	# if on break point
+					result="${result}-$((${sorted_result[${i}-1]}+1)):00, ${sorted_result[${i}]}:00" 
+				fi
+			done
+			result="${result}-$((${sorted_result[${#sorted_result[*]}-1]}+1)):00"
+		fi
+	fi
   elif [ "${part}" == "rtime" ]; then
 	result=$((10#${policy_array[1]}))
   fi
@@ -2184,6 +2206,7 @@ add_heapuprc_count() {
 # Check now hit plugin's notify policy range or not ?
 # Usage:        hit_policy_range_ornot {notify_plicy_config}
 # Example:      hit_policy_range_ornot "0-09,07-11,13-20,10-19  5"  
+# Return:	0 | 1
 #
 hit_policy_range_ornot() {
   local notify_policy=$1
@@ -2203,23 +2226,29 @@ hit_policy_range_ornot() {
 }
 
 # Check nower heaped up rc-number hit plugin's notify policy maxnum or not ?
-# Usage:	hit_policy_heapuprc_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
-# Example:	hit_policy_heapuprc_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
+# Usage:	hit_policy_rtime_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
+# Example:	hit_policy_rtime_ornot {plugin_name} "{plugin_rc}" "{notify_policy}"
+# Return:	0 | 1
+# Output:	if return 0, there will be three kinds of output as following
+#		unlimited	same level notify will be sent continuously without limitation
+#		ming:N:M	same level notify has been sent for {N} times, max is {M} times.
+#		last:N		same level notify has been sent for {N} times, also the last time.
 #
-hit_policy_heapuprc_ornot() {
+hit_policy_rtime_ornot() {
   local plugin_name=$1	plugin_rc=$2  notify_policy=$3
+
   [ -z "${plugin_name}" ] && {
-        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin name";
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_rtime_ornot error: missing plugin name";
         return 1
   }
 
   [ -z "${plugin_rc}" ] && {
-        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing plugin rc";
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_rtime_ornot error: missing plugin rc";
         return 1
   }
 
   [ -z "${notify_policy}" ] && {
-        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_heapuprc_ornot error: missing notify policy";
+        write_log -f "${MOLE_LOG}" "E0000000 hit_policy_rtime_ornot error: missing notify policy";
         return 1
   }
 
@@ -2229,16 +2258,21 @@ hit_policy_heapuprc_ornot() {
   if [ "${policy_rtimenum}" == "-1" ]; then
 	return 1	# disabled, never notify on -1
   elif [ "${policy_rtimenum}" == "0" ]; then
+	echo "unlimited"
 	return 0	# unlimited, always notify on 0
   elif [ -z "${nower_heapupnum}" -o ! -z "${nower_heapupnum//[0-9]}" ]; then
 	return 1	# disabled on nower heapupnum not numberic
   elif [ -z "${policy_rtimenum}" -o ! -z "${policy_rtimenum//[0-9]}" ]; then
 	return 1	# disabled on policy rtimenum not numberic
   else
-	if [ ${nower_heapupnum} -le ${policy_rtimenum} ]; then
-		return 0	# enabled on nower heapupnum lower/equal than policy rtimenum
-	else
-		return 1	# disabled on nower heapupnum larger than policy rtimenum
+	if [ ${nower_heapupnum} -lt ${policy_rtimenum} ]; then  # enabled on nower heapupnum lower than policy rtimenum
+		echo "ming:${nower_heapupnum}:${policy_rtimenum}"
+		return 0	
+	elif [ ${nower_heapupnum} -eq ${policy_rtimenum} ]; then # enabled on nower heapupnum equal policy rtimenum
+		echo "last:${nower_heapupnum}"
+		return 0
+	else  							# disabled on nower heapupnum larger than policy rtimenum
+		return 1	
 	fi
   fi
 }
@@ -3416,12 +3450,24 @@ process_plugin() {
 	write_log ${jid} ${plugin_name} "mail notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "mail notify enabled. CONTINUE";
+	# read mail notify policy
 	local mail_policy=$(get_mail_policy ${plugin_name})
 	write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
+	# check mail notify policy
+	# check time range of mail notify policy
 	if hit_policy_range_ornot "${mail_policy}"; then
-		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
-		result_emllst=" ${m_alert} ### ${result_emllst} " 
-		write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
+		write_log ${jid} ${plugin_name} "mail notify is allowed at this time range, CONTINUE";
+		# check rtime of mail notify policy
+		local hit_rtime_detail=
+		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "${mail_policy}"); then
+			write_log ${jid} ${plugin_name} "mail notify is allowed by nower heapuprc number, CONTINUE";
+			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
+			result_emllst=" ${m_alert} ### ${result_emllst} " 
+			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
+		else
+			result_emllst=" banned ### $(gettext "banned by mail notify nower heapuprc number") "
+			write_log ${jid} ${plugin_name} "mail notify is banned by nower heapuprc number. SKIP";
+		fi
 	else
 		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
 		write_log ${jid} ${plugin_name} "mail notify is banned at this time range. SKIP";
@@ -3856,14 +3902,15 @@ process_plugin_misform() {
 #is_float  11.1zzz; echo $?
 #is_between 99.9 1.1 100; echo $?
 #is_between .9 azdk 100; echo $?
-#valid_notify_policy " abc 3 "
-#echo $?
-#valid_notify_policy " 0-24,1-1,1-100,abc-def,,  12 "
-#echo $?
+#valid_notify_policy " abc 3 ";echo $?
+#valid_notify_policy " 0-24,1-1,1-100,abc-def,,  12 ";echo $?
+#valid_notify_policy " 0-2,7-9,11 5"; echo $?
 #get_mail_policy abc
 #get_sms_policy abc
-#get_policy_analysize " 0-24,1-1,1-100,3-108,10000-10007,abc-def,,  12  "  "range"
+#get_policy_analysize " 0-24,1-1,1-100,3-108,10000-10007,,  12  "  range
 #get_policy_analysize  "0-9,07-08,13-18,15-17  5"  range
+#get_policy_analysize  "7-9,6-14,0-4 5"  range 
+#get_policy_analysize  "7-9,6-14,0-4 5"  range  hrformat
 #hit_policy_range_ornot "0-9,07-08,13-16  5";echo $?
 #add_heapuprc_count sysload crit
 #add_heapuprc_count sysload crit
@@ -3874,4 +3921,4 @@ process_plugin_misform() {
 #add_heapuprc_count sysload crit
 #get_heapuprc_count sysload succ
 #get_heapuprc_count sysload crit
-#hit_policy_heapuprc_ornot sysload crit $(get_mail_policy sysload); echo $?
+#hit_policy_rtime_ornot sysload crit $(get_mail_policy sysload); echo $?
