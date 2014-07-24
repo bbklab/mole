@@ -2207,6 +2207,7 @@ add_heapuprc_count() {
 # Usage:        hit_policy_range_ornot {notify_plicy_config}
 # Example:      hit_policy_range_ornot "0-09,07-11,13-20,10-19  5"  
 # Return:	0 | 1
+# Output:	if return 0, output is the human-readable time range
 #
 hit_policy_range_ornot() {
   local notify_policy=$1
@@ -2219,6 +2220,7 @@ hit_policy_range_ornot() {
   local range_H=$( get_policy_analysize "${notify_policy}" "range" )
 
   if is_sub "$((10#${nower_H}))" "${range_H}" ; then
+	echo "$( get_policy_analysize "${notify_policy}" "range" "hrformat" )"
 	return 0
   else
 	return 1
@@ -2232,7 +2234,7 @@ hit_policy_range_ornot() {
 # Output:	if return 0, there will be three kinds of output as following
 #		unlimited	same level notify will be sent continuously without limitation
 #		ming:N:M	same level notify has been sent for {N} times, max is {M} times.
-#		last:N		same level notify has been sent for {N} times, also the last time.
+#		last:M		same level notify has been sent for {M} times, also the last time.
 #
 hit_policy_rtime_ornot() {
   local plugin_name=$1	plugin_rc=$2  notify_policy=$3
@@ -3911,7 +3913,7 @@ process_plugin_misform() {
 #get_policy_analysize  "0-9,07-08,13-18,15-17  5"  range
 #get_policy_analysize  "7-9,6-14,0-4 5"  range 
 #get_policy_analysize  "7-9,6-14,0-4 5"  range  hrformat
-#hit_policy_range_ornot "0-9,07-08,13-16  5";echo $?
+#hit_policy_range_ornot "0-9,07-08,13-18  5";echo $?
 #add_heapuprc_count sysload crit
 #add_heapuprc_count sysload crit
 #add_heapuprc_count sysload crit
@@ -3921,4 +3923,4 @@ process_plugin_misform() {
 #add_heapuprc_count sysload crit
 #get_heapuprc_count sysload succ
 #get_heapuprc_count sysload crit
-#hit_policy_rtime_ornot sysload crit $(get_mail_policy sysload); echo $?
+#hit_policy_rtime_ornot sysload crit "$(get_mail_policy sysload)"; echo $?
