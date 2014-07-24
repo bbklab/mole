@@ -71,11 +71,11 @@ show_usage(){
 # def conv_output2mailbody
 # Convert plugin output to html mailbody
 # Output:       path of html mailbody
-# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}" "${plugin}"  "${gname}"
-# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid" "disk_fs"
+# Usage:        conv_output2mailbody  "${content}" "{hd_content}" "{jobid}" "${plugin}"  "${gname}" "${policy_info}"
+# Example:      conv_output2mailbody  "{level}:{type}:{title | summary | details: item1. ### item2. ### item3. ### }" "hi" "jid" "disk_fs" "bbklab__eyou.net" "mail policy text content"
 #
 conv_output2mailbody() {
-  local content=$1  hd_content=$2  jobid=$3  plugin=$4  gname=$5
+  local content=$1  hd_content=$2  jobid=$3  plugin=$4  gname=$5  policy_info=$6
   local level= title= summary= details= mailbody= rc=
 
   local logo_link=$(get_logo_link)
@@ -93,7 +93,8 @@ conv_output2mailbody() {
 	{
 		${PLUTIL} "create_mailct" "${TPL_MAIL}" "${gname}" \
 				"${plugin}" "${jobid}" "${content}" \
-				"${hd_content}" "${logo_link}" "${logo_url}"
+				"${hd_content}" "${logo_link}" "${logo_url}" \
+				"${policy_info}"
 	} >> "${mailbody}" 2>&1
   else
   	title=$(${PLUTIL} parted_output 4 "${content}")
@@ -112,6 +113,8 @@ conv_output2mailbody() {
   	echo "<br>------------------<br>"
   	echo "$(html_green "$(gettext "Auto Handle:")") <br><br>"
   	echo "${hd_content}" | sed -e 's/###/<br>\n/g'; 
+  	echo "<br>------------------<br><br>"
+	echo "${policy_info}"
   	} >> "${mailbody}" 2>&1
   fi
 
@@ -145,6 +148,8 @@ do
                 content="${OPTARG}"       ;;
 	"h")
 		hd_content="${OPTARG}"	  ;;
+	"p")	
+		policy_info="${OPTARG}"	  ;;
 	*)	
 		show_usage		  ;;
         esac
@@ -153,6 +158,7 @@ done
 # check args 
 [ -z "${plugin_name}" -o -z "${jobid}" -o -z "${content}" ] && show_usage
 [ -z "${hd_content}" ] && hd_content="Nothing to do"
+[ -z "${policy_info}" ] && show_usage
 from="${plugin_name}.${jobid}"
 level=$(${PLUTIL} parted_output 1 "${content}")
 
@@ -395,7 +401,7 @@ case "${mail_type}" in
         header_subject="Subject: =?UTF-8?B?${header_subject}?="
 
 	### 1. convert plugin output to mailbody files.
-	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}" "${plugin_name}" "${gname}")
+	mailbody_path=$(conv_output2mailbody "${content}" "${hd_content}" "${jobid}" "${plugin_name}" "${gname}" "${policy_info}")
 
 	### 2. send emails.
 	n=0  t_s=0   t_e=0  result=		## total   total_succ   total_error   result

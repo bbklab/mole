@@ -81,7 +81,7 @@ Example:
   parted_output  {1-6}  {allof-plugin-output}
   format_toterm  {output-contain-htmlcode-htmlcolor}
   base64_encode  {strings-to-be-encode}
-  create_mailct	 {tpl_path} {host_name} {plugin_name} {eventid} {plugin_output} {handler_output} {logolink} {logourl}
+  create_mailct	 {tpl_path} {host_name} {plugin_name} {eventid} {plugin_output} {handler_output} {logolink} {logourl} {policy_info}
   filter_html    {plugin_output}
   read_config	 {section} {key} {config_file}
 EOF
@@ -252,24 +252,26 @@ sub read_config {
 }
 
 # Create Mail Content by Template
-# Usage:   create_mailct {tpl_path} {hname} {plugin} {eventid} {plugin_output} {handler_output} {logolink} {logourl}
-# Example: create_mailct "notify_mail.tpl" "dev__bbklab.net" "disk_fs" "abcdefghi012345" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321"
+# Usage:   create_mailct {tpl_path} {hname} {plugin} {eventid} {plugin_output} {handler_output} {logolink} {logourl} {policy_info}
+# Example: create_mailct "notify_mail.tpl" "dev__bbklab.net" "disk_fs" "abcdefghi012345" "{level}:{type}:{title | summary | details: item1. ### item2.}" "123 ### 321" "logo link" "logo url" "mail policy content text"
 #
 sub create_mailct {
 	### @ARGV
-	my ($tpl_path,$hname,$plugin,$eventid,$content,$hd_content,$logohost,$logourl) = @ARGV;
+	my ($tpl_path,$hname,$plugin,$eventid,$content,$hd_content,$logohost,$logourl,$policy_info) = @ARGV;
 	exit(1) unless (defined $tpl_path && 
 			defined $hname && 
 			defined $plugin && 
 			defined $eventid && 
 			defined $content && 
-			defined $hd_content);
+			defined $hd_content &&
+			defined $policy_info);
 	exit(1) unless (-f $tpl_path && -r $tpl_path);
 	exit(1) if ( $hname =~ m/\A\s*\Z/ ||
 			$plugin =~ m/\A\s*\Z/ ||
 			$eventid =~ m/\A\s*\Z/ ||
 			$content =~ m/\A\s*\Z/ ||
-			$hd_content =~ m/\A\s*\Z/ );
+			$hd_content =~ m/\A\s*\Z/ ||
+			$policy_info =~ m/\A\s*\Z/ );
 	unless (defined $logohost && $logohost ne '') {
 		$logohost = 'http://esop.eyou.net';
 	}
@@ -284,6 +286,7 @@ sub create_mailct {
 	### $hd_content
 	### $logohost
 	### $logourl
+	### $policy_info
 
 	$content = &filter_html($content,'perl');
 	$hd_content = &filter_html($hd_content,'perl');
@@ -359,6 +362,10 @@ sub create_mailct {
 			}
 			if (m/\${MOLE-NOTIFY-MAIL_AUTOHANDLE}/){
 				s/\${MOLE-NOTIFY-MAIL_AUTOHANDLE}/$hd_content/;
+				print "$_"; next;
+			}
+			if (m/\${MOLE-NOTIFY-MAIL_POLICYNOTICE}/){
+				s/\${MOLE-NOTIFY-MAIL_POLICYNOTICE}/$policy_info/;
 				print "$_"; next;
 			}
 			print "$_";
