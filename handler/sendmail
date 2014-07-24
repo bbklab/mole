@@ -63,8 +63,8 @@ fi
 # def help
 #
 show_usage(){
-  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" -p \"${mail_policy_infotext}\" "
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "  \"mail policy content text\"
   exit 1
 }
 
@@ -137,7 +137,7 @@ conv_output2mailbody() {
 [ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" ] && show_usage
 
 # read args
-while getopts f:s:i:h: opt
+while getopts f:s:i:h:p: opt
 do
         case ${opt} in
         "f")
