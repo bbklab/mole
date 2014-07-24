@@ -446,13 +446,13 @@ else
 							process_plugin ${plugin_name} "${jobid}" &
 							_pid=$!
 							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-1"
+							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-1"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						else
 							process_inner_plugin ${plugin_name} "${jobid}" &
 							_pid=$!
 							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-2"
+							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-2"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						fi
 					}
@@ -464,13 +464,13 @@ else
                                                         process_plugin ${plugin_name} "${jobid}" &
 							_pid=$!
                                                         echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-3"
+							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-3"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						else
                                                         process_inner_plugin ${plugin_name} "${jobid}" &
 							_pid=$!
                                                         echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-4"
+							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-4"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						fi
 					}
