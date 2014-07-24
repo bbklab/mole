@@ -3456,14 +3456,31 @@ process_plugin() {
 	local mail_policy=$(get_mail_policy ${plugin_name})
 	write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
 	# check mail notify policy
+	local mail_policy_detail=$(gettext "according by plugin's policy settings,")
+	local hit_range_detail=  hit_rtime_detail=
 	# check time range of mail notify policy
-	if hit_policy_range_ornot "${mail_policy}"; then
-		write_log ${jid} ${plugin_name} "mail notify is allowed at this time range, CONTINUE";
+	if hit_range_detail=$(hit_policy_range_ornot "${mail_policy}"); then
+		write_log ${jid} ${plugin_name} "mail notify is allowed by nower"\
+							"time range (${hit_range_detail}), CONTINUE";
 		# check rtime of mail notify policy
-		local hit_rtime_detail=
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "${mail_policy}"); then
-			write_log ${jid} ${plugin_name} "mail notify is allowed by nower heapuprc number, CONTINUE";
-			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" 2>&1 )
+			write_log ${jid} ${plugin_name} "mail notify is allowed by nower"\
+					"heapuprc number (${hit_rtime_detail}), CONTINUE";
+			if [ "${hit_rtime_detail}" == "unlimited" ]; then
+				mail_policy_detail="${mail_policy_detail} $(gettext "will continuously send mail noitfy,")"
+			elif [[ "${hit_rtime_detail}" =~ "ming" ]]; then
+				local n=${hit_rtime_detail%:*}; n=${n##*:}
+				local m=${hit_rtime_detail##*:}
+				mail_policy_detail="${mail_policy_detail} $(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
+			elif [[ "${hit_rtime_detail}" =~ "last" ]]; then
+				local m=${hit_rtime_detail##*:}
+				mail_policy_detail="${mail_policy_detail} $(eval_gettext "will send no more than \${m} mail notify, now for the last time,")"
+			fi
+			if [ -n "${hit_range_detail}" ]; then
+				mail_policy_detail="${mail_policy_detail} $(eval_gettext "mail notify range: \${hit_range_detail}")"
+			fi
+
+			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" -p "${mail_policy_detail}" 2>&1 )
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
 		else
