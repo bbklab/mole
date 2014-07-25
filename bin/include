@@ -3339,14 +3339,15 @@ process_plugin() {
 			"[${_now_errcount} >= ${_errcount_uplimit}]. CONTINUE"
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset output part1 from [${part1}] to [${new_level}]. CONTINUE"
+		part1="${new_level}"
 		if [ "${part2}" == "str" ]; then               # reset plugin {output}
 			local add_title="$(gettext "RECOVERY")"
 			write_log ${jid} ${plugin_name}\
 				"got event recovery, and return is [str], reset output part3"\
 				"to add title [${add_title}]. CONTINUE"
-			output="{${new_level}}:{${part2}}:{(${add_title}) ${part3}}"  
+			output="{${part1}}:{${part2}}:{(${add_title}) ${part3}}"  
 		else
-			output="{${new_level}}:{${part2}}:{${part3}}"
+			output="{${part1}}:{${part2}}:{${part3}}"
 		fi
 		write_log ${jid} ${plugin_name}\
 			"got event recovery, reset plugin return code from [${rc}] to [${new_level}]. CONTINUE"
