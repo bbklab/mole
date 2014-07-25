@@ -3352,6 +3352,7 @@ process_plugin() {
 			"got event recovery, reset plugin return code from [${rc}] to [${new_level}]. CONTINUE"
 		rc="${new_level}"			       # reset plugin {rc}
 	else
+		local _now_errcount=${maxerr_detail%%:*}    _errcount_uplimit=${maxerr_detail##*:}
 		write_log ${jid} ${plugin_name}\
 			"not event recovery (${_now_errcount} < ${_errcount_uplimit}), return status: [SUCC]. CONTINUE"
 	fi
@@ -3400,6 +3401,8 @@ process_plugin() {
   update_status "${plugin_name}" "${jid}" "${output}"
 
   # update plugin heaped up rc number
+  # --*--< Important >--*--
+  # this step must behind in max err check, otherwise leading to conflict with notify policy logic
   add_heapuprc_count "${plugin_name}" "${part1}" "${jid}"
 
 
