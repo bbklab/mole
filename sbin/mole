@@ -515,7 +515,7 @@ stop_core_cron() {
 
 		# 1. first stop core cron
 		write_log -f "${MOLE_LOG}" "S0000000 MOLE 1 => stop mole core cron"
-		stopps_by_pidfile ${PID_FILE} ${max_wait}
+		stopps_by_pidfile ${PID_FILE} ${max_wait}	# max_wait to ensure mole could caught singla TERM
 
 		# 2. then stop all running plugins
 		rps="$(list_running_plugin_section | tr '\n' ' ')"
