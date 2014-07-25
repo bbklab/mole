@@ -1475,7 +1475,7 @@ valid_notify_policy() {
 	:
   elif ! is_int "${p2}"; then
 	return 3
-  elif ! is_between "$((10#${p2}))" 0 9999; then
+  elif ! is_between "$((10#${p2}))" 0 9999; then  # use 10hex convetion after int check to avoid error complain
 	return 4
   fi
 
@@ -1487,11 +1487,11 @@ valid_notify_policy() {
 	[ ${#pair_array[*]} -ne 2 ] && return 5
 	
 	local s=${pair_array[0]} e=${pair_array[1]}
-	if ! is_int "${s}" || ! is_between "$((10#${s}))" 0 23; then
+	if ! is_int "${s}" || ! is_between "$((10#${s}))" 0 23; then # use 10hex convetion after int check to avoid error complain 
 		return 6
 	fi
 
-	if ! is_int "${e}" || ! is_between "$((10#${e}))" 1 24; then
+	if ! is_int "${e}" || ! is_between "$((10#${e}))" 1 24; then # use 10hex convetion after int check to avoid error complain 
 		return 7
 	fi
 
