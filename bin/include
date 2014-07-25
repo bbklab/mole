@@ -3134,7 +3134,7 @@ process_plugin() {
 	return 1
   else
   	if [ "$(read_plugin_section "${plugin_name}" )" != "${plugin_name}" ]; then   ### plugin finished, log record, no handler triggered 
-		write_log ${jid} ${plugin_name} "not registered in config file. EXIT";
+		write_log ${jid} ${plugin_name} "not registered. EXIT";
 		update_status "${plugin_name}" "${jid}" "EXIT on Plugin NOT Registered";
 		update_lastrun_and_nextrun "${plugin_name}" "${jid}"
 		un_lock "${plugin_name}" "${jid}"	# unlock first
@@ -3142,14 +3142,14 @@ process_plugin() {
 		unset _LOG
 		return 2
 	else
-		write_log ${jid} ${plugin_name} "registered in config file. CONTINUE";
+		write_log ${jid} ${plugin_name} "registered. CONTINUE";
 	fi
   fi
 
   # Step 4: check if input plugin-name enabled in config file or not
   local status=$(get_enable "${plugin_name}")
   if [ "${status}" != "yes" ]; then	### plugin finished, log record, no handler triggered
-	write_log ${jid} ${plugin_name} "not enabled."\
+	write_log ${jid} ${plugin_name} "disabled."\
 		"status=[${status}] EXIT";
 	update_status "${plugin_name}" "${jid}" "EXIT on Plugin Disabled"
 	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
@@ -3158,13 +3158,12 @@ process_plugin() {
 	unset _LOG
 	return 0
   else
-	write_log ${jid} ${plugin_name} "enabled. status=[${status}] CONTINUE";
+	write_log ${jid} ${plugin_name} "enabled. CONTINUE";
   fi
 
   # Step 5: check if plugin file exists under PLUGIN_DIR or not
   if [ ! -f "${PLUGIN_DIR}/${plugin_name}" -o ! -s "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished, log record, no handler triggered 
-	write_log ${jid} ${plugin_name} "plugin file:"\
-		"[${PLUGIN_DIR}/${plugin_name}] not exist or empty. EXIT";
+	write_log ${jid} ${plugin_name} "plugin file not prepared. EXIT";
 	update_status "${plugin_name}" "${jid}" "EXIT on Plugin File Not Found or Empty"
 	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
 	un_lock "${plugin_name}" "${jid}"	# unlock first
@@ -3172,8 +3171,7 @@ process_plugin() {
 	unset _LOG
 	return 3
   else
-	write_log ${jid} ${plugin_name} "plugin file:"\
-		"[${PLUGIN_DIR}/${plugin_name}] exist. CONTINUE";
+	write_log ${jid} ${plugin_name} "plugin file prepared. CONTINUE";
   fi
 
   # Step 6: exec plugin / obtain returned code / obtain returned stuff
@@ -3188,7 +3186,7 @@ process_plugin() {
 	"return code: [${rc}]  return string: [${output}]. CONTINUE";
 
 
-  write_log ${jid} ${plugin_name} "begin to process various examinations on plugin result. CONTINUE"
+  write_log ${jid} ${plugin_name} "begin misform examinations on plugin result. CONTINUE"
 
   # Step 6.1: check plugin output max length
   local PLUGIN_MAXLEN=$(get_plugin_maxlen)
@@ -3302,7 +3300,7 @@ process_plugin() {
   
 
   # update plugin execution result
-  write_log ${jid} ${plugin_name} "all examinations on plugin result passed. CONTINUE"
+  write_log ${jid} ${plugin_name} "plugin result passed all examinations. CONTINUE"
   update_status "${plugin_name}" "${jid}" "${output}"
 
   # update plugin heaped up rc number
