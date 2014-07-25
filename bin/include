@@ -1470,12 +1470,12 @@ valid_notify_policy() {
   local policy_array=( ${policy} )
   [ ${#policy_array[*]} -ne 2 ] && return 2
 
-  local p1=${policy_array[0]} p2=$((10#${policy_array[1]}))
+  local p1=${policy_array[0]} p2=${policy_array[1]}
   if [ "${p2}" == "-1" ]; then
 	:
   elif ! is_int "${p2}"; then
 	return 3
-  elif ! is_between "${p2}" 0 9999; then
+  elif ! is_between "$((10#${p2}))" 0 9999; then
 	return 4
   fi
 
@@ -1486,12 +1486,12 @@ valid_notify_policy() {
 	local pair_array=( ${range_pair//-/ } )
 	[ ${#pair_array[*]} -ne 2 ] && return 5
 	
-	local s=$((10#${pair_array[0]})) e=$((10#${pair_array[1]}))
-	if ! is_int "${s}" || ! is_between "${s}" 0 23; then
+	local s=${pair_array[0]} e=${pair_array[1]}
+	if ! is_int "${s}" || ! is_between "$((10#${s}))" 0 23; then
 		return 6
 	fi
 
-	if ! is_int "${e}" || ! is_between "${e}" 1 24; then
+	if ! is_int "${e}" || ! is_between "$((10#${e}))" 1 24; then
 		return 7
 	fi
 
