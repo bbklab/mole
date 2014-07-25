@@ -430,10 +430,10 @@ msgid "will continuously send mail noitfy,"
 msgstr "智能运维平台将连续向您发送通知,"
 
 msgid "will send no more than ${m} mail notify, now for the ${n} times,"
-msgstr "智能运维平台最多向您连续发送${m}次通知，该邮件为第${n}次"
+msgstr "智能运维平台最多向您连续发送${m}次通知，本邮件为第${n}次"
 
 msgid "will send no more than ${m} mail notify, now for the last time,"
-msgstr "智能运维平台最多向您连续发送${m}次通知，该邮件为最后一次"
+msgstr "智能运维平台最多向您连续发送${m}次通知，本邮件为最后一次"
 
 msgid "mail notify range: ${hit_range_detail}"
 msgstr "发送时间范围: ${hit_range_detail}"
