@@ -2666,14 +2666,14 @@ stopps_by_pidfile() {
 				done
 			else
 				write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate father pid:"\
-					"[${x}] => [${cmdline}] SIG:TERM success";
+					"[${x}] => [${cmdline1}] SIG:TERM success";
 			fi
 		}
 	done
 
 	if ! check_ps_by_pid_file "${fpid}" >/dev/null 2>&1; then
 		write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate"\
-			"process according by [${pidfile}] success"
+			"process according by [${fpid}] success"
 		local errinfo=  rc=
   		errinfo=$( /bin/rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
 		rc=$?
