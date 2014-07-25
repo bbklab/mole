@@ -1982,7 +1982,7 @@ is_reached_maxerr() {
 }
 
 # Accumulated return-err number +1 
-# Note: 	only called at plugin return err (non-zero)
+# Note: 	only called at plugin return: 1-WARN, 2-CRIT, 3-UNKN 
 # Usage:        add_repeat_errcount  plugin_name  [jobid]
 # Example:	add_repeat_errcount  check_sysload  [jobid]
 # Note:   null 	        =>   insert new as 1
@@ -3308,9 +3308,15 @@ process_plugin() {
   add_heapuprc_count "${plugin_name}" "${part1}" "${jid}"
 
 
-  # Step 7: special steps.   
-  # while plugin return status = 0(OK) or 4(NOOP) or 5(NOTIFY)
-  # return status: 0:OK  
+  # Step 7: special steps on each level
+  # 		0-SUCC	:	reset plugin result if hit event [recovery] or not, continue
+  # 		4-NOOP	:	nothing to do, exit
+  # 		5-NOTIFY:	nothing to do, continue
+  # 		1-WARN	:	add repeat errcount +1 and checking, continue if reached, otherwise exit
+  # 		2-CRIT	:	same as above
+  #		3-UNKN	:	same as above
+
+  # 0-SUCC
   if [ "${rc}" == "0" ]; then    
 	write_log ${jid} ${plugin_name}\
 		"return status: [SUCC], will check nower errcount to detect recovery event, CONTINUE";
@@ -3342,7 +3348,7 @@ process_plugin() {
 	write_log ${jid} ${plugin_name}\
 		"will reset repeat errcount. CONTINUE";
 	reset_repeat_errcount "${plugin_name}" "${jid}"		# reset accumulated return-err number => 0
-  # return status: 4:NOOP
+  # 4-NOOP
   elif [ "${rc}" == "4" ]; then  ### plugin finished. 
 	write_log ${jid} ${plugin_name}\
 		"return status: [NOOP], Noting to do. EXIT";
@@ -3352,11 +3358,11 @@ process_plugin() {
 	write_log ${jid} ${plugin_name} "FINISHED"
 	unset _LOG
 	return 0
-  # return status: 5:NOTIFY
+  # 5-NOTIFY
   elif [ "${rc}" == "5" ]; then
 	write_log ${jid} ${plugin_name}\
 		"return status: [NOTIFY], CONTINUE";
-  # return status: (1/2/3  warn,crit,unkn) == (! 0/4/5  succ,noop,notify)
+  # 1-WARN, 2-CRIT, 3-UNKN 
   else  
 	write_log ${jid} ${plugin_name}\
 		"return code: [${rc}]. try to +1 on repeat errcount. CONTINUE";
