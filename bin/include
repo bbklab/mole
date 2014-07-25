@@ -3299,22 +3299,16 @@ process_plugin() {
 	;;
   esac
   
-
-  # update plugin execution result
   write_log ${jid} ${plugin_name} "plugin result passed all examinations. CONTINUE"
-  update_status "${plugin_name}" "${jid}" "${output}"
-
-  # update plugin heaped up rc number
-  add_heapuprc_count "${plugin_name}" "${part1}" "${jid}"
 
 
   # Step 7: special steps on each level
-  # 		0-SUCC	:	reset plugin result if hit event [recovery] or not, continue
+  # 		0-SUCC	:	reset plugin result if hit event [recovery], continue
   # 		4-NOOP	:	nothing to do, exit
   # 		5-NOTIFY:	nothing to do, continue
   # 		1-WARN	:	add repeat errcount +1 and checking, continue if reached, otherwise exit
-  # 		2-CRIT	:	same as above
-  #		3-UNKN	:	same as above
+  # 		2-CRIT	:	add repeat errcount +1 ...
+  #		3-UNKN	:	add repeat errcount +1 ...
 
   # 0-SUCC
   if [ "${rc}" == "0" ]; then    
@@ -3384,6 +3378,14 @@ process_plugin() {
         	return 0
   	fi
   fi
+
+
+  # update plugin execution result
+  update_status "${plugin_name}" "${jid}" "${output}"
+
+  # update plugin heaped up rc number
+  add_heapuprc_count "${plugin_name}" "${part1}" "${jid}"
+
 
   # Step 8: check action: take_snapshot
   local t_snap=$(take_action_ornot "${plugin_name}" take_snapshot ${rc})
