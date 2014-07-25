@@ -3466,21 +3466,27 @@ process_plugin() {
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "${mail_policy}"); then
 			write_log ${jid} ${plugin_name} "mail notify is allowed by nower"\
 					"heapuprc number (${hit_rtime_detail}), CONTINUE";
+
+			local tmp_content=
 			if [ "${hit_rtime_detail}" == "unlimited" ]; then
-				mail_policy_detail="${mail_policy_detail} $(gettext "will continuously send mail noitfy,")"
+				tmp_content="$(gettext "will continuously send mail noitfy,")"
 			elif [[ "${hit_rtime_detail}" =~ "ming" ]]; then
 				local n=${hit_rtime_detail%:*}; n=${n##*:}
 				local m=${hit_rtime_detail##*:}
-				mail_policy_detail="${mail_policy_detail} $(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
+				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
 			elif [[ "${hit_rtime_detail}" =~ "last" ]]; then
 				local m=${hit_rtime_detail##*:}
-				mail_policy_detail="${mail_policy_detail} $(eval_gettext "will send no more than \${m} mail notify, now for the last time,")"
+				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the last time,")"
 			fi
+			mail_policy_detail="${mail_policy_detail} ${tmp_content}"
 			if [ -n "${hit_range_detail}" ]; then
-				mail_policy_detail="${mail_policy_detail} $(eval_gettext "mail notify range: \${hit_range_detail}")"
+				tmp_content="$(eval_gettext "mail notify range: \${hit_range_detail}")"
+				mail_policy_detail="${mail_policy_detail} ${tmp_content}"
 			fi
 
-			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" -i "${output}" -h "${hd_output}" -p "${mail_policy_detail}" 2>&1 )
+			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
+						-i "${output}" -h "${hd_output}" \
+						-p "${mail_policy_detail}" 2>&1 )
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
 		else
@@ -3930,6 +3936,8 @@ process_plugin_misform() {
 #get_policy_analysize  "0-9,07-08,13-18,15-17  5"  range
 #get_policy_analysize  "7-9,6-14,0-4 5"  range 
 #get_policy_analysize  "7-9,6-14,0-4 5"  range  hrformat
+#get_policy_analysize  "0-1,2-3,5-9 5"  range 
+#get_policy_analysize  "0-1,2-3,5-9 5"  range  hrformat
 #hit_policy_range_ornot "0-9,07-08,13-18  5";echo $?
 #add_heapuprc_count sysload crit
 #add_heapuprc_count sysload crit
