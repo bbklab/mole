@@ -443,6 +443,33 @@ msgstr "发送时间范围: ${hit_range_detail}"
 
 ### bin/checkconf
 
+msgid "empty policy"
+msgstr "空策略"
+
+msgid "policy not combined by two part seperated by blank"
+msgstr "策略必须由空格分隔的两部分组成"
+
+msgid "max_repeat_time not integer"
+msgstr "策略的最大连续通知次数必须为正整数"
+
+msgid "max_repeat_time not between 0-99999"
+msgstr "策略的最大连续通知次数必须在0-99999之间"
+
+msgid "one of range_pair not combined by two part seperated by -"
+msgstr "策略的时间范围必须由 - 分隔的两部分组成"
+
+msgid "one of range_start not integer or not between 0-23"
+msgstr "策略的起始时间必须是0-23之间的正整数"
+
+msgid "one of range_stop not integer or not between 1-24"
+msgstr "策略的终止时间必须是1-24之间的正整数"
+
+msgid "one of range_start larger or equal range_stop"
+msgstr "策略的起始时间必须小于终止时间"
+
+msgid "set default"
+msgstr "将读取默认值"
+
 msgid "NULL, set default"
 msgstr "为空值, 将读取默认值"
 

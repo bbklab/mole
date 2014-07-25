@@ -133,6 +133,8 @@ ARRAY_CONFIG_RULES=(
 	"default=>mail_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
 	"default=>sms_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
 	"default=>post_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>mail_policy"		"policy:0-24 3"
+	"default=>sms_policy"		"policy:0-24 3"
 	#"default=>mail_receviers"	"file or emls:root_bbk@126.com"
 	#"default=>sms_receviers"	"file or int:10000000000:99999999999"
 	"default=>attsnap_mail"		"set:[yes|no]"
@@ -173,6 +175,51 @@ ARRAY_CONFIG_RULES=(
 #
 # Function Definations
 #
+
+
+# check type {policy}
+# Example:	check_type_policy "0-27  9"; echo $?
+#
+check_type_policy() {
+  local rule="$1"; shift 1; local input="$*"
+  local default=$(echo -e "${rule}"|awk -F":" '{$1="";print;exit;}')
+  local result=  rc=
+  
+  valid_notify_policy "${input}"
+  rc=$?
+  case "${rc}" in
+	"0")
+		return ${STATE_OK}
+		;;
+	"1")
+		result="$(gettext "empty policy")"
+		;;
+	"2")
+		result="$(gettext "policy not combined by two part seperated by blank")"
+		;;
+	"3")
+		result="$(gettext "max_repeat_time not integer")"
+		;;
+	"4")
+		result="$(gettext "max_repeat_time not between 0-99999")"
+		;;
+	"5")
+		result="$(gettext "one of range_pair not combined by two part seperated by -")"
+		;;
+	"6")
+		result="$(gettext "one of range_start not integer or not between 0-23")"
+		;;
+	"7")
+		result="$(gettext "one of range_stop not integer or not between 1-24")"
+		;;
+	"8")
+		result="$(gettext "one of range_start larger or equal range_stop")"
+		;;
+  esac
+  result="${result}, $(gettext "set default") ${default}"
+  echo -e "${result}"
+  return ${STATE_WARN}
+}
 
 # check type {str}
 # Example:	check_type_str "str:Mole Plugin" "  "; echo $?
