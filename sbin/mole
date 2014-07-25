@@ -513,21 +513,21 @@ stop_core_cron() {
   if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
   	write_log -f "${MOLE_LOG}" "S0000000 MOLE stopping..."
 
-		# 1. first stop core cron
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE 1 => stop mole core cron"
-		stopps_by_pidfile ${PID_FILE} ${max_wait}	# max_wait to ensure mole could caught singla TERM
+	write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole core cron"
+	stopps_by_pidfile ${PID_FILE} ${max_wait}	# max_wait to ensure mole could caught singla TERM
+	rc=$?
 
-		# 2. then stop all running plugins
-		rps="$(list_running_plugin_section | tr '\n' ' ')"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE 2 => stop all of running plugins: [${rps}]"
-		for p in `echo "${rps}"`
-  		do
-			stop_single_plugin "${p}"
-			clear_dead_lock_pid "${p}"
-  		done
-
-	echo_green "$(gettext " [OK]")"; echo
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE 3 => stop mole done"
+	case "$rc" in
+	"0")
+		echo_green "$(gettext " [OK]")"; echo
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole done"
+		;;
+	*)
+		echo_red "$(gettext " [FAIL]")";echo
+		write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole return error(${rc})"
+		;;
+	esac
+	
   else
 	echo_yellow "$(gettext " [SKIP]")" ; echo
 	echo "${status}"

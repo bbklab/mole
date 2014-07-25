@@ -106,6 +106,9 @@ msgstr "  [成功]"
 msgid "  [SKIP]"
 msgstr "  [跳过]"
 
+msgid " [FAIL]"
+msgstr " [失败]"
+
 msgid "need arguments."
 msgstr "缺少参数."
 

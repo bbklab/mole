@@ -2612,6 +2612,11 @@ stopps_by_pid() {
 #  2.2 remove if process dead
 # Usage:	stopps_by_pidfile   /path/to/pid/file		10
 # Example:	stopps_by_pidfile   /var/run/crond.pid		5
+# Return:	0	stop success, remove pid file success
+#		1	missing argument fpid
+#		2	stop success, but remove pid file failed
+#		3	specified pid file not exists
+#		4	stop failed, process still running
 # LogFlag: 	STP00000
 #
 stopps_by_pidfile() {
