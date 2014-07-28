@@ -2192,14 +2192,14 @@ add_heapuprc_count() {
 		"[${plugin_name}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] success."
 	if [ -n "${change_from}" ]; then
 		write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
-			"[${plugin_name}] status changing from [${change_from}] to [${plugin_rc}] success."
+			"[${plugin_name}] status switch from [${change_from}] to [${plugin_rc}] success."
 	fi
   else
 	write_log -f "${MOLE_LOG}" "E0000000 add_heapuprc_count (mode=${mode}) on"\
 		"[${plugin_name}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] error: [${errinfo}]"
 	if [ -n "${change_from}" ]; then
 		write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
-			"[${plugin_name}] status changing from [${change_from}] to [${plugin_rc}] failed."
+			"[${plugin_name}] status switch from [${change_from}] to [${plugin_rc}] failed."
 	fi
   fi
 
