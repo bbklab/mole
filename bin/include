@@ -3654,6 +3654,10 @@ process_plugin() {
 						-i "${output}" -h "${hd_output}" \
 						-p "${mail_policy_detail}" 2>&1 )
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
+
+			# add heapupnotify count for [plugin]-[mail] level=[part1]
+			add_heapupnotify_count "${plugin_name}" "${part1}"  "mail"  "${jid}"
+
 			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
 		else
 			result_emllst=" banned ### $(gettext "banned by mail notify nower heapuprc number") "
