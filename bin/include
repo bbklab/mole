@@ -2403,9 +2403,9 @@ hit_policy_rtime_ornot() {
 	echo "unlimited"
 	return 0	# unlimited, always notify on 0
   elif [ -z "${nower_heapupnum}" -o ! -z "${nower_heapupnum//[0-9]}" ]; then
-	return 1	# disabled on nower heapupnum not numberic
+	return 0	# enabled on nower heapupnum not numberic
   elif [ -z "${policy_rtimenum}" -o ! -z "${policy_rtimenum//[0-9]}" ]; then
-	return 1	# disabled on policy rtimenum not numberic
+	return 0	# enabled on policy rtimenum not numberic
   else
 	if [ ${nower_heapupnum} -lt ${policy_rtimenum} ]; then  # enabled on nower heapupnum lower than policy rtimenum
 		echo "ming:${nower_heapupnum}:${policy_rtimenum}"
