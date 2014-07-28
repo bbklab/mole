@@ -103,7 +103,7 @@ TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"
 TMP_NEXTRUN="${TMP_DIR}/.nextrun.dat"
 TMP_REPEAT="${TMP_DIR}/.repeat.dat"
 TMP_STATUS="${TMP_DIR}/.status.dat"
-TMP_HEAPUP="${TMP_DIR}/.heapuprc.dat"
+TMP_HEAPUPRC="${TMP_DIR}/.heapuprc.dat"
 SMTPHOST_STATUS="${TMP_DIR}/.smtphost.status"
 POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
 
@@ -2096,11 +2096,11 @@ get_heapuprc_count() {
 
   today_date="$(/bin/date +%F 2>&-)"
 
-  result=$(awk '($1~/'${plugin_name}'\>/) {print $1;exit}' ${TMP_HEAPUP} 2>&-)
+  result=$(awk '($1~/'${plugin_name}'\>/) {print $1;exit}' ${TMP_HEAPUPRC} 2>&-)
   if [ -z "${result}" ]; then
 	result="noplugin"
   else
-	local nowerrc_array=( $(awk '($1~/'${plugin_name}'\>/) {print $2,$3;exit}' ${TMP_HEAPUP} 2>&-) )
+	local nowerrc_array=( $(awk '($1~/'${plugin_name}'\>/) {print $2,$3;exit}' ${TMP_HEAPUPRC} 2>&-) )
 	local nower_rc=${nowerrc_array[0]}  nower_count=${nowerrc_array[1]}
 	if [ "${nower_rc}" != "${plugin_rc}" ]; then
 		result="noheaprc:${nower_rc}"
@@ -2112,7 +2112,7 @@ get_heapuprc_count() {
 			result="invalid"
 		else
 			today_date="$(/bin/date +%F 2>&-)"
-			heapup_date=$(awk '($1~/'${plugin_name}'\>/) {print $NF;exit}' ${TMP_HEAPUP} 2>&-)
+			heapup_date=$(awk '($1~/'${plugin_name}'\>/) {print $NF;exit}' ${TMP_HEAPUPRC} 2>&-)
 			if [ "${today_date}" != "${heapup_date}" ]; then
 				result="nottoday"
 			fi
@@ -2150,8 +2150,8 @@ add_heapuprc_count() {
         return 1
   }
 
-  /bin/touch ${TMP_HEAPUP}
-  [ ! -s ${TMP_HEAPUP} ] && echo -e "${headline}" > ${TMP_HEAPUP}
+  /bin/touch ${TMP_HEAPUPRC}
+  [ ! -s ${TMP_HEAPUPRC} ] && echo -e "${headline}" > ${TMP_HEAPUPRC}
 
   local heaped_upcount=  num=  mode=  change_from=
   heaped_upcount=$(get_heapuprc_count "${plugin_name}" "${plugin_rc}")
@@ -2181,10 +2181,10 @@ add_heapuprc_count() {
   # only collect stderr output
   if [ "${mode}" == "update" ]; then
         # update old, update the whole plugin's line, only one continuously status remaining 
-        errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${plugin_rc}"' '"${num}"' '"${today_date}"'' ${TMP_HEAPUP} 2>&1 1>/dev/null )
+        errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${plugin_rc}"' '"${num}"' '"${today_date}"'' ${TMP_HEAPUPRC} 2>&1 1>/dev/null )
   elif [ "${mode}" == "add" ]; then
         # add new
-        errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${plugin_rc}"' '"${num}"' '"${today_date}"'/' ${TMP_HEAPUP} 2>&1 1>/dev/null )
+        errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${plugin_rc}"' '"${num}"' '"${today_date}"'/' ${TMP_HEAPUPRC} 2>&1 1>/dev/null )
   fi
   rc=$?
   if [ "${rc}" == "0" ]; then
