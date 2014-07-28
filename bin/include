@@ -1788,7 +1788,7 @@ update_lastrun_and_nextrun() {
 	local logfile="${MOLE_LOG}"
   fi
 
-  touch ${TMP_LASTRUN} ${TMP_NEXTRUN}
+  /bin/touch ${TMP_LASTRUN} ${TMP_NEXTRUN}
   [ ! -s ${TMP_LASTRUN} ] && echo -e "${headline}" > ${TMP_LASTRUN}
   [ ! -s ${TMP_NEXTRUN} ] && echo -e "${headline}" > ${TMP_NEXTRUN}
 
@@ -1888,7 +1888,7 @@ update_status() {
   fi
 
   
-  touch ${TMP_STATUS}
+  /bin/touch ${TMP_STATUS}
   [ ! -s ${TMP_STATUS} ] && echo -e "${headline}" > ${TMP_STATUS}
 
   local n_record="${plugin_name} ${jobid} ${now} ${content}"
@@ -2001,7 +2001,7 @@ add_repeat_errcount() {
         return 1
   }
 
-  touch ${TMP_REPEAT}
+  /bin/touch ${TMP_REPEAT}
   [ ! -s ${TMP_REPEAT} ] && echo -e "${headline}" > ${TMP_REPEAT}
 
   local repeat_errcount=  num=  mode=
@@ -2052,7 +2052,7 @@ reset_repeat_errcount() {
         return 1
   }
 
-  touch ${TMP_REPEAT}
+  /bin/touch ${TMP_REPEAT}
   [ ! -s ${TMP_REPEAT} ] && echo -e "${headline}" > ${TMP_REPEAT}
 
   # only collect stderr  output
@@ -2150,7 +2150,7 @@ add_heapuprc_count() {
         return 1
   }
 
-  touch ${TMP_HEAPUP}
+  /bin/touch ${TMP_HEAPUP}
   [ ! -s ${TMP_HEAPUP} ] && echo -e "${headline}" > ${TMP_HEAPUP}
 
   local heaped_upcount=  num=  mode=  change_from=
@@ -2310,20 +2310,25 @@ list_running_plugin_section() {
 
 # Generate an empty temporary file for plugin if needed.
 # Output:	path of temporary file
-# Usage:	gen_tmpfile  plugin_name
-# Example:	gen_tmpfile  check_sysload
+# Usage:	gen_tmpfile  plugin_name	[{jobid}]
+# Example:	gen_tmpfile  sysload		[{jobid}]
 #
 gen_tmpfile() {
-  local plugin_name=$1  rc=  errinfo=
+  local plugin_name=$1  jobid=$2  rc=  errinfo=
   [ -z "${plugin_name}" ] && {
 	write_log -f "${MOLE_LOG}" "E0000000 gen_tmpfile error: missing plugin name";
 	return 1
   }
 
   [ ! -d "${TMP_DIR}/${plugin_name}" ] && /bin/mkdir -p ${TMP_DIR}/${plugin_name} 2>&-
-  local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}_$( ${PLUTIL} unique_digest )"
+  local filepath="${TMP_DIR}/${plugin_name}/${plugin_name}"
+  if [ -z "${jobid}" ]; then
+  	filepath="${filepath}_$( ${PLUTIL} unique_digest )"
+  else
+	filepath="${filepath}_${jobid}"
+  fi
   # only collect stderr output.
-  errinfo=$( touch "${filepath}" 2>&1 1>/dev/null )
+  errinfo=$( /bin/touch "${filepath}" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" == "0" ]; then
   	echo "${filepath}"

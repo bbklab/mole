@@ -88,7 +88,7 @@ conv_output2mailbody() {
   level=$(${PLUTIL} parted_output 1 "${content}" | tr '[a-z]' '[A-Z]')
   level="$(eval " gettext "${level}" ")"
 
-  mailbody="$(gen_tmpfile mailbody)"
+  mailbody="$(gen_tmpfile mailbody "${jobid}")"
   if [ -f "${TPL_MAIL}" -a -s "${TPL_MAIL}" ]; then
 	{
 		${PLUTIL} "create_mailct" "${TPL_MAIL}" "${gname}" \
