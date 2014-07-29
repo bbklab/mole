@@ -2366,10 +2366,15 @@ hit_policy_range_ornot() {
 # Example:	hit_policy_rtime_ornot {plugin_name} "{plugin_rc}" "${notify_type}" "{notify_policy}"
 # Note:		notify_type ~ mail|sms
 # Return:	0 | 1
-# Output:	if return 0, there will be three kinds of output as following
-#		unlimited	same level notify will be sent continuously without limitation
-#		ming:N:M	same level notify has been sent for {N} times, max is {M} times.
-#		last:M		same level notify has been sent for {M} times, also the last time.
+# Output:	if return 0, there will be kinds of output as following
+#			unlimited	same level notify will be sent continuously without limitation
+#			first:N:M	same level notify will send first time, as nower heap-up number not numberic
+#			ming:N:M	same level notify has been sent for {N} times, max is {M} times.
+#			last:N:M	same level notify has been sent for {N} (N=M-1) times, will send the last time.
+# 		if return 1, there will be kinds of output as following
+#			never-notify	notify has been disabled by config: -1
+#			policy-error	notify has been disabled by invalid policy rtimes
+#			exceed:		notify has been sent more than limited times			
 #
 hit_policy_rtime_ornot() {
   local plugin_name=$1	plugin_rc=$2  notify_type=$3  notify_policy=$4
@@ -2398,22 +2403,29 @@ hit_policy_rtime_ornot() {
   local policy_rtimenum=$(get_policy_analysize "${notify_policy}" "rtime")
   
   if [ "${policy_rtimenum}" == "-1" ]; then
+	echo "nerver-notify"
 	return 1	# disabled, never notify on -1
   elif [ "${policy_rtimenum}" == "0" ]; then
 	echo "unlimited"
 	return 0	# unlimited, always notify on 0
-  elif [ -z "${nower_heapupnum}" -o ! -z "${nower_heapupnum//[0-9]}" ]; then
+  elif ! is_int "${nower_heapupnum}"; then
+	echo "first:${nower_heapupnum}:${policy_rtimenum}"
 	return 0	# enabled on nower heapupnum not numberic
-  elif [ -z "${policy_rtimenum}" -o ! -z "${policy_rtimenum//[0-9]}" ]; then
-	return 0	# enabled on policy rtimenum not numberic
+  elif ! is_int "${policy_rtimenum}"; then
+	echo "policy-error:${policy_rtimenum}"
+	return 1	# disabled on policy rtimenum not numberic
   else
-	if [ ${nower_heapupnum} -lt ${policy_rtimenum} ]; then  # enabled on nower heapupnum lower than policy rtimenum
+	# enabled on nower heapupnum lower more than 1 than policy rtimenum
+	if (( ${policy_rtimenum} - ${nower_heapupnum} > 1 )); then  
 		echo "ming:${nower_heapupnum}:${policy_rtimenum}"
-		return 0	
-	elif [ ${nower_heapupnum} -eq ${policy_rtimenum} ]; then # enabled on nower heapupnum equal policy rtimenum
-		echo "last:${nower_heapupnum}"
 		return 0
-	else  							# disabled on nower heapupnum larger than policy rtimenum
+	# enabled on nower heapupnum lower 1 than policy rtimenum
+	elif (( ${policy_rtimenum} - ${nower_heapupnum} == 1 )); then
+		echo "last:${nower_heapupnum}:${policy_rtimenum}"
+		return 0
+	# disabled on nower heapupnum larger or equal than policy rtimenum
+	else 
+		echo "exceed:${nower_heapupnum}"
 		return 1	
 	fi
   fi
@@ -3631,13 +3643,16 @@ process_plugin() {
 		# check rtime of mail notify policy
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "mail" "${mail_policy}"); then
 			write_log ${jid} ${plugin_name} "mail notify is allowed by nower"\
-					"heapuprc number (${hit_rtime_detail}), CONTINUE";
+					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
 
 			local tmp_content=
 			if [ "${hit_rtime_detail}" == "unlimited" ]; then
 				tmp_content="$(gettext "will continuously send mail noitfy,")"
+			elif [[ "${hit_rtime_detail}" =~ "first" ]]; then
+				local m=${hit_rtime_detail##*:}
+				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the first time,")"
 			elif [[ "${hit_rtime_detail}" =~ "ming" ]]; then
-				local n=${hit_rtime_detail%:*}; n=${n##*:}
+				local n=${hit_rtime_detail%:*}; n=${n##*:}; ((n++))
 				local m=${hit_rtime_detail##*:}
 				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
 			elif [[ "${hit_rtime_detail}" =~ "last" ]]; then
@@ -3660,8 +3675,9 @@ process_plugin() {
 
 			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
 		else
-			result_emllst=" banned ### $(gettext "banned by mail notify nower heapuprc number") "
-			write_log ${jid} ${plugin_name} "mail notify is banned by nower heapuprc number. SKIP";
+			result_emllst=" banned ### $(gettext "banned by mail notify nower heapup-notify number") "
+			write_log ${jid} ${plugin_name} "mail notify is banned"\
+				"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
 		fi
 	else
 		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
