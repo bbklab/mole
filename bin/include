@@ -3482,10 +3482,12 @@ process_plugin() {
 
   # 0-SUCC
   if [ "${rc}" == "0" ]; then    
+  	local is_recovery=0		# default: is not recovery
 	write_log ${jid} ${plugin_name}\
 		"return status: [SUCC], try to detect recovery event, CONTINUE";
 	local maxerr_detail=
 	if maxerr_detail=$(is_reached_maxerr "${plugin_name}"); then	# got event recovery 
+		is_recovery=1		# got event recovery
 		local _now_errcount=${maxerr_detail%%:*}    _errcount_uplimit=${maxerr_detail##*:}
 		local new_level="recovery"
 		write_log ${jid} ${plugin_name}\
@@ -3646,7 +3648,9 @@ process_plugin() {
 					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
 
 			local tmp_content=
-			if [ "${hit_rtime_detail}" == "unlimited" ]; then
+			if [ ${is_recovery} -eq 1 ]; then	# event recovery won't generate policy times detail
+				tmp_content=
+			elif [ "${hit_rtime_detail}" == "unlimited" ]; then
 				tmp_content="$(gettext "will continuously send mail noitfy,")"
 			elif [[ "${hit_rtime_detail}" =~ "first" ]]; then
 				local m=${hit_rtime_detail##*:}
