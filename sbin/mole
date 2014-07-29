@@ -458,22 +458,6 @@ else
 					}
 				else
 					check_runlock_on_pid_exist ${plugin_name}
-					[ "$?" == "4" ] && {
-						jobid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
-						if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
-                                                        process_plugin ${plugin_name} "${jobid}" &
-							_pid=$!
-                                                        echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-3"\
-								"${plugin_name}, save plugin daemon pid [${_pid}]";
-						else
-                                                        process_inner_plugin ${plugin_name} "${jobid}" &
-							_pid=$!
-                                                        echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-4"\
-								"${plugin_name}, save plugin daemon pid [${_pid}]";
-						fi
-					}
 				fi
 			fi
 		done

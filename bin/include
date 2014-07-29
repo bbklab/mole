@@ -2597,7 +2597,9 @@ del_fpid() {
 }
 
 # Check run-lock status for plugin
-# Output:	nolock | linkerror | start timestamp (plugin is running)
+# Output:	nolock		start timestamp empty / link not exists
+#		linkerror	start timestamp not empty but not-yet numberic / link target mistake
+#		[0-9]+		plugin start timestamp, means plugin is running
 # Usage:        check_lock  plugin_name
 # Example:	check_lock  check_sysload
 #
@@ -2607,29 +2609,26 @@ check_lock() {
 	write_log -f "${MOLE_LOG}" "E0000000 check_lock error: missing plugin name";
 	return 1
   fi
-  # [ -e ${RUN_DIR}/${plugin_name}.lock ] && {   ###  never check broken link: never return linkerror
+
+  local p_path= logfile=
+  if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
+	p_path="${INNER_DIR}/${plugin_name}"
+	logfile="${INNER_LOG}"
+  else
+       	p_path="${PLUGIN_DIR}/${plugin_name}"
+	logfile="${MOLE_LOG}"
+  fi
+
   if [ -L "${RUN_DIR}/${plugin_name}.lock" ]; then
 	local f=$(readlink "${RUN_DIR}/${plugin_name}.lock" 2>&-)
-	if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
-		local p_path="${INNER_DIR}/${plugin_name}"
-		local logfile="${INNER_LOG}"
-	else
-        	local p_path="${PLUGIN_DIR}/${plugin_name}"
-		local logfile="${MOLE_LOG}"
-	fi
 	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
 		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
-		if ! is_int "${result}"; then
-			write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
-				"runlock timestamp is not numberic: [${result}], "\
-				"return linkerror";
+		if [ -z "${result}" ]; then
+			result="nolock"
+		elif ! is_int "${result}"; then
 			result="linkerror"
 		fi
 	else
-		write_log -f "${logfile}" "E0000000 check_lock on [${plugin_name}] error: "\
-				"runlock link->target is mistake or target not exist: "\
-				"[${f}] ==> [${p_path}], "\
-				"return linkerror";
 		result="linkerror"
 	fi
   else
@@ -2892,7 +2891,7 @@ timeout_ornot() {
   }
   local exec_tmout=$(conv_time2sec "$(get_exec_tmout ${plugin_name})")
   local starttime=$(check_lock ${plugin_name})
-  if [ -z "${starttime}" -o ! -z "${starttime//[0-9]/}" ]; then		### maybe not running
+  if ! is_int "${starttime}"; then	### maybe not running
 	write_log -f "${MOLE_LOG}" "E0000000 timeout_ornot error:"\
 		"starttime [${starttime}] not numberic on plugin "\
 		"[${plugin_name}]: maybe not running.";
@@ -2942,17 +2941,16 @@ add_runlock_on_pid_notexist(){
 
 # Check run-lock on plugin while pid file exists
 # Note:		called to check run-lock at next scan period begins, previous plugin is still running.
-# Output: 	0 1 2 3 4 5
+# Output: 	0 1 2 3 4
 # Steps:
-#   0: running, but timeout  ==>  stop plugin  ==>  process_plugin_timeout  ==>  skip 
-#   1: running, and NOT timeout  ==>  skip
-#   2: linkerror  ==>  remove dead run-lock  ==>  skip
-#   3: nolock  ==>  add run-lock  ==>  failed  ==>  skip
-#   4: nolock  ==>  add run-lock  ==>  succ    ==>  process_plugin
-#   5: unknown  ==>  skip
+#   0: running, but timeout, submit to process_plugin_timeout()
+#   1: running, and NOT timeout, nothing did
+#   2: linkerror, nothing did
+#   3: nolock, nothing did
+#   4: unknown, nothing did
 # Usage:	check_runlock_on_pid_exist  plugin_name
 # Example:	check_runlock_on_pid_exist  check_sysload   
-# LogFlag: 	L0000000
+# LogFlag: 	CKLCK000
 #
 check_runlock_on_pid_exist() {
   local plugin_name=$1  r_c=
@@ -2968,44 +2966,31 @@ check_runlock_on_pid_exist() {
   fi
 
   local lockinfo=$(check_lock "${plugin_name}")
-  [ -z "${lockinfo//[0-9]/}" ] && {	    ###   is running
+  if is_int "${lockinfo}" ; then	### is running
 	local timeout_result=( $(timeout_ornot "${plugin_name}") )
 	if [ "${timeout_result[0]}" == "yes" ]; then   ### condition: 0
-		write_log -f ${logfile} "L0000000 MOLE plugin"\
-			"[${plugin_name}] has been running for ${timeout_result[1]} seconds, timeout. STOP IT"
+		write_log -f ${logfile} "CKLCK000 MOLE plugin"\
+			"[${plugin_name}] running timeout (${timeout_result[1]}s),"
+			"submit to timeout processing"
 		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
 		return 0
 	else    
-		# write_log -f ${logfile} "L0000000 MOLE plugin"\
-			# "[${plugin_name}] has been running for ${timeout_result[1]} seconds"
 		return 1	### condition: 1
 	fi
-  }
+  elif [ "${lockinfo}" == "linkerror" ]; then
+  	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
+		"[${plugin_name}] runlock status ${lockinfo}, nothing did";
+	return 2
+  elif [ "${lockinfo}" == "nolock" ]; then
+  	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
+		"[${plugin_name}] runlock status ${lockinfo}, nothing did";
+	return 3
+  else
+  	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
+		"[${plugin_name}] runlock status unknown (${lockinfo}), nothing did";
+	return 4
+  fi
 
-  [ "${lockinfo}" == "linkerror" ] && {
-	un_lock "${plugin_name}"
-	write_log -f ${logfile} "L0000000 MOLE plugin"\
-		"[${plugin_name}] running but linkerror. UNLOCK IT";
-	return 2      ### condition: 2
-  }
-
-  [ "${lockinfo}" == "nolock" ] && {    ### not running
-	gen_lock "${plugin_name}"
-        r_c=$?
-	if [ "${r_c}" != "0" ]; then
-		write_log -f ${logfile} "L0000000 MOLE add runlock on"\
-			"[${plugin_name}]: without runlock but add runlock failed. EXIT";
-		return 3      ### condition: 3
-	else		
-		write_log -f ${logfile} "L0000000 MOLE add runlock on"\
-			"[${plugin_name}]: without runlock and add runlock succeed. OK";
-		return 4      ### condition: 4
-	fi
-  }
-
-  write_log -f ${logfile} "L0000000 MOLE plugin"\
-	"[${plugin_name}] something unknown occure. EXIT";
-  return 5 	### condition: 5
 }
 
 
