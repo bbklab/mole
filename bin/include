@@ -3471,7 +3471,7 @@ process_plugin() {
   # 0-SUCC
   if [ "${rc}" == "0" ]; then    
 	write_log ${jid} ${plugin_name}\
-		"return status: [SUCC], will check nower errcount to detect recovery event, CONTINUE";
+		"return status: [SUCC], try to detect recovery event, CONTINUE";
 	local maxerr_detail=
 	if maxerr_detail=$(is_reached_maxerr "${plugin_name}"); then	# got event recovery 
 		local _now_errcount=${maxerr_detail%%:*}    _errcount_uplimit=${maxerr_detail##*:}
@@ -3541,11 +3541,11 @@ process_plugin() {
 
 
   # update plugin execution result
+  # this step should behind in special steps
   update_status "${plugin_name}" "${jid}" "${output}"
 
   # update plugin heaped up rc number
-  # --*--< Important >--*--
-  # this step must behind in max err check, otherwise leading to conflict with notify policy logic
+  # this step should behind in special steps
   add_heapuprc_count "${plugin_name}" "${part1}" "${jid}"
 
 
