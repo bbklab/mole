@@ -12,7 +12,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -26,7 +26,7 @@ fi
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
         source "/usr/bin/gettext.sh" 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -40,7 +40,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
         export TEXTDOMAINDIR="${LOCALE_DIR}"
         export TEXTDOMAIN="mole"
 else
@@ -227,7 +227,7 @@ read_conf() {
 		awk=" awk -F"${kvsep}" "
 	fi
 
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		if [ -z "${config}" ]; then
 			result=$( ${awk} '($0~/^[ \t]*$/){next;} ($0~/^[ \t]*#/){next;} {print $1;exit}' "${file}" 2>&- )
 		else
@@ -248,7 +248,7 @@ read_iniconf() {
 		awk=" awk -F"${kvsep}" "
 	fi
 
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		result=$( cat ${file} | tr '\t' ' ' |\
                         ${awk} '\
                                 ($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
@@ -265,9 +265,9 @@ get_emversion() {
 	local conf_phpfile="${EM_INSTALL}/app/inc/conf/conf_global.php"
 	local conf_phpfile_new="${EM_INSTALL}/inc/conf/conf_global.php"
 	local version_file=
-	if [ -f "${conf_phpfile}" -a -s "${conf_phpfile}" ]; then
+	if [ -f "${conf_phpfile}" ] && [ -s "${conf_phpfile}" ]; then
 		version_file="${conf_phpfile}"
-	elif [ -f "${conf_phpfile_new}" -a -s "${conf_phpfile_new}" ]; then
+	elif [ -f "${conf_phpfile_new}" ] && [ -s "${conf_phpfile_new}" ]; then
 		version_file="${conf_phpfile_new}"
 	else
 		return
@@ -282,7 +282,7 @@ get_emgversion() {
 
 get_emstart() {
 	local result=
-	if [ -f "${EM_INIT_CONFIG}" -a -s "${EM_INIT_CONFIG}" ]; then
+	if [ -f "${EM_INIT_CONFIG}" ] && [ -s "${EM_INIT_CONFIG}" ]; then
 		result=$(awk 'BEGIN{x=0;y=0} ($0~/^[ \t]*ARRAY_START=\(/){x=1;y=1;next;} \
 			($0~/^[ \t]*#/){next;} (x==1 && y==1 && $0~/^[ \t]*\)/){exit;} \
 			(x==1 && y==1){gsub(" ","");print} ' "${EM_INIT_CONFIG}" 2>&-)
@@ -297,9 +297,9 @@ get_emgstart() {
 get_basedomain() {
 	local result=  file=	
 
-	if [ -f "${EM_CONFIG}" -a -s "${EM_CONFIG}" ]; then
+	if [ -f "${EM_CONFIG}" ] && [ -s "${EM_CONFIG}" ]; then
 		result=$( read_conf "${EM_CONFIG}" "server_me" "=" 2>&- )
-	elif [ -f "${EMG_DOMAIN_CONFIG}" -a -s "${EMG_DOMAIN_CONFIG}" ]; then
+	elif [ -f "${EMG_DOMAIN_CONFIG}" ] && [ -s "${EMG_DOMAIN_CONFIG}" ]; then
 		result=$( read_conf "${EMG_DOMAIN_CONFIG}" "" 2>&- )
 	fi
 
@@ -544,7 +544,7 @@ get_emcompinfo() {
 	if is_emcomp "${comp}" >/dev/null 2>&1; then
 		if   [ "${comp}" == "mysql" 		]; then
 			file="$EM_CONFDIR_MYSQL/my.cnf"
-			if [ -f "${file}" -a -s "${file}" ]; then
+			if [ -f "${file}" ] && [ -s "${file}" ]; then
 				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
 					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
 					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
@@ -564,7 +564,7 @@ get_emcompinfo() {
 			fi
 		elif [ "${comp}" == "mysql_index" 	]; then
 			file="$EM_CONFDIR_MYSQL/my_index.cnf"
-			if [ -f "${file}" -a -s "${file}" ]; then
+			if [ -f "${file}" ] && [ -s "${file}" ]; then
 				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
 					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
 					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
@@ -584,7 +584,7 @@ get_emcompinfo() {
 			fi
 		elif [ "${comp}" == "mysql_log"   	]; then
 			file="$EM_CONFDIR_MYSQL/my_log.cnf"
-			if [ -f "${file}" -a -s "${file}" ]; then
+			if [ -f "${file}" ] && [ -s "${file}" ]; then
 				local skip_network=$( awk '($0~/^[ \t]*#/){next;} \
 					($0~/^[ \t]*\[mysqld\][ \t]*$/){x=1;next;} \
 					(x==1 && $0~/^[ \t]*\[.+\][ \t]*$/){exit;} \
@@ -611,30 +611,30 @@ get_emcompinfo() {
 		elif [ "${comp}" == "memcache_session"	]; then
 			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_SESSION_LISTEN" "=")
 			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_SESSION_PORT" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
 		elif [ "${comp}" == "memcache_fix"	]; then
 			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_FIX_LISTEN" "=")
 			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_FIX_PORT" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
 		elif [ "${comp}" == "memcache_hot"	]; then
 			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_HOT_LISTEN" "=")
 			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "MEMCACHE_HOT_PORT" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
 		elif [ "${comp}" == "gearman"		]; then
 			local listen_addr=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_LISTEN" "=")
 			local listen_port=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_PORT" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
 			local gmysql_addr=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_MYSQL_HOST" "=")
 			local gmysql_port=$(read_conf "${EM_INIT_CONFIG}" "GEARMAN_MYSQL_PORT" "=")
-			if [ -n "${gmysql_addr}" -a -n "${gmysql_port}" ]; then
+			if [ -n "${gmysql_addr}" ] && [ -n "${gmysql_port}" ]; then
 				conn_addr="${gmysql_addr}:${gmysql_port}"
 			fi
 		elif [ "${comp}" == "phpd"		]; then
@@ -642,16 +642,16 @@ get_emcompinfo() {
 		elif [ "${comp}" == "filed"		]; then
 			local listen_addr="0.0.0.0"
 			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "filed" "filed_port" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
 		elif [ "${comp}" == "filedagent"	]; then
 			local listen_addr="0.0.0.0"
 			local listen_port=$(read_iniconf "${EM_MTA_CONFIG}" "agent" "agent_port" "=")
-			if [ -n "${listen_addr}" -a -n "${listen_port}" ]; then
+			if [ -n "${listen_addr}" ] && [ -n "${listen_port}" ]; then
 				bind_addr="${listen_addr}:${listen_port}"
 			fi
-			if [ -f "${EM_FILEDAGENT_CONFIG}" -a -s "${EM_FILEDAGENT_CONFIG}" ]; then
+			if [ -f "${EM_FILEDAGENT_CONFIG}" ] && [ -s "${EM_FILEDAGENT_CONFIG}" ]; then
 				conn_addr=$( awk '($0~/^[ \t]*#/){next;} \
 						(NF=="4" && $1~/[0-9]+/){printf "%s:%d ",$2,$3}' \
 						"${EM_FILEDAGENT_CONFIG}" 2>&- )
@@ -659,12 +659,12 @@ get_emcompinfo() {
 		elif [ "${comp}" == "httpd"		]; then
 			local file1="${EM_CONFDIR_APACHE}/httpd.conf"
 			local file2="${EM_OPT_INSTALL}/conf/httpd.conf"
-			if [ -f "${file1}" -a -s "${file1}" ]; then
+			if [ -f "${file1}" ] && [ -s "${file1}" ]; then
 				file="${file1}"
-			elif [ "${file2}" -a -s "${file2}" ]; then
+			elif [ "${file2}" ] && [ -s "${file2}" ]; then
 				file="${file2}"
 			fi
-			if [ -n "${file}" -a -f "${file}" -a -s "${file}" ]; then
+			if [ -n "${file}" ] && [ -f "${file}" ] && [ -s "${file}" ]; then
 				bind_addr=$( awk '($0~/^[ \t]*#/){next;} \
 						(NF=="2" && $1=="Listen" && $2~/:/){printf "%s ",$2;next;} \
 						(NF=="2" && $1=="Listen" && $2!~/:/){printf "0.0.0.0:%s ",$2;next;}' \
@@ -672,7 +672,7 @@ get_emcompinfo() {
 			fi
 		elif [ "${comp}" == "nginx"		]; then
 			local file="${EM_CONFDIR_NGINX}/nginx.conf"	
-			if [ -f "${file}" -a -s "${file}" ]; then
+			if [ -f "${file}" ] && [ -s "${file}" ]; then
 				local listen_addr="0.0.0.0"
 				bind_addr="$(awk -v addr="${listen_addr}" '($0~/^[ \t]*#/){next;} \
 					($0~/^[ \t]*server[ \t]*{[ \t]*$/){x=1;next;} \
@@ -773,8 +773,8 @@ config_pdisk_fs() {
 	local file="/etc/mtab"	tune2fs="/sbin/tune2fs"
 	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude"  cfg_value2=
 
-	if [ -f "${file}" -a -s "${file}" ]; then
-		if [ -f "${tune2fs}" -a -x "${tune2fs}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
+		if [ -f "${tune2fs}" ] && [ -x "${tune2fs}" ]; then
 			local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
 			for d in `echo "${devices}"`
 			do
@@ -805,7 +805,7 @@ config_pdisk_space() {
 	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
 	local cfg3="space_pct"  cfg_value3="90"  cfg4="inode_pct"  cfg_value4="90"
 
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		if [ "$(awk '($2=="/boot"){print $2}' "${file}" 2>&-)" != "" ]; then
 			cfg_value2="/boot"
 		fi
@@ -828,7 +828,7 @@ config_pdisk_iostat() {
 	local file="/etc/mtab"
 	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="70"
 
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
 		for d in `echo "${devices}"`
 		do
@@ -885,9 +885,9 @@ config_pnotify_oom() {
 	local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"	 file=
 	local cfg="messagefile" cfg_value=
 
-	if [ -f "${el5_file}" -a -s "${el5_file}" ]; then
+	if [ -f "${el5_file}" ] && [ -s "${el5_file}" ]; then
 		file="${el5_file}"
-	elif [ -f "${el6_file}" -a -s "${el6_file}" ]; then
+	elif [ -f "${el6_file}" ] && [ -s "${el6_file}" ]; then
 		file="${el6_file}"
 	fi
 	cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/\*\.info/){print $NF;exit;}' "${file}" 2>&-)"
@@ -906,9 +906,9 @@ config_pnotify_syslogin() {
         local el5_file="/etc/syslog.conf"  el6_file="/etc/rsyslog.conf"  file=
         local cfg="authfile" cfg_value=
 
-        if [ -f "${el5_file}" -a -s "${el5_file}" ]; then
+        if [ -f "${el5_file}" ] && [ -s "${el5_file}" ]; then
                 file="${el5_file}"
-        elif [ -f "${el6_file}" -a -s "${el6_file}" ]; then
+        elif [ -f "${el6_file}" ] && [ -s "${el6_file}" ]; then
                 file="${el6_file}"
         fi  
         cfg_value="$(awk '($0~/^[ \t]*#/){next;} ($1~/authpriv\.\*/){print $NF;exit;}' "${file}" 2>&-)"
@@ -927,7 +927,7 @@ config_pport() {
 	local cfg="port_list"  cfg_value=
 
 	local sshd_file="/etc/ssh/sshd_config"
-	if [ -f "${sshd_file}" -a -s "${sshd_file}" ]; then
+	if [ -f "${sshd_file}" ] && [ -s "${sshd_file}" ]; then
 		local listen_addr="$(awk '($0~/^[ \t]*#/){next;} ($1~/^ListenAddress\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
 		local listen_port="$(awk '($0~/^[ \t]*#/){next;} ($1~/^Port\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
 		[ -z "${listen_addr}" ] && listen_addr="0.0.0.0"
@@ -976,7 +976,7 @@ config_pprocess() {
 # sshd		1		/usr/sbin/sshd.*
 "
 
-	if [ -f "/usr/sbin/sshd" -a -f "/etc/init.d/sshd" ]; then
+	if [ -f "/usr/sbin/sshd" ] && [ -f "/etc/init.d/sshd" ]; then
 		headline="${headline}\nsshd		1	/usr/sbin/sshd.*\n"
 	fi
 
@@ -998,7 +998,7 @@ config_pprocess() {
 	else
 		return 1
 	fi
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		${MOLE} config-clear ${plugin} ${cfg}; ((rc+=$?))
 		${MOLE} config-update ${plugin} ${cfg} "file:${cfg_value}"; ((rc+=$?))
 	fi
@@ -1047,7 +1047,7 @@ config_ptcp_conn() {
 	local cfg="port_list"  cfg_value=
 
 	local sshd_file="/etc/ssh/sshd_config"
-	if [ -f "${sshd_file}" -a -s "${sshd_file}" ]; then
+	if [ -f "${sshd_file}" ] && [ -s "${sshd_file}" ]; then
 		local listen_port="$(awk '($0~/^[ \t]*#/){next;} ($1~/^Port\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
 		[ -z "${listen_port}" ] && listen_port="22"
 		cfg_value="${listen_port}:50"

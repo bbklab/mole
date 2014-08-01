@@ -335,7 +335,7 @@ get_inetorder() {
 		elif [ "${#array_inet[*]}" == "1" ]; then
 			result="${array_inet[0]}"
 		else
-			if [ -f "${biosdevname}" -a -x "${biosdevname}" ]; then
+			if [ -f "${biosdevname}" ] && [ -x "${biosdevname}" ]; then
 				new_mode=1				# new naming schema first
 			fi
 
@@ -431,7 +431,7 @@ check_ps_by_pid_file() {
 		 "missing arguments, fpid=[${fpid}]";
 	return 1
   }
-  if [ -f "${pid_file}" -a -s "${pid_file}" ]; then
+  if [ -f "${pid_file}" ] && [ -s "${pid_file}" ]; then
   	read line < "${pid_file}"
 	for x in `echo ${line}`; do
   		if [ -z "${x//[0-9]/}" ] && [ -d "/proc/${x}" ]; then
@@ -602,11 +602,11 @@ list_section_keys(){
   else
 	config_file="${CONF_DIR}/${section}.ini"
   fi
-  [ -f "${config_file}" -a -s "${config_file}" ] || {
+  if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 list_section_keys error:"\
 		"section=[${section}], but config file [${config_file}] not exists or empty.";
 	return 1
-  }
+  fi
   result=$(cat ${config_file} | tr '\t' ' ' |\
 		awk -F"=" '\
 			($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next} \
@@ -699,7 +699,7 @@ read_mole_config(){
 		config_file="${specified_file}"
 	fi
 
-	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
 		# this is too slow
 		# value=$( ${PLUTIL} read_config "${section}" "${key}" "${config_file}" 2>&- |\
 			 #sed -e 's/^[ \t]*//; s/[ \t]*$//;' 2>&- )
@@ -749,11 +749,11 @@ update_mole_config() {
         return 3
   else
 	# return 9(warn) if global.id global.name
-	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "force" ]; then
+	if [ "${section}" == "global" ] && [ "${key}" == "id" ] && [ "${mode}" != "force" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "force" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "name" ] && [ "${mode}" != "force" ]; then
 		return 9
-        elif [ "${section}" == "global" -a "${key}" == "parter_id" -a "${mode}" != "force" ]; then                
+        elif [ "${section}" == "global" ] && [ "${key}" == "parter_id" ] && [ "${mode}" != "force" ]; then                
                 return 9
 	fi
 	# set config_file
@@ -765,7 +765,7 @@ update_mole_config() {
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
 
-	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
   		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
 				 awk -F"=" '\
 					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
@@ -841,11 +841,11 @@ clear_mole_config() {
         return 3
   else
 	# return 9(warn) if global.id global.name
-	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "force" ]; then
+	if [ "${section}" == "global" ] && [ "${key}" == "id" ] && [ "${mode}" != "force" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "force" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "name" ] && [ "${mode}" != "force" ]; then
 		return 9
-        elif [ "${section}" == "global" -a "${key}" == "parter_id" -a "${mode}" != "force" ]; then                
+        elif [ "${section}" == "global" ] && [ "${key}" == "parter_id" ] && [ "${mode}" != "force" ]; then                
                 return 9
 	fi
 	# set config_file
@@ -857,7 +857,7 @@ clear_mole_config() {
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
 
-	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
   		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
 				 awk -F"=" '\
 					($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next}\
@@ -929,11 +929,11 @@ add_mole_config() {
                 "missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else 
-	if [ "${section}" == "global" -a "${key}" == "id" -a "${mode}" != "force" ]; then
+	if [ "${section}" == "global" ] && [ "${key}" == "id" ] && [ "${mode}" != "force" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" -a "${mode}" != "force" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "name" ] && [ "${mode}" != "force" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "parter_id" -a "${mode}" != "force" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "parter_id" ] && [ "${mode}" != "force" ]; then
 		return 9
 	fi
 	# set config_file 
@@ -945,7 +945,7 @@ add_mole_config() {
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
 
-	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
 		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
 					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
 		if [ -z "${section_linenum}" ]; then
@@ -1018,11 +1018,11 @@ del_mole_config() {
         return 3
   else
 	# return 9(warn) if global.id global.name
-	if [ "${section}" == "global" -a "${key}" == "id" ]; then
+	if [ "${section}" == "global" ] && [ "${key}" == "id" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "name" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "name" ]; then
 		return 9
-	elif [ "${section}" == "global" -a "${key}" == "parter_id" ]; then
+	elif [ "${section}" == "global" ] && [ "${key}" == "parter_id" ]; then
 		return 9
 	fi
 	# set config_file 
@@ -1034,7 +1034,7 @@ del_mole_config() {
         	config_file="${CONF_DIR}/${section}.ini"
   	fi
 
-	if [ -f "${config_file}" -a -s "${config_file}" ]; then
+	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
 		local section_linenum=$( cat ${config_file} | tr '\t' ' ' |\
 					awk '($0~/^ *\[ *'${section}' *\] *$/){print NR;exit;}' )
 		if [ -z "${section_linenum}" ]; then 
@@ -1254,11 +1254,14 @@ get_enable() {
   [ -z "${result}" ] && result=$(read_mole_config default enable)
 
   # check valid or not
-  [ -z "${result}" ] && {
+  if [ -z "${result}" ]; then
 	result="${default}"
-  } || {
-  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
-  }
+  else
+  	if [ "${result}" != "yes" ] && [ "${result}" != "no" ]; then
+		result="${default}"
+	fi
+  fi
+
   echo "${result}"
 }
 
@@ -1275,11 +1278,14 @@ get_debug() {
   [ -z "${result}" ] && result=$(read_mole_config default debug)
  
   # check valid or not
-  [ -z "${result}" ] && {
+  if [ -z "${result}" ]; then
         result="${default}"
-  } || {
-        [ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
-  }
+  else
+        if [ "${result}" != "yes" ] && [ "${result}" != "no" ]; then
+		result="${default}"
+	fi
+  fi
+
   echo "${result}"
 }
 
@@ -1297,11 +1303,13 @@ get_attsnap_mail() {
   result=$(read_mole_config ${plugin_name} attsnap_mail)
   [ -z "${result}" ] && result=$(read_mole_config default attsnap_mail)
   # check null or invalid or not
-  [ -z "${result}" ] && {
+  if [ -z "${result}" ]; then
  	result="${default}"
-  } || {
-  	[ "${result}" != "yes" -a "${result}" != "no" ] && result="${default}"
-  }
+  else
+  	if [ "${result}" != "yes" ] && [ "${result}" != "no" ]; then
+		result="${default}"
+	fi
+  fi
   echo "${result}"
 }
 
@@ -1371,9 +1379,9 @@ get_mail_receviers() {
   result=$(read_mole_config ${plugin_name} mail_receviers)
   [ -z "${result}" ] && result=$(read_mole_config default mail_receviers)
 
-  if [ -f "/${result##*file:}" -a -s "/${result##*file:}" ]; then
+  if [ -f "/${result##*file:}" ] && [ -s "/${result##*file:}" ]; then
         result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "/${result##*file:}")
-  elif [ -f "${BASE_DIR}/${result##*file:}" -a -s "${BASE_DIR}/${result##*file:}" ]; then
+  elif [ -f "${BASE_DIR}/${result##*file:}" ] && [ -s "${BASE_DIR}/${result##*file:}" ]; then
         result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "${BASE_DIR}/${result##*file:}")
   else
         [ -z "${result}" ] && result="${default}"  ### set default whatever.
@@ -1392,9 +1400,9 @@ get_sms_receviers() {
   result=$(read_mole_config ${plugin_name} sms_receviers)
   [ -z "${result}" ] && result=$(read_mole_config default sms_receviers)
 
-  if [ -f "/${result##*file:}" -a -s "/${result##*file:}" ]; then
+  if [ -f "/${result##*file:}" ] && [ -s "/${result##*file:}" ]; then
         result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "/${result##*file:}")
-  elif [ -f "${BASE_DIR}/${result##*file:}" -a -s "${BASE_DIR}/${result##*file:}" ]; then
+  elif [ -f "${BASE_DIR}/${result##*file:}" ] && [ -s "${BASE_DIR}/${result##*file:}" ]; then
         result=$(awk '($0!~/^[ \t]*#/) { for(i=1;i<=NF;i++) {printf "%s ",$i} }' "${BASE_DIR}/${result##*file:}")
   fi
   echo -en "${result}"
@@ -1568,10 +1576,10 @@ get_policy_analysize() {
 	write_log -f "${MOLE_LOG}" "E0000000 get_policy_analysize error: missing notify policy to be analysized.";
 	return 1
   }
-  [ "${part}" != "range" -a "${part}" != "rtime" ] && {
+  if [ "${part}" != "range" ] && [ "${part}" != "rtime" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 get_policy_analysize error: required part [${part}] not recognized.";
 	return 2
-  }
+  fi
 
   local policy_array=( ${notify_policy} )
   if [ "${part}" == "range" ]; then
@@ -1632,12 +1640,19 @@ get_action_type() {
 		"missing plugin_name or action_type : [$*]";
         return 1
   }
-  [ "${action_type}" != "take_snapshot" -a "${action_type}" != "mail_notify" -a "${action_type}" != "post_notify" -a "${action_type}" != "auto_handle" -a "${action_type}" != "sms_notify" ] && {
+
+  local array_action_type=( 
+	take_snapshot
+	mail_notify
+	post_notify
+	auto_handle
+	sms_notify
+  )
+  if ! is_sub "${action_type}" "${array_action_type[*]}"
 	write_log -f "${MOLE_LOG}" "E0000000 get_action_type error:"\
-		"action_type: [${action_type}] is invalid,"\
-		"only [ take_snapshot/mail_notify/sms_notify/post_notify/auto_handle ] is acceptable.";
+		"action_type: [${action_type}] is not allowed"
 	return 2
-  }
+  fi
 
   ### read values
   result=$(read_mole_config ${plugin_name} ${action_type})
@@ -2627,7 +2642,7 @@ check_lock() {
 
   if [ -L "${RUN_DIR}/${plugin_name}.lock" ]; then
 	local f=$(readlink "${RUN_DIR}/${plugin_name}.lock" 2>&-)
-	if [ "${f}" == "${p_path}" -a -f "${p_path}" ]; then
+	if [ "${f}" == "${p_path}" ] && [ -f "${p_path}" ]; then
 		result=$(stat -c %Y ${RUN_DIR}/${plugin_name}.lock 2>&-) 
 		if [ -z "${result}" ]; then
 			result="nolock"
@@ -2714,7 +2729,7 @@ stopps_by_pid() {
         return 1
   fi
 
-  if [ "${sig}" != "15" -a "${sig}" != "9" ]; then
+  if [ "${sig}" != "15" ] && [ "${sig}" != "9" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pid error:"\
 		"argument invalid, sig=[${sig}] must be 15 or 9";
 	return 1
@@ -2785,7 +2800,7 @@ stopps_by_pidfile() {
 		"[${fpid}] result: [${line}]";
 
 	for x in `echo ${line}`;do
-		[ -z "${x//[0-9]/}" -a -d "/proc/${x}" ] && {
+		if [ -z "${x//[0-9]/}" ] && [ -d "/proc/${x}" ]; then
 			local kidpids=$(get_pidkids_bypid ${x})    ### step: 1.1
 			write_log -f "${MOLE_LOG}" "STP00000 MOLE get_kidpids for pid:[${x}] result:[${kidpids}]";
 
@@ -2816,7 +2831,7 @@ stopps_by_pidfile() {
 				write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate father pid:"\
 					"[${x}] => [${cmdline1}] SIG:TERM success";
 			fi
-		}
+		fi
 	done
 
 	if ! check_ps_by_pid_file "${fpid}" >/dev/null 2>&1; then
@@ -3106,19 +3121,19 @@ disable_plugin() {
 init_plugin() {
   local plugin_name=$1  rc=0
   if [ -z "${plugin_name}" ]; then
-	if [ -f "${TMP_LASTRUN}" -a -s "${TMP_LASTRUN}" ]; then
+	if [ -f "${TMP_LASTRUN}" ] && [ -s "${TMP_LASTRUN}" ]; then
 		: > "${TMP_LASTRUN}" >/dev/null 2>&1
 		((rc+=$?))
 	else
 		((rc+=0))
 	fi
-	if [ -f "${TMP_NEXTRUN}" -a -s "${TMP_NEXTRUN}" ]; then
+	if [ -f "${TMP_NEXTRUN}" ] && [ -s "${TMP_NEXTRUN}" ]; then
   		: > "${TMP_NEXTRUN}" >/dev/null 2>&1
 		((rc+=$?))
 	else
 		((rc+=0))
 	fi
-	if [ -f "${TMP_REPEAT}" -a -s "${TMP_REPEAT}" ]; then
+	if [ -f "${TMP_REPEAT}" ] && [ -s "${TMP_REPEAT}" ]; then
   		: > "${TMP_REPEAT}"  >/dev/null 2>&1
 		((rc+=$?))
 	else
@@ -3126,19 +3141,19 @@ init_plugin() {
 	fi
 	plugin_name="all plugins"
   else
-	if [ -f "${TMP_LASTRUN}" -a -s "${TMP_LASTRUN}" ]; then
+	if [ -f "${TMP_LASTRUN}" ] && [ -s "${TMP_LASTRUN}" ]; then
  		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_LASTRUN}" > /dev/null 2>&1
 		((rc+=$?))
 	else
 		((rc+=0))
 	fi
-	if [ -f "${TMP_NEXTRUN}" -a -s "${TMP_NEXTRUN}" ]; then
+	if [ -f "${TMP_NEXTRUN}" ] && [ -s "${TMP_NEXTRUN}" ]; then
  		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_NEXTRUN}" > /dev/null 2>&1
 		((rc+=$?))
 	else
 		((rc+=0))
 	fi
-	if [ -f "${TMP_REPEAT}" -a -s "${TMP_REPEAT}" ]; then
+	if [ -f "${TMP_REPEAT}" ] && [ -s "${TMP_REPEAT}" ]; then
  		sed -i '/^'"${plugin_name}"'\>/d' "${TMP_REPEAT}"  > /dev/null 2>&1
 		((rc+=$?))
 	else
@@ -3192,21 +3207,23 @@ view_base_config() {
 view_extra_config() {
   local plugin_name=$1  silient=$2
   [ -z "${silient}"  ] && silient=0 || silient=1
-  [ "${silient}" == "0" -a -z "${plugin_name}" ] && {
+  if [ "${silient}" == "0" ] && [ -z "${plugin_name}" ]; then
 	echo_red "$(gettext "view_extra_config error: please specify plugin_name.")"; echo
  	return 1
-  }
-  [ "${silient}" == "0" ] && { 
+  fi
+  if [ "${silient}" == "0" ]; then
 	echo_green "[${plugin_name}]: $(gettext "extra configuration")"
 	echo
-  }
+  fi
   {
 	local search_tag=0  headline="$(gettext "config_name(user-def)") ^ $(gettext "value")"
   	for cname in `list_section_keys "${plugin_name}"`
   	do
 		if ! is_sub "${cname}" "${ARRAY_BASE_CONFIG[*]}"; then		### 2. user-def config
 			cvalue=$(read_mole_config ${plugin_name} ${cname})
-			[ "${silient}" == "0" -a "${search_tag}" == "0" ] && echo -e "${headline}"
+			if [ "${silient}" == "0" ] && [ "${search_tag}" == "0" ]; then
+					echo -e "${headline}"
+			fi
 			echo -e "${cname} ^ ${cvalue}"
 			search_tag=1
 		fi
@@ -3246,7 +3263,7 @@ process_plugin() {
 
   # Step 2.2: check current mole kids exceed or not,  yes ==> process_kidsexceed ==> return
   local KIDSNUM_UPLIMIT=$(get_max_kidsnum)
-  if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
+  if [ -f "${PID_FILE}" ] && [ -s "${PID_FILE}" ]; then
  	read empid < "${PID_FILE}"
   	local kidsnum=$( get_kidsnum "${empid}" )
   	if [ "$(echo  "${kidsnum} > $KIDSNUM_UPLIMIT" | bc 2>&-)" == "1" ]; then	### plugin finished.
@@ -3559,7 +3576,7 @@ process_plugin() {
   else
 	write_log ${jid} ${plugin_name} "auto handle enabled. CONTINUE";
 	local handler=$(get_auto_handler "${plugin_name}")
-	if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+	if [ -f "${HANDLER_DIR}/${handler}" ] && [ -s "${HANDLER_DIR}/${handler}" ]; then
 		write_log ${jid} ${plugin_name} "auto handler:"\
 			"[${HANDLER_DIR}/${handler}] exists. CONTINUE";
  		[ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
@@ -3781,7 +3798,7 @@ process_plugin_timeout() {
 	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"auto handle enabled. CONTINUE"
 	local handler=$(get_auto_handler "${plugin_name}")
-        if [ -f "${HANDLER_DIR}/${handler}" -a -s "${HANDLER_DIR}/${handler}" ]; then
+        if [ -f "${HANDLER_DIR}/${handler}" ] && [ -s "${HANDLER_DIR}/${handler}" ]; then
                 write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 			"auto handler [${HANDLER_DIR}/${handler}] exists. CONTINUE"
                 [ ! -x "${HANDLER_DIR}/${handler}" ] && /bin/chmod a+x "${HANDLER_DIR}/${handler}" 2>&-
