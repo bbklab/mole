@@ -284,7 +284,7 @@ is_sub() {
 #
 is_int() {
 	local item="$1"
-	if [ -z "${item}" -o ! -z "${item//[0-9]}" ]; then
+	if [ -z "${item}" ] || [ ! -z "${item//[0-9]}" ]; then
 		return 1
 	else
 		return 0
@@ -524,7 +524,7 @@ is_plugin_configfile(){
 	else
   		local pname=$(echo "${filepath##*/}" |LANG=C /usr/bin/perl -ne 'if(m/\A(\S+)\.ini\Z/i){print "$1"};' 2>&-)
   		local hname=$(head -n1 "${filepath}" |LANG=C /usr/bin/perl -ne 'if(m/\A\s*\[\s*(\S+)\s*\]\s*/){print "$1"};' 2>&-)
-  		if [ -z "${pname}" -o -z "${hname}" ]; then
+  		if [ -z "${pname}" ] || [ -z "${hname}" ]; then
 			result="no"
   		elif [ "${pname}" != "${hname}" ]; then
 			result="no"
@@ -647,7 +647,7 @@ read_mole_section() {
         return 1
   else 
 	config_file="${CONFIG_FILE}"
-        if [ ! -f "${config_file}" -o ! -s "${config_file}" ]; then 
+        if [ ! -f "${config_file}" ] || [ ! -s "${config_file}" ]; then 
                 write_log -f "${MOLE_LOG}" "E0000000 read_mole_section error:"\
                         "config file [${config_file}] not exists or empty.";
                 return 2
@@ -682,7 +682,7 @@ read_mole_config(){
   	local section=$1  key=$2  value=  config_file=
   fi
 
-  if [ -z "${section}" -o -z "${key}" ]; then
+  if [ -z "${section}" ] || [ -z "${key}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 read_mole_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
 	return 1
@@ -743,7 +743,7 @@ update_mole_config() {
   	local section=$1 key=$2 ; shift 2 ; local value=$*
   fi
   local errinfo=  config_file=
-  if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then
+  if [ -z "${section}" ] || [ -z "${key}" ] || [ -z "${value}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 update_mole_config error:"\
 		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
@@ -835,7 +835,7 @@ clear_mole_config() {
   	local section=$1 key=$2
   fi
   local errinfo=  config_file=
-  if [ -z "${section}" -o -z "${key}" ]; then
+  if [ -z "${section}" ] || [ -z "${key}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 clear_mole_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
         return 3
@@ -924,7 +924,7 @@ add_mole_config() {
         local section=$1 key=$2 ; shift 2 ; local value=$*
   fi
   local errinfo=  config_file=
-  if [ -z "${section}" -o -z "${key}" -o -z "${value}" ]; then 
+  if [ -z "${section}" ] || [ -z "${key}" ] || [ -z "${value}" ]; then 
         write_log -f "${MOLE_LOG}" "E0000000 add_mole_config error:"\
                 "missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
@@ -1012,7 +1012,7 @@ add_mole_config() {
 del_mole_config() {
   local section=$1 key=$2 config_file=
   local errinfo=
-  if [ -z "${section}" -o -z "${key}" ]; then
+  if [ -z "${section}" ] || [ -z "${key}" ]; then
         write_log -f "${MOLE_LOG}" "DELC0000 del_mole_config error:"\
 		"missing arguments, section=[${section}] key=[${key}]";
         return 3
@@ -1467,7 +1467,9 @@ get_maxerr_times() {
   [ -z "${result}" ] && result=$(read_mole_config default maxerr_times)
 
   # check valid or not ==> ( 0 is invalid )
-  [ -z "${result}" -o ! -z "${result//[1-9]}" ] && result=${default}  # set default whatever.
+  if [ -z "${result}" ] || [ ! -z "${result//[1-9]}" ]; then
+	result=${default}  # set default whatever.
+  fi
   echo "${result}"
 }
 
@@ -1635,11 +1637,11 @@ get_policy_analysize() {
 get_action_type() {
   local plugin_name=$1  action_type=$2
   local result=  output=  item=
-  [ -z "${plugin_name}" -o -z "${action_type}" ] && {
+  if [ -z "${plugin_name}" ] || [ -z "${action_type}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 get_action_type error:"\
 		"missing plugin_name or action_type : [$*]";
         return 1
-  }
+  fi
 
   local array_action_type=( 
 	take_snapshot
@@ -1692,11 +1694,11 @@ get_action_type() {
 take_action_ornot() {
   local plugin_name=$1  action_type=$2  event=$3
   local result=
-  [ -z "${plugin_name}" -o -z "${action_type}" -o -z "${event}" ] && {
+  if [ -z "${plugin_name}" ] || [ -z "${action_type}" ] || [ -z "${event}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 take_action_ornot error:"\
 		"missing plugin_name or action_type or event : [$*]";
         return 1
-  }
+  fi
   
   ### 1. read plugin_name action_type
   local action_type_config=$(get_action_type ${plugin_name} ${action_type})
@@ -2785,7 +2787,7 @@ stopps_by_pidfile() {
   	return 1
   }
   
-  if [ -z "${confirm_wait}" -o ! -z "${confirm_wait//[0-9]}" ]; then
+  if [ -z "${confirm_wait}" ] || [ ! -z "${confirm_wait//[0-9]}" ]; then
 	write_log -f "${MOLE_LOG}" "STP00000 MOLE confirm wait seconds"\
 		"missing, set as default 3 seconds";
 	confirm_wait=3
@@ -3324,7 +3326,7 @@ process_plugin() {
   fi
 
   # Step 5: check if plugin file exists under PLUGIN_DIR or not
-  if [ ! -f "${PLUGIN_DIR}/${plugin_name}" -o ! -s "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished, log record, no handler triggered 
+  if [ ! -f "${PLUGIN_DIR}/${plugin_name}" ] || [ ! -s "${PLUGIN_DIR}/${plugin_name}" ]; then	### plugin finished, log record, no handler triggered 
 	write_log ${jid} ${plugin_name} "plugin file not prepared. EXIT";
 	update_status "${plugin_name}" "${jid}" "EXIT on Plugin File Not Found or Empty"
 	update_lastrun_and_nextrun "${plugin_name}" "${jid}"
