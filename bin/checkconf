@@ -16,7 +16,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -30,7 +30,7 @@ fi
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
         source "/usr/bin/gettext.sh" 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -44,7 +44,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
         export TEXTDOMAINDIR="${LOCALE_DIR}"
         export TEXTDOMAIN="mole"
 else
@@ -57,9 +57,9 @@ fi
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
         export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -85,17 +85,19 @@ STATE_UNKN=3
 
 # Set VERBOSE
 VERBOSE=0
-[ "$1" == "-v" -o "$1" == "verbose" ] && VERBOSE=1
+if [ "$1" == "-v" ] || [ "$1" == "verbose" ]; then
+	VERBOSE=1
+fi
 
 # Show Help
-[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && {
+if [ "$1" == "-h" ] || [ "$1" == "help" ] || [ "$1" == "?" ] || [ "$1" == "/?" ]; then
 cat << EOF
 	./${0##*/}
 	./${0##*/} -v | verbose
 	./${0##*/} -h | help
 EOF
 exit 0
-}
+fi
 
 # Check Rules Definations:
 #
@@ -286,22 +288,22 @@ check_type_int(){
 	return ${STATE_FAIL}
   fi
 
-  [ -z "${input//[ ]}" ] && {
+  if [ -z "${input//[ ]}" ]; then
 	result="$(gettext "NULL")"
 	rc=${STATE_FAIL}
-  } || {
-	[ ! -z "${input//[0-9]}" ] && {
+  else
+	if [ ! -z "${input//[0-9]}" ]; then
 		result="$(gettext "must be interger")"
 		rc=${STATE_FAIL}
-	} || {
-		[ "$(echo "${input}>=${min}" | bc 2>&-)" == "1" -a "$(echo "${input}<=${max}" | bc 2>&1)" == "1" ] && {
+	else
+		if  is_between "${input}" "${min}" "${max}"; then
 			rc=${STATE_OK}
-		} || {
+		else
 			result="$(eval_gettext "must between \${min}-\${max}")"
 			rc=${STATE_FAIL}
-		}
-	}
-  }
+		fi
+	fi
+  fi
 
   echo -e "${result}"
   return "${rc}"
@@ -391,11 +393,11 @@ check_type_file(){
 	local errnum=0 oknum=0 total=0
 	for file in `echo -e "${filelst}"`
 	do
-		if [ -f "/${file}" -a -s "/${file}" ]; then
+		if [ -f "/${file}" ] && [ -s "/${file}" ]; then
 			((oknum++))
-		elif [ -f "${BASE_DIR}/${file}" -a -s "${BASE_DIR}/${file}" ]; then
+		elif [ -f "${BASE_DIR}/${file}" ] && [ -s "${BASE_DIR}/${file}" ]; then
 			((oknum++))
-		elif [ -f "${BASE_DIR}/${sdir}/${file}" -a -s "${BASE_DIR}/${sdir}/${file}" ]; then
+		elif [ -f "${BASE_DIR}/${sdir}/${file}" ] && [ -s "${BASE_DIR}/${sdir}/${file}" ]; then
 			((oknum++))
 		else
 			((errnum++))
@@ -449,7 +451,7 @@ check_ortypes(){
   rc1=$?
   retr2=$( eval "check_type_${type2} \"${rule2}\" \"${input}\" " 2>&1 )
   rc2=$?
-  if [ "${rc1}" == "0" -o "${rc2}" == "0" ]; then
+  if [ "${rc1}" == "0" ] || [ "${rc2}" == "0" ]; then
 	rc=${STATE_OK}
   else
 	result="eval_gettext "\${type1} return \${rc1}; \${type2} return \${rc2}")" 
