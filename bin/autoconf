@@ -53,9 +53,9 @@ fi
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
         export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -337,7 +337,9 @@ is_emstarton() {
 	local process=$1
 
 	[ -z "${EM_START}" ] && EM_START=( $(get_emstart) )
-	[ -z "${process}" -o "${#EM_START[*]}" == "0" ] && return 1
+	if [ -z "${process}" ] || [ "${#EM_START[*]}" == "0" ]; then
+		return 1
+	fi
 	
 	if is_sub "${process}" "${EM_START[*]}"; then
 		return 0
@@ -456,7 +458,9 @@ is_emcomp() {
 	local comp=$1	rval=1
 	local index=
 	
-	[ -z "${comp}" -o "${#ARRAY_EMCOMP[*]}" == "0" ] && return 1
+	if [ -z "${comp}" ] || [ "${#ARRAY_EMCOMP[*]}" == "0" ]; then
+		return 1
+	fi
 
 	for ((i=0;i<=${#ARRAY_EMCOMP[*]}-1;i+=4))
 	do
@@ -690,7 +694,7 @@ get_emcompinfo() {
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_1" "smtpd_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "smtpd_2" "smtpd_listener" "=")
 			bind_addr="$(echo -en "${addr1} ${addr2} ${addr3}" | tr ',;' ' ' | sed -e 's/tcp:\/\///g') "
-		elif [ "${comp}" == "pop" -o "${comp}" == "pop3" ]; then
+		elif [ "${comp}" == "pop" ] || [ "${comp}" == "pop3" ]; then
 			local addr1=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d"   "pop3d_listener" "=")
 			local addr2=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_1" "pop3d_listener" "=")
 			local addr3=$(read_iniconf "${EM_MTA_CONFIG}" "pop3d_2" "pop3d_listener" "=")
@@ -859,7 +863,7 @@ config_pmemory() {
 
 	if [ -f "${file}" ]; then
 		local mem_size=$(awk '/^MemTotal:/ {print $2/1024/1024;exit;}' "${file}" 2>&-)
-		if [ -z "${mem_size}" -o ! -z "${mem_size//[0-9.]}" ]; then
+		if [ -z "${mem_size}" ] || [ ! -z "${mem_size//[0-9.]}" ]; then
 			cfg_value2=10
 		elif [ "$(echo "${mem_size} >= 16" | bc 2>&-)" == "1" ]; then
                 	cfg_value2=10
@@ -1028,7 +1032,7 @@ config_psysload() {
                         	cfg_value=$( echo "${cpunum} * 0.5" | bc 2>&-)
                 	fi  
         	fi  
-		if [ -z "${cfg_value}" -o ! -z "${cfg_value//[0-9.]}" ]; then
+		if [ -z "${cfg_value}" ] || [ ! -z "${cfg_value//[0-9.]}" ]; then
 			cfg_value=10
 		fi
 	fi
@@ -1354,13 +1358,15 @@ config_pemp_mailqueue() {
 
 # 1. process arguments
 [ "$#" == "0" ] && show_usage
-[ "$1" == "-h" -o "$1" == "help" -o "$1" == "?" -o "$1" == "/?" ] && show_usage
+if [ "$1" == "-h" ] || [ "$1" == "help" ] || [ "$1" == "?" ] || [ "$1" == "/?" ]; then
+	show_usage
+fi
 
 # 2. automatic config/enable specified plugins
 if [ "$1" == "rpminit" ]; then
 
 	# check {MOLE} prepared ?
-	if [ ! -f "${MOLE}" -o ! -x "${MOLE}" ]; then
+	if [ ! -f "${MOLE}" ] || [ ! -x "${MOLE}" ]; then
 		write_log "mole [${MOLE}] not prepared! exit!"
 		exit 1
 	fi
