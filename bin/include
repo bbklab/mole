@@ -419,7 +419,10 @@ is_match() {
 
 # According to input pidfile, output process state.
 # Usage:	check_ps_on_pid_file  {pid_file}
-# Return: 	0 1 2 3  ==>  Running | Missing arguments | Dead but pid file exists | Dead
+# Return: 	0		Running
+#		1		Missing arguments
+# 		2 		Dead (but pid file left exists)
+#		3		Dead (pid file not exists or empty)
 #
 check_ps_by_pid_file() {
   local pid_file=$1  pid=
@@ -428,14 +431,17 @@ check_ps_by_pid_file() {
 		 "missing arguments, fpid=[${fpid}]";
 	return 1
   }
-  [ -f "${pid_file}" -a -s "${pid_file}" ] && {
-  	read line < ${pid_file}
+  if [ -f "${pid_file}" -a -s "${pid_file}" ]; then
+  	read line < "${pid_file}"
 	for x in `echo ${line}`; do
-  		[ -z "${x//[0-9]/}" -a -d "/proc/${x}" ] && pid="${pid} ${x}"
+  		if [ -z "${x//[0-9]/}" ] && [ -d "/proc/${x}" ]; then
+			pid="${pid} ${x}"
+		fi
   	done
   	[ ! -z "${pid//[ ]}" ] && return 0 || return 2
-  }
-  return 3
+  else
+  	return 3
+  fi
 }
 
 # According to input ppid, search all of kid pids, output by reverse order.
@@ -2644,69 +2650,51 @@ check_lock() {
 # 2. lock exists, but pid file not exists   ==>  remove lock
 # 3. lock exists, pid file exist, but according to the pid file, no process running ==> remove lock,remove pidfile
 # 4. pid file exists, but according to the pid file, no process running ==> remove pidfile
-# Note:		No arguments will clear all plugins.
-# Usage:	clear_dead_lock_pid  [ plugin_name ]
-# Example1:	clear_dead_lock_pid  check_sysload
+# Usage:	clear_dead_lock_pid  ${plugin_name}
+# Example1:	clear_dead_lock_pid  sysload
 # Example2:	clear_dead_lock_pid
-# LogFlag:	D0000000
+# LogFlag:	CLEAR000
 #
 clear_dead_lock_pid() {
-  local plugin_name=$1
-
-  clear_single_dead_lock_pid() {
-	local _p=$1  _rc=
-	if [ -z "${_p}" ]; then
-		write_log -f "${MOLE_LOG}" "E0000000 clear_single_dead_lock_pid error: missing plugin name";
-		return 1
-	fi
-  	if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
-        	local logfile="${INNER_LOG}"
-	else
-        	local logfile="${MOLE_LOG}"
-  	fi
-
-	[ -L "${RUN_DIR}/${_p}.lock" ] && {
-		if [ "$(check_lock  "${_p}")" == "linkerror" ]; then   ### condition: 1
-			write_log -f ${logfile} "D0000000 MOLE remove linkerror lock for"\
-				"[${_p}]: link error";
-			un_lock "${_p}"
-		fi
-		if [ ! -f "${RUN_DIR}/${_p}.pid" ]; then  ### condition: 2
-			write_log -f ${logfile} "D0000000 MOLE remove dead lock for"\
-				"[${_p}]: pid not exists";
-			un_lock "${_p}"        
-		else
-			check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
-			_rc=$?
-			if [ "$_rc" != "0" ]; then  ### condition: 3
-				write_log -f ${logfile} "D0000000 MOLE remove dead lock and pid for"\
-					"[${_p}]: pid exists but process not running";
-				un_lock "${_p}"  	# unlock first
-				del_fpid "${_p}"	# then del pid file
-			fi
-		fi
-	}
-	if [ -s "${RUN_DIR}/${_p}.pid" ]; then
-		check_ps_by_pid_file "${RUN_DIR}/${_p}.pid" 1>/dev/null 2>&1
-		_rc=$?
-		if [ "$_rc" != "0" ]; then  ### condition: 4
-			write_log -f ${logfile} "D0000000 MOLE remove dead pid for [${_p}]";
-			del_fpid "${_p}"
-		fi
-	fi
-  }
-
-  if [ -z "${plugin_name}" ]; then
-	for p in `list_plugin_section`
-	do
-		clear_single_dead_lock_pid "${p}"
-	done 
-	for q in `list_inner_plugin_section`
-	do
-		clear_single_dead_lock_pid "${q}"
-	done
+  local _p=$1  _rc=
+  if [ -z "${_p}" ]; then
+	write_log -f "${MOLE_LOG}" "E0000000 clear_dead_lock_pid error: missing plugin name";
+	return 1
+  fi
+  if [[ "${_p}" =~ ${INNER_BEGIN} ]]; then
+       	local logfile="${INNER_LOG}"
   else
-	clear_single_dead_lock_pid "${plugin_name}"
+       	local logfile="${MOLE_LOG}"
+  fi
+
+  local lock_status=$(check_lock "${_p}")
+  local pid_status=  pid_rc=0
+  if [ "${lock_status}" == "nolock" ]; then
+	:
+  elif [ "${lock_status}" == "linkerror" ]; then
+	write_log -f ${logfile} "CLEAR000 MOLE remove [${_p}] runlock for [linkerror]"
+	un_lock "${_p}"
+  elif is_int "${lock_status}"; then		# plugin has lock
+	pid_status=$(check_ps_by_pid_file "${RUN_DIR}/${_p}.pid")
+	pid_rc=$?
+	if [ ${pid_rc} -eq 3 ]; then		### condition: 2
+		write_log -f ${logfile} "CLEAR000 MOLE remove [${_p}] runlock for"\
+			"[pid file not exist]"
+		un_lock "${_p}"        
+	elif [ ${pid_rc} -eq 2 ]; then		### condition: 3
+		write_log -f ${logfile} "CLEAR000 MOLE remove [${_p}] runlock/pidfile for"\
+			"[pid file left dead]";
+		un_lock "${_p}"  	# unlock first
+		del_fpid "${_p}"	# then del pid file
+	fi
+  fi
+  
+  check_ps_by_pid_file "${RUN_DIR}/${_p}.pid"
+  pid_rc=$?
+  if [ ${pid_rc} -eq 2 ]; then  ### condition: 4
+	write_log -f ${logfile} "CLEAR000 MOLE remove [${_p}] pidfile for"\
+		"[pid file left dead]"
+	del_fpid "${_p}"
   fi
 }
 
@@ -2940,7 +2928,8 @@ add_runlock_on_pid_notexist(){
 }
 
 # Check run-lock on plugin while pid file exists
-# Note:		called to check run-lock at next scan period begins, previous plugin is still running.
+# Note:		called to check run-lock at next scan period begins
+#		previous plugin instance's pidfile is still exists (running ?)
 # Output: 	0 1 2 3 4
 # Steps:
 #   0: running, but timeout, submit to process_plugin_timeout()
@@ -2953,7 +2942,7 @@ add_runlock_on_pid_notexist(){
 # LogFlag: 	CKLCK000
 #
 check_runlock_on_pid_exist() {
-  local plugin_name=$1  r_c=
+  local plugin_name=$1
   if [ -z "${plugin_name}" ]; then
         write_log -f "${MOLE_LOG}" "E0000000 check_runlock_on_pid_exist error: missing plugin name";
         return 1
