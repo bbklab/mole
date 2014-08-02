@@ -12,7 +12,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -29,7 +29,7 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
         source "/usr/bin/gettext.sh" 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -43,7 +43,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
         export TEXTDOMAINDIR="${LOCALE_DIR}"
         export TEXTDOMAIN="mole"
 else
@@ -56,9 +56,9 @@ fi
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
         export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -104,7 +104,7 @@ check_root() {
 }
 
 check_tmp() {
-  if [ -d "/tmp" -a -r "/tmp" -a -w "/tmp" -a -x "/tmp" ]; then
+  if [ -d "/tmp" ] && [ -r "/tmp" ] && [ -w "/tmp" ] && [ -x "/tmp" ]; then
 	echo -e "${OK} : $(gettext "directory /tmp accessable")"
 	((ok_num++))
 	return 0
@@ -172,12 +172,12 @@ array_base_cmd=(
 local num=0 lacklist=
 for ((i=1;i<${#array_base_cmd[@]};i++))
 do
-	[ -f "${array_base_cmd[$i]}" -a -x "${array_base_cmd[$i]}" ] && {
+	if [ -f "${array_base_cmd[$i]}" ] && [ -x "${array_base_cmd[$i]}" ]; then
 		continue
-	} || {
+	else
 		((num++))
 		lacklist="${lacklist} ${array_base_cmd[$i]}"
-	}
+	fi
 done
 if [ "${num}" != "0" ]; then
 	echo -e "${CRIT}: ${num}/$((${#array_base_cmd[@]}-1)) ${array_base_cmd[0]}$(gettext "not prepared"): [$(echo_yellow "${lacklist}")]"
