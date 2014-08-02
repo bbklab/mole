@@ -12,7 +12,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
