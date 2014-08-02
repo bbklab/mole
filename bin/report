@@ -18,7 +18,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -32,7 +32,7 @@ fi
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
         source "/usr/bin/gettext.sh" 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -46,7 +46,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
         export TEXTDOMAINDIR="${LOCALE_DIR}"
         export TEXTDOMAIN="mole"
 else
@@ -59,9 +59,9 @@ fi
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
         export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -80,7 +80,7 @@ print_record(){
   local output=
 
   if [ "${MODE}" == "0" ]; then   ## read from stat file.
-  	if [ -f "${TMP_STATUS}" -a -s "${TMP_STATUS}" ]; then
+  	if [ -f "${TMP_STATUS}" ] && [ -s "${TMP_STATUS}" ]; then
 		line=$(awk '(/^'${pname}'\> /){print;exit;}' "${TMP_STATUS}" 2>&-)
   	else
 		echo_yellow "$(gettext "Status File NOT Exist or Empty")" ; echo
@@ -201,7 +201,9 @@ do
 		show_usage		  ;;
         esac
 done
-[ ! -z "${plugin_name}" -o ! -z "${content}" ] && MODE=1
+if [ ! -z "${plugin_name}" ] || [ ! -z "${content}" ]; then
+	MODE=1
+fi
 
 if [ "${MODE}" == "0" ]; then
 	plugin_name="${1}"
