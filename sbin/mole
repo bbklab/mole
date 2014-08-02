@@ -30,7 +30,7 @@ set +m
 
 # === LOAD INCLUDE FILE
 #
-if [ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ]; then
+if [ -f "${BASE_DIR}/bin/include" ] && [ -s "${BASE_DIR}/bin/include" ]; then
   	source ${BASE_DIR}/bin/include 2>&1
 	rc=$?
 	[ "$rc" != "0" ] && {
@@ -44,7 +44,7 @@ fi
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
 	source "/usr/bin/gettext.sh" 2>&1
 	rc=$?
 	[ "$rc" != "0" ] && {
@@ -58,7 +58,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
 	export TEXTDOMAINDIR="${LOCALE_DIR}"
 	export TEXTDOMAIN="mole"
 else
@@ -71,9 +71,9 @@ fi
 glocale=$(get_global_locale)
 if [ -z "${glocale}" ]; then
 	export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
 	export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
 	export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
 	export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -237,9 +237,9 @@ EOF
 ### Show mole status
 # Return Code:  0 1 2 3	   running | dead | dead with pid left | fake?
 show_status() {
-  if [ -f "${PID_FILE}" -a -s "${PID_FILE}" ]; then
+  if [ -f "${PID_FILE}" ] && [ -s "${PID_FILE}" ]; then
 	read pid < "${PID_FILE}"
-	if [ -z "${pid//[0-9]}" -a -d "/proc/${pid}" ]; then    ###  numberic => running
+	if [ -z "${pid//[0-9]}" ] && [ -d "/proc/${pid}" ]; then    ###  numberic => running
 		local cmdline=$(cat /proc/${pid}/cmdline 2>&-)
 		[ "$(sub_str "${cmdline}" "mole")" == "yes" ] && {    ### cmdline contains "mole" ==> mole running
 			echo_green "$(eval_gettext "mole (pid: \${pid}) running ...")" ; echo
@@ -368,13 +368,13 @@ else
 	write_log -f "${MOLE_LOG}" "S0000000 MOLE starting mole core cron... "
 
 	cd / >/dev/null 2>&1;
-	if [ "$?" != "0" -o "$(pwd -P)" != "/" ]; then
+	if [ "$?" != "0" ] || [ "$(pwd -P)" != "/" ]; then
 		echo -e "[$(echo_red "$(gettext "changing into / failed!")")]"
 		exit 1;
 	fi
 
 	umask 0000 >/dev/null 2>&1;
-	if [ "$?" != "0" -o "$(umask)" != "0000" ]; then
+	if [ "$?" != "0" ] || [ "$(umask)" != "0000" ]; then
 		echo -e "[$(echo_red "$(gettext "changing umask failed!")")]"
 		exit 1;
 	fi
@@ -722,7 +722,7 @@ case "$#" in
 		exit $rcode
 			;;
 	"init"|"i")
-		if [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+		if [ "$arg2" == "all" ] || [ "$arg2" == "a" ]; then
 			init_plugin
 		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### is plugin
                         init_plugin  "$arg2"
@@ -749,7 +749,7 @@ case "$#" in
 				} | column -t -s "==>"
 				echo;echo;
 			done
-		elif [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+		elif [ "$arg2" == "all" ] || [ "$arg2" == "a" ]; then
 			for s in global default sendmail postlog takesnap `list_inner_plugin_section`   ### output about mole section 
 			do
 				echo_green "[${s}] $(gettext "configuration"):";echo
@@ -808,7 +808,7 @@ case "$#" in
 			eval "${cmd} 2>&-"
 			;;
 	"report"|"R")
-		if [ "$arg2" == "all" -o "$arg2" == "a" ]; then
+		if [ "$arg2" == "all" ] || [ "$arg2" == "a" ]; then
 			. ${REPORT_SH} "all"
 		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then 	### is plugin
 			. ${REPORT_SH} "$arg2"
@@ -835,12 +835,12 @@ case "$#" in
 		fi
 			;;
 	"checkconf"|"c")
-		if [ "$arg2" == "verbose" -o "$arg2" == "-v" ]; then
+		if [ "$arg2" == "verbose" ] || [ "$arg2" == "-v" ]; then
 			. ${CHECKCONF_SH} "$arg2"
 		fi
 			;;
 	"makedir"|"m")
-		if [ "$arg2" == "c" -o "$arg2" == "-c" ]; then
+		if [ "$arg2" == "c" ] || [ "$arg2" == "-c" ]; then
 			. ${MAKEDIR_SH} "-c"
 		fi
 			;;
@@ -858,14 +858,14 @@ case "$#" in
 	;;
 "3")
 	arg1=$1; arg2=$2; arg3=$3
-	[ -z "${arg2//[ ]}" -o -z "${arg3//[ ]}"  ] && {
+	if [ -z "${arg2//[ ]}" ] || [ -z "${arg3//[ ]}"  ]; then
 		echo_yellow "$(gettext "need arguments.")";echo
 		exit 1
-        }
+        fi
 
 	case "$arg1" in 
         "view"|"config-view"|"v")
-                if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+                if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			read_mole_config "$arg2" "$arg3"
 			rc=$?
 			exit ${rc}
@@ -892,7 +892,7 @@ case "$#" in
                 fi  
 			;;
 	"config-del")
-		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			del_mole_config "$arg2" "$arg3"
 			rc=$?
 			case "$rc" in
@@ -910,7 +910,7 @@ case "$#" in
 		fi
 		;;
 	"config-clear")
-		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			clear_mole_config "$arg2" "$arg3"
 			rc=$?
 			case "$rc" in
@@ -935,14 +935,14 @@ case "$#" in
 	;;
 "4")
 	arg1=$1; arg2=$2; arg3=$3; arg4=$4
-	[ -z "${arg2//[ ]}" -o -z "${arg3//[ ]}" -o -z "${arg4//[ ]}" ] && {
+	if [ -z "${arg2//[ ]}" ] || [ -z "${arg3//[ ]}" ] || [ -z "${arg4//[ ]}" ]; then
 		echo_yellow "$(gettext "need arguments.")";echo
 		exit 1
-	}
+	fi
 
 	case "$arg1" in
 	"config-add"|"a")
-		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			add_mole_config "$arg2" "$arg3" "$arg4"
 			rc=$?
 			case "$rc" in
@@ -960,7 +960,7 @@ case "$#" in
 		fi
 		;;
 	"config-update"|"u")
-		if [ "$(read_mole_section "$arg2")" == "$arg2" -o "$(read_plugin_section "$arg2")" == "$arg2" ]; then
+		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			update_mole_config "$arg2" "$arg3" "$arg4"
 			rc=$?
 			case "$rc" in
