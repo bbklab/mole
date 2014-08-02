@@ -134,11 +134,11 @@ get_pid(){
   local fpid=$1
   local pid=
 
-  if [ -f "${fpid}" -a -r "${fpid}" ]; then
+  if [ -f "${fpid}" ] && [ -r "${fpid}" ]; then
 	pid=$(awk '{print $1;exit;}' "${fpid}" 2>&-)
-	[ -z "${pid}" -o ! -z "${pid//[0-9]}" ] && {
+	if [ -z "${pid}" ] || [ ! -z "${pid//[0-9]}" ]; then
 		return 2	## pidfile exists but pid invalid
-	} 
+	fi
   else
 	return 1		## pidfile not exist
   fi
@@ -269,7 +269,9 @@ status(){
 	local plen=${#pname}
 	local rc=
 	
-	[ -z "${fpid}" -o -z "${pname}" -o -z "${disname}" ] && return 4
+	if [ -z "${fpid}" ] || [ -z "${pname}" ] || [ -z "${disname}" ]; then
+		return 4
+	fi
 
  	local len=$(($PRINTF_MAXLEN-$plen))
 
@@ -342,7 +344,7 @@ fi
 # 2. process args
 
 # 2.1   pass ${*} to mole
-if [ "${1}" == "mole" -o "${1}" == "m" ]; then
+if [ "${1}" == "mole" ] || [ "${1}" == "m" ]; then
   shift; args=$(echo -e "${@}" | sed -e 's/"/\"/g')
   ${PATH_MOLE_SBIN}/mole ${args}
   exit $?
