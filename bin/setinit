@@ -13,7 +13,7 @@
         path=$( cd $(dirname $0) && pwd)
         BASE_DIR=${path%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -27,7 +27,7 @@ fi
 
 # === LOAD GETTEXT.SH FILE
 #
-if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
         source "/usr/bin/gettext.sh" 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -41,7 +41,7 @@ fi
 
 # === SET TEXTDOMAINDIR TEXTDOMAIN
 #
-if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
         export TEXTDOMAINDIR="${LOCALE_DIR}"
         export TEXTDOMAIN="mole"
 else
@@ -54,9 +54,9 @@ fi
 glocale=$(read_mole_config global locale)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
-elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
         export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
 else
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
@@ -101,11 +101,11 @@ FAIL="$(echo_red "$(gettext "[FAIL]")")"
 v5_config="/usr/local/eyou/mail/etc/eyou_mail.ini"
 v4_config="/var/eyou/etc/eyou_smtpd_config"
 gw_config="/var/emdg/etc/domain.conf"
-if [ -f "${v5_config}" -a -s "${v5_config}" ]; then
+if [ -f "${v5_config}" ] && [ -s "${v5_config}" ]; then
 	base_domain=$(awk -F"=" '($1~/server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]' | sed -e 's/\x00//g;s/\x0D//g')
-elif [ -f "${v4_config}" -a -s "${v4_config}" ]; then
+elif [ -f "${v4_config}" ] && [ -s "${v4_config}" ]; then
 	base_domain=$(awk '($1~/o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
-elif [ -f "${gw_config}" -a -s "${gw_config}" ]; then
+elif [ -f "${gw_config}" ] && [ -s "${gw_config}" ]; then
 	base_domain=$(awk '{print $1;exit}' "${gw_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
 fi  
 base_domain="${base_domain//[ ]}"
@@ -216,7 +216,7 @@ if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
 			echo -en "$(echo_red "$(eval_gettext "length exceed: \$length")")\n"
 			valid=0
 			continue
-		elif [ -z "${input_role//[ ]}" -o ! -z "${input_role//[0-9a-zA-Z.-]}" ]; then
+		elif [ -z "${input_role//[ ]}" ] || [ ! -z "${input_role//[0-9a-zA-Z.-]}" ]; then
 			echo -en "$(echo_red "$(gettext "input invalid")")\n"
 			valid=0
 			continue
@@ -238,7 +238,7 @@ if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
 			echo -en "$(echo_red "$(eval_gettext "length exceed: \$length")")\n"
 			valid=0
 			continue
-		elif [ -z "${input_domain//[ ]}" -o ! -z "${input_domain//[0-9a-zA-Z.-]}" ]; then
+		elif [ -z "${input_domain//[ ]}" ] || [ ! -z "${input_domain//[0-9a-zA-Z.-]}" ]; then
 			echo -en "$(echo_red "$(gettext "input invalid")")\n"
 			valid=0
 			continue
@@ -276,7 +276,7 @@ if [ "${parter_id}" == "0000000000" ]; then
 	while [ "${valid}" == "0" ]
 	do
 		read -p "$(gettext "parter id of this box"): " input_parter_id
-		if [ -z "${input_parter_id//[ ]}" -o ! -z "${input_parter_id//[a-z0-9]}" ]; then
+		if [ -z "${input_parter_id//[ ]}" ] || [ ! -z "${input_parter_id//[a-z0-9]}" ]; then
 			valid=0
 			continue
 		elif [ "${#input_parter_id}" != "32" ]; then
