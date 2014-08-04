@@ -27,24 +27,26 @@ clean(){
 ### Main Begin ...
 
 [ -z "${1}" ] && show_help
-[ "${1}" == "help" -o "${1}" == "-h" -o "${1}" == "?" ] && show_help
+if [ "${1}" == "help" ] || [ "${1}" == "-h" ] || [ "${1}" == "?" ]; then
+	show_help
+fi
 if [ "$1" == "clean" ]; then
 	clean
 	exit 0
 fi
 
 specfile=$(get_fspec "${1}")
-if [ -n "${specfile}" -a -f "${specfile}" -a -s "${specfile}" ]; then
+if [ -n "${specfile}" ] && [ -f "${specfile}" ] && [ -s "${specfile}" ]; then
 	source0=$(awk -F: '($1~/Source0/){print $2}' "${specfile}" 2>&-|tr -d ' \t')
 else
 	echo "spec file: [${specfile}] not exist!"
 	exit 1
 fi
 
-[ -f "/usr/bin/rpmbuild" -a -x "/usr/bin/rpmbuild" ] || {
+if [ -f "/usr/bin/rpmbuild" ] && [ -x "/usr/bin/rpmbuild" ]; then
 	echo "/usr/bin/rpmbuild not prepared"
 	exit 1
-}
+fi
 
 cp -a "${path}"/${source0}   "${path}"/SOURCES/${source0}
 cp -a "${specfile}"  "${path}"/SPECS/
