@@ -16,6 +16,7 @@
 }
 
 # for debug
+# source "/usr/bin/gettext.sh" 2>&1
 # BASE_DIR="/usr/local/esop/agent/mole"
 
 
@@ -3242,6 +3243,43 @@ view_extra_config() {
   } | column -t -s "^"
 }
 
+
+# Create mail policy details which displayed in notify mailbody
+# Usage:	generate_mail_policy_detail  {is_recovery}  {hit_range_detail}  {hit_rtime_detail}
+# Example:	generate_mail_policy_detail  0  "0:00-24:00"  "ming:1:3"
+#
+generate_mail_policy_detail() {
+  local is_recovery=$1  hit_range_detail=$2  hit_rtime_detail=$3
+  local result=$(gettext "according by plugin's policy settings,")
+
+  is_int "${is_recovery}" || is_recovery=0
+
+  local tmp_content=
+  if [ ${is_recovery} -eq 1 ]; then	# event recovery won't generate policy times detail
+	tmp_content=
+  elif [ "${hit_rtime_detail}" == "unlimited" ]; then
+	tmp_content="$(gettext "will continuously send mail noitfy,")"
+  elif [[ "${hit_rtime_detail}" =~ "first" ]]; then
+	local m=${hit_rtime_detail##*:}
+	tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the first time,")"
+  elif [[ "${hit_rtime_detail}" =~ "ming" ]]; then
+	local n=${hit_rtime_detail%:*}; n=${n##*:}; ((n++))
+	local m=${hit_rtime_detail##*:}
+	tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
+  elif [[ "${hit_rtime_detail}" =~ "last" ]]; then
+	local m=${hit_rtime_detail##*:}
+	tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the last time,")"
+  fi
+
+  result="${result} ${tmp_content}"
+  if [ -n "${hit_range_detail}" ]; then
+	tmp_content="$(eval_gettext "mail notify range: \${hit_range_detail}")"
+	result="${result} ${tmp_content}"
+  fi
+
+  echo "${result}"
+}
+
 # Process plugin 
 # Note:		core function, each enabled plugin will be handed over to this function.
 # Usage:        process_plugin   plugin_name
@@ -3638,7 +3676,6 @@ process_plugin() {
 	local mail_policy=$(get_mail_policy ${plugin_name})
 	write_log ${jid} ${plugin_name} "mail notify policy is [${mail_policy}]. CONTINUE";
 	# check mail notify policy
-	local mail_policy_detail=$(gettext "according by plugin's policy settings,")
 	local hit_range_detail=  hit_rtime_detail=
 	# check time range of mail notify policy
 	if hit_range_detail=$(hit_policy_range_ornot "${mail_policy}"); then
@@ -3649,27 +3686,9 @@ process_plugin() {
 			write_log ${jid} ${plugin_name} "mail notify is allowed by nower"\
 					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
 
-			local tmp_content=
-			if [ ${is_recovery} -eq 1 ]; then	# event recovery won't generate policy times detail
-				tmp_content=
-			elif [ "${hit_rtime_detail}" == "unlimited" ]; then
-				tmp_content="$(gettext "will continuously send mail noitfy,")"
-			elif [[ "${hit_rtime_detail}" =~ "first" ]]; then
-				local m=${hit_rtime_detail##*:}
-				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the first time,")"
-			elif [[ "${hit_rtime_detail}" =~ "ming" ]]; then
-				local n=${hit_rtime_detail%:*}; n=${n##*:}; ((n++))
-				local m=${hit_rtime_detail##*:}
-				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the \${n} times,")"
-			elif [[ "${hit_rtime_detail}" =~ "last" ]]; then
-				local m=${hit_rtime_detail##*:}
-				tmp_content="$(eval_gettext "will send no more than \${m} mail notify, now for the last time,")"
-			fi
-			mail_policy_detail="${mail_policy_detail} ${tmp_content}"
-			if [ -n "${hit_range_detail}" ]; then
-				tmp_content="$(eval_gettext "mail notify range: \${hit_range_detail}")"
-				mail_policy_detail="${mail_policy_detail} ${tmp_content}"
-			fi
+			local mail_policy_detail=$(generate_mail_policy_detail "${is_recovery}" \
+							"${hit_range_detail}" \
+							"${hit_rtime_detail}" )
 
 			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 						-i "${output}" -h "${hd_output}" \
@@ -4151,3 +4170,4 @@ process_plugin_misform() {
 #get_heapuprc_count sysload succ
 #get_heapuprc_count sysload crit
 #hit_policy_rtime_ornot sysload crit "$(get_mail_policy sysload)"; echo $?
+#generate_mail_policy_detail 0   "0:00-24:00"  "ming:1:3"
