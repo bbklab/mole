@@ -27,7 +27,9 @@ CMD_MAKE="make"
 
 
 OS_BIT=$(getconf LONG_BIT 2>&-)
-[ -z "${OS_BIT}" -o ! -z "${OS_BIT//[0-9]}" ] && OS_BIT="32"
+if [ -z "${OS_BIT}" ] || [ ! -z "${OS_BIT//[0-9]}" ]; then
+	OS_BIT="32"
+fi
 
 
 
