@@ -1485,6 +1485,7 @@ get_maxerr_times() {
 #	6	one of range_start not integer or not between 0-23
 #	7	one of range_stop not integer or not between 1-24
 #	8	one of range_start larger or equal range_stop
+#	11	number of range_pair exceed than 5
 # 
 valid_notify_policy() {
   local policy="${1}"	v="${2}"
@@ -1503,6 +1504,12 @@ valid_notify_policy() {
   fi
 
   local range_array=(  ${p1//,/ }  )
+  local range_maxnum=5
+
+  if [ ${#range_array[*]} -gt ${range_maxnum} ]; then
+	return 11
+  fi
+
   for ((i=0;i<${#range_array[*]};i++))
   do
 	local range_pair=${range_array[$i]}

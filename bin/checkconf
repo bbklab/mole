@@ -217,6 +217,9 @@ check_type_policy() {
 	"8")
 		result="$(gettext "one of range_start larger or equal range_stop")"
 		;;
+	"11")
+		result="$(gettext "number of range_pair exceed than 5")"
+		;;
   esac
   result="${result}, $(gettext "set default") ${default}"
   echo -e "${result}"

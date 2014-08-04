@@ -470,6 +470,9 @@ msgstr "策略的终止时间必须是1-24之间的正整数"
 msgid "one of range_start larger or equal range_stop"
 msgstr "策略的起始时间必须小于终止时间"
 
+msgid "number of range_pair exceed than 5"
+msgstr "策略的时间范围个数不得超过5个"
+
 msgid "set default"
 msgstr "将读取默认值"
 
