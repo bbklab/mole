@@ -10,7 +10,7 @@
         BASE_DIR=${path%/*}
         BASE_DIR=${BASE_DIR%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -62,7 +62,7 @@ check() {
 
   for file in  ${array_logfiles[@]}
   do
-	if [ -f "${file}" -a -s "${file}" ]; then
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
 
 		## 1. check filesize
 		local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1;exit;}' )
@@ -161,7 +161,7 @@ check() {
 	if mkdir -p "${PROXY_LOGBACKDIR}" >/dev/null 2>&1; then
 		for file in  ${array_proxylog[@]}
 		do
-			if [ -f "${file}" -a -s "${file}" ]; then
+			if [ -f "${file}" ] && [ -s "${file}" ]; then
 				## 1. check filesize
 				local size=$( /usr/bin/du -sm "${file}" 2>&- | awk '{print $1;exit;}' )
 				if is_int "${size}" && is_between "${force_size_uplimit}" "999999999"; then

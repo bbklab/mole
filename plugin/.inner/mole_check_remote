@@ -10,7 +10,7 @@
         BASE_DIR=${path%/*}
         BASE_DIR=${BASE_DIR%/*}
 }
-if [ -f ${BASE_DIR}/bin/include -a -s ${BASE_DIR}/bin/include ]; then
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
         source ${BASE_DIR}/bin/include 2>&1
         rc=$?
         [ "$rc" != "0" ] && {
@@ -68,7 +68,7 @@ check() {
         return
   }
 
-  if [ -z "${post_server}" -a -z "${smtp_server}" ]; then
+  if [ -z "${post_server}" ] && [ -z "${smtp_server}" ]; then
 	flag=1
 	now=$(date +%F_%T)
 	posthost_content="post server not defined."
