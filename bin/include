@@ -1650,7 +1650,7 @@ get_action_type() {
 	auto_handle
 	sms_notify
   )
-  if ! is_sub "${action_type}" "${array_action_type[*]}"
+  if ! is_sub "${action_type}" "${array_action_type[*]}"; then
 	write_log -f "${MOLE_LOG}" "E0000000 get_action_type error:"\
 		"action_type: [${action_type}] is not allowed"
 	return 2

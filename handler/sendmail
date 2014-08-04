@@ -64,7 +64,7 @@ fi
 #
 show_usage(){
   echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{plugin_output_stuff}\"  -h \"{handler_output_stuff}\" -p \"${mail_policy_infotext}\" "
-  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "  \"mail policy content text\"
+  echo "Example: ./${0##*/} -f check_sysload -s AlFt5885 -i \"{crit}:{str}:{System Load Check CRITICAL | Load [13.8] >= UpLimit: [10]}\" -h \"auto handler result here\" "  -p \"mail policy content text\"
   exit 1
 }
 
@@ -301,6 +301,8 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 header_priority="X-Priority: 1"
 header_eventid="Event_ID: ${jobid}"
 header_mailer="X-Mailer: esop-Sendmail-1.0"
+header_from="5pm66IO96L+Q57u05bmz5Y+w"
+header_from="From: =?UTF-8?B?${header_from}?= <${auth_user}>"
 ### sendmail depend on different {mail_type}.
 vexit=0
 case "${mail_type}" in
@@ -380,6 +382,7 @@ case "${mail_type}" in
                         -o message-header="${header_priority}" \
                         -o message-header="${header_eventid}" \
 			-o message-header="${header_mailer}" \
+			-o message-header="${header_from}" \
 			-a ${att_file_args}  ${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 			if [ "$?" == "0" ]; then
 				((t_s+=1)) 
@@ -428,6 +431,7 @@ case "${mail_type}" in
 			-o message-header="${header_priority}" \
 			-o message-header="${header_eventid}" \
 			-o message-header="${header_mailer}" \
+			-o message-header="${header_from}" \
 	    		${attsnap_mail_args} ${attach_ini_mail_args} 2>&1 )
 		  if [ "$?" == "0" ]; then
 			((t_s+=1))
