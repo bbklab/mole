@@ -603,6 +603,8 @@ list_section_keys(){
 	config_file="${CONF_DIR}/${section}.ini"
   fi
   if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
+	:
+  else
 	write_log -f "${MOLE_LOG}" "E0000000 list_section_keys error:"\
 		"section=[${section}], but config file [${config_file}] not exists or empty.";
 	return 1
