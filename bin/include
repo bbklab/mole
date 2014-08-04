@@ -3767,6 +3767,11 @@ process_plugin_timeout() {
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name} running timeout"\
 	"has been running for ${durationtime} seconds"
 
+  # Step 0: add repeat errcount
+  write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} return [${level}]."\
+	"try to +1 on repeat errcount";
+  add_repeat_errcount "${plugin_name}" "${jid}"   # accumulated error number +1, on plugin return tmout
+
   # Step 0: update status
   update_status "${plugin_name}" "${jid}" "${output}"
 
@@ -4055,6 +4060,11 @@ process_plugin_misform() {
 
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name} output misforma:"\
 	"${reason}"
+
+  # Step 0: add repeat errcount
+  write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} return [${level}]."\
+        "try to +1 on repeat errcount";
+  add_repeat_errcount "${plugin_name}" "${jid}"   # accumulated error number +1, on plugin return misform
 
   # Step 0: update status.
   update_status "${plugin_name}" "${jid}" "${output}"
