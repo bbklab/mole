@@ -56,7 +56,7 @@ util_check() {
   local total=0 err=0 lacklst=
   for util in ${REQUIRED_UTILS[*]}; do
 	((total++))
-	if [ ! -f "${util}" -o ! -x "${util}" ]; then
+	if [ ! -f "${util}" ] || [ ! -x "${util}" ]; then
 		((err++))
 		lacklst="${lacklst} ${util}"
 	fi
@@ -68,7 +68,7 @@ util_check() {
 #
 build_md5db() {
   local dirname="$1" md5dbfile="$2"
-  if [ -z "${dirname}" -o ! -d "${dirname}" ]; then
+  if [ -z "${dirname}" ] || [ ! -d "${dirname}" ]; then
 	echo_red "pls check your input [${dirname}]";echo
 	exit 1
   fi
@@ -111,8 +111,10 @@ prefix="$4"
 MODE=0
 
 # 2. check input args 
-[ -z "${srcdir}" -o -z "${dstdir}" ] && show_help
-if [ ! -d "${srcdir}" -o ! -d "${dstdir}" ]; then
+if [ -z "${srcdir}" ] || [ -z "${dstdir}" ]; then
+	show_help
+fi
+if [ ! -d "${srcdir}" ] || [ ! -d "${dstdir}" ]; then
 	echo_red "[${srcdir}] or [${dstdir}] isn't an exist directory.";echo
 	exit 1
 fi

@@ -57,7 +57,7 @@ util_check() {
   local total=0 err=0 lacklst=
   for util in ${REQUIRED_UTILS[*]}; do
         ((total++))
-        if [ ! -f "${util}" -o ! -x "${util}" ]; then
+        if [ ! -f "${util}" ] || [ ! -x "${util}" ]; then
                 ((err++))
                 lacklst="${lacklst} ${util}"
         fi
@@ -217,10 +217,12 @@ update_fcfg="${update_path}/update.cfg"
 update_flog="${update_path}/update.log"
 
 # 4. check update.cfg
-[ -f "${update_fcfg}" -a -s "${update_fcfg}" ] || {
+if [ -f "${update_fcfg}" ] && [ -s "${update_fcfg}" ]; then
+	:
+else
 	echo_red "[${update_fcfg}] not exist or empty!";echo
 	exit 1
-}
+fi
 
 # 5. log start
 log
