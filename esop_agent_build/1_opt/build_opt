@@ -47,11 +47,13 @@ CMD_MAKE_J="make -j 2"
 
 if [ -z "$1" ]; then
   OS_BIT=$(getconf LONG_BIT 2>&-)
-elif [ "$1" == "32" -o "$1" == "64" ]; then
+elif [ "$1" == "32" ] || [ "$1" == "64" ]; then
   OS_BIT="$1"
 else
   OS_BIT=$(getconf LONG_BIT 2>&-)
-  [ -z "${OS_BIT}" -o ! -z "${OS_BIT//[0-9]}" ] && OS_BIT="32"
+  if [ -z "${OS_BIT}" ] || [ ! -z "${OS_BIT//[0-9]}" ]; then
+	OS_BIT="32"
+  fi
 fi
 
 
