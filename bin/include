@@ -165,17 +165,20 @@ ARRAY_CONF_GET_MAPS=(
   # config		# method
 
   # global config
-  "g_parter_id"		"get_parter_id"
-  "g_mole_id"		"get_mole_id"
-  "g_global_name"	"get_global_name"
-  "g_scan_interval"	"get_scan_interval"
-  "g_attach_ini_mail"	"get_attach_ini_mail"
-  "g_sysload_uplimit"	"get_sysload_uplimit"
-  "g_max_kidsnum"	"get_max_kidsnum"
-  "g_plugin_maxlen"	"get_plugin_maxlen"
-  "g_handler_maxlen"	"get_handler_maxlen"
-  "g_notify_onmisform"  "get_notify_onmisform"
-  "g_locale"		"get_global_locale"
+  "g_id"               "get_mole_id"
+  "g_parter_id"	       "get_parter_id"
+  "g_name"	       "get_global_name"
+  "g_scan_interval"    "get_scan_interval"
+  "g_notify_by"	       "get_notify_by"
+  "g_attach_ini_mail"  "get_attach_ini_mail"
+  "g_sysload_uplimit"  "get_sysload_uplimit"
+  "g_max_kidsnum"      "get_max_kidsnum"
+  "g_plugin_maxlen"    "get_plugin_maxlen"
+  "g_handler_maxlen"   "get_handler_maxlen"
+  "g_notify_onmisform" "get_notify_onmisform"
+  "g_locale"           "get_global_locale"
+  "g_logo_link"	       "get_logo_link"
+  "g_logo_url"	       "get_logo_url"
 
   # plugin config	# replace ${PLACE_HOLDER} as real plugin
   "p_enable"		"get_enable ${PLACE_HOLDER}"
@@ -190,6 +193,8 @@ ARRAY_CONF_GET_MAPS=(
   "p_auto_handle"	"get_action_type ${PLACE_HOLDER} auto_handle"
   "p_mail_receviers"	"get_mail_receviers ${PLACE_HOLDER}"
   "p_sms_receviers"	"get_sms_receviers ${PLACE_HOLDER}"
+  "p_mail_policy"	"get_mail_policy ${PLACE_HOLDER}"
+  "p_sms_policy"	"get_sms_policy ${PLACE_HOLDER}"
   "p_attsnap_mail"	"get_attsnap_mail ${PLACE_HOLDER}"
   "p_auto_handler"	"get_auto_handler ${PLACE_HOLDER}"
   "p_locale"		"get_locale ${PLACE_HOLDER}"
@@ -1137,6 +1142,14 @@ get_scan_interval() {
   else
 	[ ${result} -lt ${min} ] && result=${min}
   fi
+  echo "${result}"
+}
+
+# Get notify by mode		config-name:  notify_by
+# Note: now return client forever
+#
+get_notify_by() {
+  local result="client"
   echo "${result}"
 }
 
