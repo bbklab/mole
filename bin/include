@@ -208,6 +208,15 @@ INNERARGS_HOLDER="_INNERARGS_"  # holder for inner-args
 ### CONIFG METHOD MAPS
 ARRAY_INNER_FUNC_MAPS=(
   "get_policy_analysize"        "get_policy_analysize ${INNERARGS_HOLDER}"
+  "conv_time2sec"		"conv_time2sec ${INNERARGS_HOLDER}"
+  "get_lastrun"			"get_lastrun ${INNERARGS_HOLDER}"
+  "get_nextrun"			"get_nextrun ${INNERARGS_HOLDER}"
+  "get_repeat_errcount"		"get_repeat_errcount ${INNERARGS_HOLDER}"
+  "is_reached_maxerr"		"is_reached_maxerr ${INNERARGS_HOLDER}"
+  "get_heapuprc_count"		"get_heapuprc_count ${INNERARGS_HOLDER}"
+  "get_heapupnotify_count"	"get_heapupnotify_count ${INNERARGS_HOLDER}"
+  "time2run_ornot"		"time2run_ornot ${INNERARGS_HOLDER}"
+  "timeout_ornot"		"timeout_ornot ${INNERARGS_HOLDER}"
 )
 
 ### PLUGIN RETRUN CODE MAPS
