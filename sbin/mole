@@ -160,7 +160,7 @@ cat << EOF
 	mole  view	sysload   enable
 	mole  udef	sysload
 	mole  printdef	CONF_DIR
-	mole  iget	g_mole_id
+	mole  iget	g_parter_id
 	mole  iget	sysload   p_debug
 	mole  setinit	view 
 	mole  setinit   reset
@@ -805,7 +805,9 @@ case "$#" in
 					break
 				fi
 			done
-			eval "${cmd} 2>&-"
+			if [ -n "${cmd}" ]; then
+				eval "${cmd} 2>&-"
+			fi
 			;;
 	"report"|"R")
 		if [ "$arg2" == "all" ] || [ "$arg2" == "a" ]; then
@@ -885,12 +887,34 @@ case "$#" in
 					break
 				fi
 			done
-			eval "${cmd} 2>&-"
+			if [ -n "${cmd}" ]; then
+				eval "${cmd} 2>&-"
+			fi
                 else
                         echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
                         exit 9;
                 fi  
 			;;
+	"ifunc")
+		cmd=
+		if [  "${arg2}" == "list" ]; then
+			for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i+=2))
+			do
+				echo "${ARRAY_INNER_FUNC_MAPS[$i]}"
+			done
+		fi
+		for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i++))
+		do
+			if [  "${arg2}" == "${ARRAY_INNER_FUNC_MAPS[$i]}" ]; then
+				cmd=""${ARRAY_INNER_FUNC_MAPS[${i}+1]}""
+				cmd="$(echo -e "${cmd}" | sed -e 's/'"${INNERARGS_HOLDER}"'/'"${arg3}"'/g' 2>&-)"
+				break
+			fi
+		done
+		if [ -n "${cmd}" ]; then
+			eval "${cmd} 2>&-"
+		fi
+		;;
 	"config-del")
 		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			del_mole_config "$arg2" "$arg3"
