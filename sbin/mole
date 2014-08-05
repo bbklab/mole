@@ -813,7 +813,9 @@ case "$#" in
 			if [  "${arg2}" == "list" ]; then
 				for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i+=2))
 				do
-					echo "${ARRAY_INNER_FUNC_MAPS[$i]}"
+					if [ -n "${ARRAY_INNER_FUNC_MAPS[$i]}" ]; then
+						echo "${ARRAY_INNER_FUNC_MAPS[$i]}"
+					fi
 				done
 			fi
 			;;
