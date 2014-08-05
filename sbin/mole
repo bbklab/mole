@@ -109,6 +109,8 @@ cat << EOF
 	printdef	{VAR}			$(gettext "print the value of variable name")
 	iget		{gkey}			$(gettext "print global config-value through inner function")
 	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
+	ifunc		list			$(gettext "list inner functions which allow to be called from cli")
+	ifunc		{funcname}  {args}	$(gettext "calling to run inner functions")
 	setinit		view			$(gettext "print global instance information")
 	setinit		reset			$(gettext "reset global instance information (be careful!)")
 	saveconf				$(gettext "save esop config files once")
@@ -116,8 +118,8 @@ cat << EOF
 	config-help				$(gettext "help stuff about mole config-* (same as above)")
 	?					$(gettext "help stuff about short args")
 
-	gkey:	g_{global_config_name}
-	pkey:	p_{plugin_config_name}
+	iget gkey:		g_{global_config_name}
+	iget plugin pkey:	p_{plugin_base_config_name}
 EOF
 }
 
@@ -162,6 +164,8 @@ cat << EOF
 	mole  printdef	CONF_DIR
 	mole  iget	g_parter_id
 	mole  iget	sysload   p_debug
+	mole  ifunc	list
+	mole  ifunc 	time2run_ornot disk_fs 
 	mole  setinit	view 
 	mole  setinit   reset
 	mole  saveconf

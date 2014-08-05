@@ -313,6 +313,12 @@ msgstr "打印全局配置的值(通过内部函数)"
 msgid "print plugin config-value through inner function"
 msgstr "打印插件配置的值(通过内部函数)"
 
+msgid "list inner functions which allow to be called from cli"
+msgstr "列出允许通过CLI调用的内部功能函数"
+
+msgid "calling to run inner functions"
+msgstr "直接运行内部功能函数"
+
 msgid "print global instance information"
 msgstr "打印实例的标识信息"
 
