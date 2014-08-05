@@ -38,7 +38,7 @@ use IO::Socket::INET;
 use Benchmark ':hireswallclock';
 use JSON;
 use Time::HiRes;
-# use Smart::Comments;
+use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
@@ -705,6 +705,8 @@ sub genjson_plugin() {
 		'debug'		=> 'debug',
 		'mail_rec'	=> 'mail_receviers',
 		'sms_rec'	=> 'sms_receviers',
+		'mail_plc'	=> 'mail_policy',
+		'sms_plc'	=> 'sms_policy',
 		'handler'	=> 'auto_handler',
 		'locale'	=> 'locale',
 		'udef'		=> '',
@@ -908,6 +910,8 @@ sub genjson_config() {
 	'debug'			=> '',
 	'mail_rec'		=> '',
 	'sms_rec'		=> '',
+	'mail_plc'		=> '',
+	'sms_plc'		=> '',
 	'handler'		=> '',
 	'locale'		=> '',
   );
@@ -972,6 +976,28 @@ sub genjson_config() {
                 }
                 if(/\A\s*sms_receviers\s+(.+)\Z/){
                         $raw_default{'sms_rec'} = $1; 
+                        next;
+                }
+                if(/\A\s*mail_policy\s+(.+)\Z/){
+			open my $fh_tmp, "$mole ifunc get_policy_analysize \" \"$1\" range hrformat\" 2>&- |";
+			if ($fh_tmp) {
+				while(<$fh_tmp>){
+                        		chomp; $raw_default{'mail_plc'} = $_; 
+					last;
+				}
+				close $fh_tmp if ($fh_tmp);
+			}
+                        next;
+                }
+                if(/\A\s*sms_policy\s+(.+)\Z/){
+			open my $fh_tmp, "$mole ifunc get_policy_analysize \" \"$1\" range hrformat\" 2>&- |";
+			if ($fh_tmp) {
+				while(<$fh_tmp>){
+					chomp; $raw_default{'sms_plc'} = $_;
+					last;
+				}
+				close $fh_tmp if ($fh_tmp);
+			}
                         next;
                 }
                 if(/\A\s*auto_handler\s+(.+)\Z/){
