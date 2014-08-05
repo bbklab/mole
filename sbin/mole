@@ -809,6 +809,14 @@ case "$#" in
 				eval "${cmd} 2>&-"
 			fi
 			;;
+	"ifunc")
+			if [  "${arg2}" == "list" ]; then
+				for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i+=2))
+				do
+					echo "${ARRAY_INNER_FUNC_MAPS[$i]}"
+				done
+			fi
+			;;
 	"report"|"R")
 		if [ "$arg2" == "all" ] || [ "$arg2" == "a" ]; then
 			. ${REPORT_SH} "all"
@@ -897,12 +905,6 @@ case "$#" in
 			;;
 	"ifunc")
 		cmd=
-		if [  "${arg2}" == "list" ]; then
-			for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i+=2))
-			do
-				echo "${ARRAY_INNER_FUNC_MAPS[$i]}"
-			done
-		fi
 		for ((i=0;i<=${#ARRAY_INNER_FUNC_MAPS[*]};i++))
 		do
 			if [  "${arg2}" == "${ARRAY_INNER_FUNC_MAPS[$i]}" ]; then
