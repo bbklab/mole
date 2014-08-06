@@ -355,6 +355,13 @@ is_multi_threshold() {
   return 0
 }
 
+# Seperate multi threashold
+# Usage:	seperate_multi_threshold  {itme}
+#
+seperate_multi_threshold() {
+  echo "${1//,/ }"
+}
+
 # Check multi threashold is valid or not ?
 # Usage:	check_multi_threshold  {content} {check_mode}
 # Note:		multi threashold must be seperated by (,)
@@ -4334,6 +4341,7 @@ process_plugin_misform() {
 #is_between .9 azdk 100; echo $?
 #is_multi_threshold 10,8.1; echo $?
 #is_multi_threshold 10,8.1; echo $?
+#seperate_multi_threshold "a,b"
 #check_multi_threshold 10,8.1 2; echo $?
 #check_multi_threshold 10,8.1,,, 3; echo $?
 #valid_notify_policy " abc 3 ";echo $?
