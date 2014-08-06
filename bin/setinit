@@ -74,8 +74,8 @@ fi
 
 # === check necessary utils
 # 
-[ -f "/usr/bin/cksum" -a -x "/usr/bin/cksum" ] || {
-	echo "error: /usr/bin/cksum not prepared"
+[ -f "/usr/bin/md5sum" -a -x "/usr/bin/md5sum" ] || {
+	echo "error: /usr/bin/md5sum not prepared"
 	exit 1
 }
 [ -f "/sbin/blkid" -a -x "/sbin/blkid" ] || {
@@ -169,7 +169,7 @@ if [ "${mole_id}" == "0000000000" ]; then
 			exit 0
 		fi
 
-		mole_id=$(echo -n "${mole_uuid}"|/usr/bin/cksum|awk '{print $1;exit;}'|tr -d '\r\n')
+		mole_id=$(echo -n "${mole_uuid}"|/usr/bin/md5sum|awk '{print $1;exit;}'|tr -d '\r\n')
 		write_log -f "${MOLE_LOG}" "SETINITX disk_uuid ${disk_uuid}"
 		write_log -f "${MOLE_LOG}" "SETINITX imac_uuid ${imac_uuid}"
 		write_log -f "${MOLE_LOG}" "SETINITX mole_uuid ${mole_uuid}"
