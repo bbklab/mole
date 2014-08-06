@@ -213,7 +213,7 @@ if (-f $statfile && -s $statfile){
   			my $conn_status = shift @array_status;
   			my $conn_details = "@array_status";
   			if ($conn_status ne '0') {
-				&log("CRIT: $logfrom post host seems down, [$conn_details], exit");
+				&log("CRIT: $logfrom post host seems down, $conn_details, exit");
   				exit 2;
   			} else {
 				&log("INFO: $logfrom post host seems online, continue.");
