@@ -38,7 +38,7 @@ use IO::Socket::INET;
 use Benchmark ':hireswallclock';
 use JSON;
 use Time::HiRes;
-use Smart::Comments;
+# use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
@@ -404,6 +404,41 @@ sub filter_html {
         $content =~ s/on((key|mouse)(down|up)|(un)?load|mouse(move|o(ut|ver))|reset|s(elect|ubmit))//gi;
         ### after_filter: $content
 	return $content;
+}
+
+sub hrformat_policy {
+	my $policy = shift || return;
+	my $part = shift || return;
+	unless (defined $part && $part ne '') {
+		return;
+	}
+	### input_policy: $policy
+	### wanted_part: $part
+
+	my $output;
+
+	if ($part eq 'range') {
+		open my $fh_tmp, qq($mole ifunc get_policy_analysize " \\"$policy\\" range hrformat" 2>&- |);
+		if ($fh_tmp) {
+			while(<$fh_tmp>){
+				chomp; $output = $_;
+				last;
+			}
+			close $fh_tmp if ($fh_tmp);
+		}
+	} elsif ($part eq 'rtime') {
+		open my $fh_tmp0, qq($mole ifunc get_policy_analysize " \\"$policy\\" rtime" 2>&- |);
+		if ($fh_tmp0) {
+			while(<$fh_tmp0>){
+				chomp; $output = "$_";
+				last;
+			}
+			close $fh_tmp0 if ($fh_tmp0);
+		}
+	}
+
+	### output_policy: $output
+	return $output;
 }
 
 sub genjson_post {
@@ -910,8 +945,10 @@ sub genjson_config() {
 	'debug'			=> '',
 	'mail_rec'		=> '',
 	'sms_rec'		=> '',
-	'mail_plc'		=> '',
-	'sms_plc'		=> '',
+	'mailplc_range'		=> '',
+	'mailplc_rtime'		=> '',
+	'smsplc_range'		=> '',
+	'smsplc_rtime'		=> '',
 	'handler'		=> '',
 	'locale'		=> '',
   );
@@ -979,25 +1016,13 @@ sub genjson_config() {
                         next;
                 }
                 if(/\A\s*mail_policy\s+(.+)\Z/){
-			open my $fh_tmp, "$mole ifunc get_policy_analysize \" \"$1\" range hrformat\" 2>&- |";
-			if ($fh_tmp) {
-				while(<$fh_tmp>){
-                        		chomp; $raw_default{'mail_plc'} = $_; 
-					last;
-				}
-				close $fh_tmp if ($fh_tmp);
-			}
+			$raw_default{'mailplc_range'} = &hrformat_policy($1,'range');
+			$raw_default{'mailplc_rtime'} = &hrformat_policy($1,'rtime');
                         next;
                 }
                 if(/\A\s*sms_policy\s+(.+)\Z/){
-			open my $fh_tmp, "$mole ifunc get_policy_analysize \" \"$1\" range hrformat\" 2>&- |";
-			if ($fh_tmp) {
-				while(<$fh_tmp>){
-					chomp; $raw_default{'sms_plc'} = $_;
-					last;
-				}
-				close $fh_tmp if ($fh_tmp);
-			}
+			$raw_default{'smsplc_range'} = &hrformat_policy($1,'range');
+			$raw_default{'smsplc_rtime'} = &hrformat_policy($1,'rtime');
                         next;
                 }
                 if(/\A\s*auto_handler\s+(.+)\Z/){
