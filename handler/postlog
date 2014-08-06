@@ -148,8 +148,7 @@ if ($type eq 'post') {
         exit 1;
   } else {
 	# reset logfrom
-        $logfrom = $plugin.'.'.$jobid;
-        &log("INFO: $logfrom type is [post]");
+        $logfrom = "$type $plugin $jobid";
   }
   if (!defined $houtput || $houtput eq ''){ 
 	# reset houtput
@@ -157,9 +156,9 @@ if ($type eq 'post') {
         &log("INFO: $logfrom houtput empty, reset houtput=[$houtput]");
   }
 } elsif ($type eq 'plugin') {                                                                                                
-  $logfrom = 'AGENT.PLUGIN';
+  $logfrom = "$type AGENT.PLUGIN";
 } elsif ($type eq 'config') {
-  $logfrom = 'AGENT.CONFIG';
+  $logfrom = "$type AGENT.CONFIG";
 } elsif ($type eq 'heartbeat') {
   unless (defined $jobid) {
 	&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
@@ -168,13 +167,12 @@ if ($type eq 'post') {
 	exit 1;
   } else {
 	# reset logfrom
-  	$logfrom = 'AGENT.HEARTBEAT'.'.'.$jobid;
-	&log("INFO: $logfrom type is [heartbeat]");
+  	$logfrom = "$type AGENT.HEARTBEAT $jobid";
   }
 }
 
 # log start
-&log("INFO: $logfrom script postlog start ...");
+&log("INFO: $logfrom script postlog start");
 
 # check global {parter_id}, {hid}, {hname}
 if (!$parter_id || $parter_id eq '' || $parter_id eq '0000000000') {
