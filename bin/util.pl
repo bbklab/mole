@@ -12,11 +12,13 @@ BEGIN {
         $pllib_dir.'/lib/perl5/5.8.8/',
         $pllib_dir.'/lib/perl5/site_perl/',
         $pllib_dir.'/lib/perl5/site_perl/5.8.8/',
+	$pllib_dir.'/lib/perl5/site_perl/5.8.8/i386-linux-thread-multi/',
         # rhel5 64bit
         $pllib_dir.'/lib64/perl5/',
         $pllib_dir.'/lib64/perl5/5.8.8/',
         $pllib_dir.'/lib64/perl5/site_perl/',
         $pllib_dir.'/lib64/perl5/site_perl/5.8.8/',
+	$pllib_dir.'/lib64/perl5/site_perl/5.8.8/x86_64-linux-thread-multi/',
         # rhel6 32bit
         $pllib_dir.'/lib/perl5/',
         $pllib_dir.'/share/perl5/',
