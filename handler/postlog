@@ -412,8 +412,8 @@ sub hrformat_policy {
 	unless (defined $part && $part ne '') {
 		return;
 	}
-	### input_policy: $policy
-	### wanted_part: $part
+	## input_policy: $policy
+	## wanted_part: $part
 
 	my $output;
 
@@ -437,7 +437,7 @@ sub hrformat_policy {
 		}
 	}
 
-	### output_policy: $output
+	## output_policy: $output
 	return $output;
 }
 
@@ -740,12 +740,14 @@ sub genjson_plugin() {
 		'debug'		=> 'debug',
 		'mail_rec'	=> 'mail_receviers',
 		'sms_rec'	=> 'sms_receviers',
-		'mail_plc'	=> 'mail_policy',
-		'sms_plc'	=> 'sms_policy',
 		'handler'	=> 'auto_handler',
 		'locale'	=> 'locale',
 		'udef'		=> '',
 		'conf_info'	=> '',
+		'mailplc_range'	=> '',
+		'mailplc_rtime'	=> '',
+		'smsplc_range'	=> '',
+		'smsplc_rtime'	=> '',
   	);
 
 	my %conf_info = ();
@@ -753,6 +755,10 @@ sub genjson_plugin() {
 		next if $key eq 'name';
 		next if $key eq 'udef';
 		next if $key eq 'conf_info';
+		next if $key eq 'mailplc_range';
+		next if $key eq 'mailplc_rtime';
+		next if $key eq 'smsplc_range';
+		next if $key eq 'smsplc_rtime';
 		open my $fh, "$mole view $plugin $single_plugin{$key} 2>&- | ";
 		my $default_flag = 0;
 		if($fh){
@@ -784,7 +790,63 @@ sub genjson_plugin() {
 			&log("DEBUG: $logfrom plugin-config [$plugin.$key]=[$single_plugin{$key}]") if $debug;
 		}
 	}
-	
+
+	# add key:  mailplc_[range|rtime]_
+	my $mail_policy;
+	open my $fh2, "$mole view $plugin mail_policy 2>&- | ";
+	if ($fh2) {
+		my $value = <$fh2>;
+		chomp $value if ($value);
+		if (!defined $value || $value eq '') {
+			open my $fh2_2, "$mole view default mail_policy 2>&- | ";
+			push @{$conf_info{'default'}}, ('mailplc_range','mailplc_rtime');
+			if ($fh2_2) {
+				my $default_value = <$fh2_2>;
+				if (defined $default_value && $default_value ne '') {
+					chomp $default_value;
+					$mail_policy = $default_value;
+				}
+				close $fh2_2 if ($fh2_2);
+			}
+		} else {
+			$mail_policy = $value;
+			push @{$conf_info{'customize'}}, ('mailplc_range','mailplc_rtime');
+		}
+		close $fh2 if ($fh2);
+	}
+	if (defined $mail_policy && $mail_policy ne '') {
+		$single_plugin{'mailplc_range'} = &hrformat_policy($mail_policy,'range');
+		$single_plugin{'mailplc_rtime'} = &hrformat_policy($mail_policy,'rtime');
+	}
+
+	# add key:  smsplc_[range|rtime]_
+	my $sms_policy;
+	open my $fh3, "$mole view $plugin sms_policy 2>&- | ";
+	if ($fh3) {
+		my $value = <$fh3>;
+		chomp $value if ($value);
+		if (!defined $value || $value eq '') {
+			open my $fh3_3, "$mole view default sms_policy 2>&- | ";
+			push @{$conf_info{'default'}}, ('smsplc_range','smsplc_rtime');
+			if ($fh3_3) {
+				my $default_value = <$fh3_3>;
+				if (defined $default_value && $default_value ne '') {
+					chomp $default_value;
+					$sms_policy = $default_value;
+				}
+				close $fh3_3 if ($fh3_3);
+			}
+		} else {
+			$sms_policy = $value;
+			push @{$conf_info{'customize'}}, ('smsplc_range','smsplc_rtime');
+		}
+		close $fh3 if ($fh3);
+	}
+	if (defined $sms_policy && $sms_policy ne '') {
+		$single_plugin{'smsplc_range'} = &hrformat_policy($sms_policy,'range');
+		$single_plugin{'smsplc_rtime'} = &hrformat_policy($sms_policy,'rtime');
+	}
+
 	# set key: {conf_info}
 	## %conf_info
 	$single_plugin{'conf_info'} = \%conf_info;
@@ -797,7 +859,7 @@ sub genjson_plugin() {
 	# add key: {name} at last
 	$single_plugin{'name'} = $plugin;
 
-	# add key: udef
+	# set key: udef
 	$single_plugin{'udef'} = '';
 	open my $fh, "$mole udef $plugin 2>&- | ";
 	if($fh) {
@@ -823,9 +885,10 @@ sub genjson_plugin() {
 		&log("DEBUG: $logfrom plugin-config [$plugin.udef]=[$single_plugin{'udef'}]") if $debug;
 	}
 
+	### %single_plugin
   	push @raw_data, \%single_plugin;
   }
-  
+
   $result{'data'} = \@raw_data;
 
   return %result;
