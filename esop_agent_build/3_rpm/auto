@@ -55,6 +55,6 @@ if [ ! -f "${path}/SOURCES/${name}.init" ]; then
 	exit 1
 fi
 
-/usr/bin/rpmbuild -bb "${path}"/SPECS/${name}.spec >/dev/null 2>&1
+/usr/bin/rpmbuild -bb "${path}"/SPECS/${name}.spec 
 echo;echo;
 find "${path}"/RPMS/ -type f -iname "*.rpm" -print
