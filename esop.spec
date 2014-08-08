@@ -7,7 +7,7 @@ Group:  	Extension
 Vendor:		Beijing eYou Information Technology Co., Ltd.
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	esop-1.1.0-rhel5.tgz
+Source0: 	esop-1.1.0-rhel6.tgz
 Source1: 	esop.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
