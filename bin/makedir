@@ -106,6 +106,7 @@ array_files=(
 	${POSTLOG_SH}
 	${TAKESNAP_SH}
 	${SENDMAIL}
+	${SENDSMS}
 	${SENDEMAIL}
 	${MAKEDIR_SH}
 	${SETINIT_SH}
