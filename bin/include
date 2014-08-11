@@ -3749,13 +3749,42 @@ process_plugin() {
   # Step 10: check action: sms_notify
   local s_alert=$(take_action_ornot "${plugin_name}" sms_notify ${rc})
   local result_smslst=
-  local sms_receviers=$(get_sms_receviers "${plugin_name}")
   if [ "${s_alert}" != "yes" ]; then
 	write_log ${jid} ${plugin_name} "sms notify disabled. SKIP";
   else
 	write_log ${jid} ${plugin_name} "sms notify enabled. CONTINUE";
-	result_smslst=" ${s_alert} ###  ###  ${sms_receviers} "
-	write_log ${jid} ${plugin_name} "sms notify without local handler, set all receviers as failed. CONTINUE";
+	# read sms notify policy
+	local sms_policy=$(get_sms_policy ${plugin_name})
+	write_log ${jid} ${plugin_name} "sms notify policy is [${sms_policy}]. CONTINUE";
+	# check sms notify policy
+	local hit_range_detail=  hit_rtime_detail=
+	# check time range of sms notify policy
+	if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
+		write_log ${jid} ${plugin_name} "sms notify is allowed by nower"\
+						"time range (${hit_range_detail}), CONTINUE";
+		# check rtime of sms notify policy
+		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "sms" "${sms_policy}"); then
+			write_log ${jid} ${plugin_name} "sms notify is allowed by nower"\
+					"heapup-notify number (${hit_rtime_detail}), CONTINUE"
+			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
+						-i "${output}" 2>&1 )
+			result_smslst=" ${s_alert} ### ${result_smslst} "
+
+			# add heapupnotify count for [plugin]-[sms] level=[part1]
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${part1}"  "sms"  "${jid}"
+			fi
+
+			write_log ${jid} ${plugin_name} "sms notify finished, details in ${SENDSMS_LOG##*/}. CONTINUE";
+		else
+			result_smslst=" banned ### $(gettext "banned by sms notify nower heapup-notify number") "
+			write_log ${jid} ${plugin_name} "sms notify is banned"\
+				"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
+		fi
+	else
+		result_emllst=" banned ### $(gettext "banned by sms notify time-range") "
+		write_log ${jid} ${plugin_name} "sms notify is banned at this time range. SKIP";
+	fi
   fi
 
   # Step 11: check action: mail_notify
@@ -3960,16 +3989,45 @@ process_plugin_timeout() {
   # Step 4: send timeout notify sms
   local s_alert=$(take_action_ornot "${plugin_name}" sms_notify "tmout")
   local result_smslst=
-  local sms_receviers=$(get_sms_receviers "${plugin_name}")
   if [ "${s_alert}" != "yes" ]; then
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"sms notify disabled. SKIP"
   else
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"sms notify enabled. CONTINUE"
-        result_smslst=" ${s_alert} ### ### ${sms_receviers} "
-        write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
-		"sms notify without local handler, set all receviers as failed. CONTINUE"
+	# read sms notify policy
+	local sms_policy=$(get_sms_policy ${plugin_name})
+	write_log -f "${MOLE_LOG}" ${jid} ${plugin_name} "sms notify policy is [${sms_policy}]. CONTINUE";
+	# check sms notify policy
+	local hit_range_detail=  hit_rtime_detail=
+	# check time range of sms notify policy
+	if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"
+							"time range (${hit_range_detail}), CONTINUE";
+		# check rtime of sms notify policy
+		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
+			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+				"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
+								-i "${output}" 2>&1 )
+			result_smslst=" ${s_alert} ### ${result_smslst} " 
+
+			# add heapupnotify count for [plugin]-[sms] level=[tmout]
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${level}"  "sms"  "${jid}"
+			fi
+			
+			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"send timeout sms finished, details in ${SENDSMS_LOG##*/}. CONTINUE"
+		else
+			result_smslst=" banned ### $(gettext "banned by sms notify nower heapup-notify number") "
+			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned"\
+					"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
+		fi
+	else 
+		result_smslst=" banned ### $(gettext "banned by sms notify time-range") "
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned at this time range. SKIP";
+        fi 
   fi
 
   # Step 5: send timeout notify mail
@@ -4071,13 +4129,42 @@ process_sysoverload() {
   snapfile=" yes ### ${snapfile##*/} "
 
   # Step 3: send sms_notify.
+  write_log -f "${MOLE_LOG}" "$jid MOLE"\
+	"sending alert sms"
   local result_smslst=
-  local sms_receviers=$(get_sms_receviers "${plugin_name}")
-  write_log -f "${MOLE_LOG}" "$jid MOLE"\
-	"sending sms"
-  result_smslst=" yes ### ### ${sms_receviers} "
-  write_log -f "${MOLE_LOG}" "$jid MOLE"\
-	"sms notify without local handler, set all receviers as failed. CONTINUE";
+  # read sms notify policy
+  local sms_policy=$(get_sms_policy ${plugin_name})
+  write_log -f "${MOLE_LOG}" ${jid} ${plugin_name} "sms notify policy is [${sms_policy}]. CONTINUE";
+  # check sms notify policy
+  local hit_range_detail=  hit_rtime_detail=
+  # check time range of sms notify policy
+  if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
+	write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+						"time range (${hit_range_detail}), CONTINUE";
+	# check rtime of sms notify policy
+	if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+				"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
+						-i "${output}" 2>&1 )
+		result_smslst=" yes ### ${result_smslst} " 
+
+		# add heapupnotify count for [plugin]-[sms] level=[ovld]
+		if [ "${hit_rtime_detail}" != "unlimited" ]; then
+			add_heapupnotify_count "${plugin_name}" "${level}"  "sms"  "${jid}"
+		fi
+
+		write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"send ovld sms finished, details in ${SENDSMS_LOG##*/}. CONTINUE"
+	else
+		result_smslst=" banned ### $(gettext "banned by sms notify nower heapup-notify number") "
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned"\
+						"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
+	fi
+  else 
+	result_smslst=" banned ### $(gettext "banned by sms notify time-range") "
+	write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned at this time range. SKIP";
+  fi 
 
   # Step 4: send alert mail whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
@@ -4164,12 +4251,41 @@ process_kidsexceed() {
 
   # Step 3: send sms_notify.
   local result_smslst=
-  local sms_receviers=$(get_sms_receviers "${plugin_name}")
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
-        "sending sms"
-  result_smslst=" yes ### ### ${sms_receviers} "
-  write_log -f "${MOLE_LOG}" "$jid MOLE"\
-	"sms notify without local handler, set all receviers as failed. CONTINUE"
+        "sending alert sms"
+  # read sms notify policy
+  local sms_policy=$(get_sms_policy ${plugin_name})
+  write_log -f "${MOLE_LOG}" ${jid} ${plugin_name} "sms notify policy is [${sms_policy}]. CONTINUE";
+  # check sms notify policy
+  local hit_range_detail=  hit_rtime_detail=
+  # check time range of sms notify policy
+  if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
+	write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+					"time range (${hit_range_detail}), CONTINUE";
+	# check rtime of sms notify policy
+	if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
+						-i "${output}" 2>&1 )
+		result_smslst=" yes ### ${result_smslst} "
+
+		# add heapupnotify count for [plugin]-[sms] level=[kids]
+		if [ "${hit_rtime_detail}" != "unlimited" ]; then
+			add_heapupnotify_count "${plugin_name}" "${level}"  "sms"  "${jid}"
+		fi
+
+		write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"send kids sms finished, details in ${SENDSMS_LOG##*/}. CONTINUE"
+	else
+		result_smslst=" banned ### $(gettext "banned by sms notify nower heapup-notify number") "
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned"\
+				"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
+	fi
+  else
+	result_smslst=" banned ### $(gettext "banned by sms notify time-range") "
+	write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned at this time range. SKIP";
+  fi
 
   # Step 4: send alert mail whatever.
   write_log -f "${MOLE_LOG}" "$jid MOLE"\
@@ -4273,10 +4389,48 @@ process_plugin_misform() {
   # Step 1: update lastrun and nextrun.
   update_lastrun_and_nextrun "${plugin_name}" "${jid}"
 
-  # Step 2: send misforma notify-mail or not ?
+  # Step 2: send misforma notify [sms|mail] or not ?
   local notify_onmisform=$(get_notify_onmisform)
   local result_emllst=  result_smslst=  snapfile=" no ### "
   if [ "${notify_onmisform}" == "yes" ]; then
+
+	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+		"sending notify sms"
+	# read sms notify policy
+	local sms_policy=$(get_sms_policy ${plugin_name})
+	write_log -f "${MOLE_LOG}" ${jid} ${plugin_name} "sms notify policy is [${sms_policy}]. CONTINUE";
+	# check sms notify policy
+	local hit_range_detail=  hit_rtime_detail=
+	# check time range of sms notify policy
+        if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+				"time range (${hit_range_detail}), CONTINUE";
+		# check rtime of sms notify policy
+		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
+			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
+					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
+							-i "${output}" 2>&1 )
+			result_smslst=" yes ### ${result_smslst} "
+
+			# add heapupnotify count for [plugin]-[sms] level=[misform]
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${level}"  "sms"  "${jid}"
+			fi
+
+			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
+				"send misform sms finished, details in ${SENDSMS_LOG##*/}. CONTINUE"
+		else
+			result_smslst=" banned ### $(gettext "banned by sms notify nower heapup-notify number") "
+			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned"\
+					"by nower heapup-notify number (${hit_rtime_detail}). SKIP";
+		fi
+	else 
+		result_smslst=" banned ### $(gettext "banned by sms notify time-range") "
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is banned at this time range. SKIP";
+        fi 
+
+
   	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
         	"sending notify mail"
 	# read mail notify policy
@@ -4316,13 +4470,6 @@ process_plugin_misform() {
 		result_emllst=" banned ### $(gettext "banned by mail notify time-range") "
 		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} mail notify is banned at this time range. SKIP";
         fi 
-
-	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
-		"sending notify sms"
-	local sms_receviers=$(get_sms_receviers "${plugin_name}")
-	result_smslst=" yes ### ### ${sms_receviers} "
-	write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
-		"sms notify without local handler, set all receviers as failed."
   else
 	result_emllst=" no ### "
 	result_smslst=" no ### "
