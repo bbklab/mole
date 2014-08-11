@@ -1931,11 +1931,11 @@ update_lastrun_and_nextrun() {
 	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${now}"'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on"\
 			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
 			"error: [${errinfo}]";
 	else
-		write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
+		write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on"\
 			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
 			"success";
 	fi
@@ -2026,10 +2026,10 @@ update_status() {
 	echo "${n_record}" >> ${TMP_STATUS} 2>/dev/null
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-	       write_log -f "${logfile}" "E0000000 update_status on:"\
+	       write_log -f "${logfile}" "E0000000 update_status on"\
 			"[${plugin_name}] for [append newitem] error";
 	else
-	       write_log -f "${logfile}" "$jobid update_status on:"\
+	       write_log -f "${logfile}" "$jobid update_status on"\
 			"[${plugin_name}] for [append newitem] success";
 	fi
   else
@@ -2680,10 +2680,10 @@ un_lock() {
   errinfo=$( unlink "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" "E0000000 un_lock on:"\
+	write_log -f "${logfile}" "E0000000 un_lock on"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" "$jobid un_lock on:"\
+	write_log -f "${logfile}" "$jobid un_lock on"\
 		"[${plugin_name}] success";
   fi
   return "${rc}"
@@ -2709,10 +2709,10 @@ del_fpid() {
   errinfo=$( /bin/rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" "E0000000 del_fpid on:"\
+	write_log -f "${logfile}" "E0000000 del_fpid on"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" "$jobid del_fpid on:"\
+	write_log -f "${logfile}" "$jobid del_fpid on"\
 		"[${plugin_name}] success.";
   fi
   return "${rc}"
