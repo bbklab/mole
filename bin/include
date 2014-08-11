@@ -3786,7 +3786,9 @@ process_plugin() {
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 
 			# add heapupnotify count for [plugin]-[mail] level=[part1]
-			add_heapupnotify_count "${plugin_name}" "${part1}"  "mail"  "${jid}"
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${part1}"  "mail"  "${jid}"
+			fi
 
 			write_log ${jid} ${plugin_name} "mail notify finished, details in ${SENDMAIL_LOG##*/}. CONTINUE";
 		else
@@ -3998,7 +4000,9 @@ process_plugin_timeout() {
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 
 			# add heapupnotify count for [plugin]-[mail] level=[tmout]
-			add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+			fi
 			
 			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 				"send timeout mail finished, details in ${SENDMAIL_LOG##*/}. CONTINUE"
@@ -4098,7 +4102,9 @@ process_sysoverload() {
 		result_emllst=" yes ### ${result_emllst} " 
 
 		# add heapupnotify count for [plugin]-[mail] level=[ovld]
-		add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+		if [ "${hit_rtime_detail}" != "unlimited" ]; then
+			add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+		fi
 
 		write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 				"send ovld mail finished, details in ${SENDMAIL_LOG##*/}. CONTINUE"
@@ -4188,7 +4194,9 @@ process_kidsexceed() {
 		result_emllst=" yes ### ${result_emllst} "
 
 		# add heapupnotify count for [plugin]-[mail] level=[kids]
-		add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+		if [ "${hit_rtime_detail}" != "unlimited" ]; then
+			add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+		fi
 
 		write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 				"send kids mail finished, details in ${SENDMAIL_LOG##*/}. CONTINUE"
@@ -4290,7 +4298,9 @@ process_plugin_misform() {
 			result_emllst=" yes ### ${result_emllst} "
 
 			# add heapupnotify count for [plugin]-[mail] level=[misform]
-			add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+			if [ "${hit_rtime_detail}" != "unlimited" ]; then
+				add_heapupnotify_count "${plugin_name}" "${level}"  "mail"  "${jid}"
+			fi
 
 			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 				"send misform mail finished, details in ${SENDMAIL_LOG##*/}. CONTINUE"
