@@ -1,0 +1,192 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Sending SMS.
+# 
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# === LOAD GETTEXT.SH FILE
+#
+if [ -f "/usr/bin/gettext.sh" ] && [ -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load [/usr/bin/gettext.sh] failed with status $rc"
+                exit 1
+        }   
+else
+        echo "[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit"
+        exit 1
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+#
+if [ -d "${LOCALE_DIR}" ] && [ -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="mole"
+else
+        echo "locale directory [${LOCALE_DIR}] not exist or accessable, exit"
+        exit 1
+fi
+
+# === SET GLOBAL LOCALE
+#
+glocale=$(read_mole_config global locale)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"               ## read from sysenv
+elif [ "${glocale}" == "zh_CN" ] || [ "${glocale}" == "zh_CN.UTF-8" ] || [ "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" ] || [ "${glocale}" == "en_US.UTF-8" ] || [ "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"
+fi
+
+
+# def help
+#
+show_usage(){
+  echo "Usage:   ./${0##*/} -f {plugin_name} -s {jobid} -i \"{sms_content}\" "
+  echo "Example: ./${0##*/} -f sysload -s TESTABCD -i \"test sms content\" "
+  exit 1
+}
+
+### Main Body Begin...
+
+if [ "$1" == "-h" ] || [ "$1" == "help" ] || [ "$1" == "?" ]; then
+	show_usage
+fi
+
+# read args
+while getopts f:s:i: opt
+do
+        case ${opt} in
+        "f")
+                plugin_name="${OPTARG}"   ;;
+        "s")
+                jobid="${OPTARG}"         ;;
+        "i")
+                content="${OPTARG}"       ;;
+	*)	
+		show_usage		  ;;
+        esac
+done
+
+# check args 
+if [ -z "${plugin_name}" ] || [ -z "${jobid}" ] || [ -z "${content}" ]; then
+	show_usage
+fi
+from="${plugin_name}.${jobid}"
+
+write_log -f "${SENDSMS_LOG}" ""
+write_log -f "${SENDSMS_LOG}" "[${from}]" "INFO: begin to sendsms"
+
+# read global.name / read plugin sms-receviers 
+gname=$(get_global_name)
+receviers=$(get_sms_receviers "${plugin_name}")
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: set name=[${gname}], receviers=[${receviers}]. CONTINUE"
+
+sms_maxlen=$(read_mole_config sms sms_maxlen)
+! is_int "${sms_maxlen}" || sms_maxlen=140
+sms_length=${#content}
+if [ ${sms_length} -gt ${sms_maxlen} ]; then
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"INFO: sms length [${sms_length}]"\
+		"exceed than [${sms_maxlen}]. TRUNCATE"
+	content="${content:0:${sms_maxlen}}"
+else
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"INFO: sms length=[${sms_length}]. CONTINUE"
+fi
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: set content=[${content}]. CONTINUE"
+
+
+# set initial result
+faillst=
+succlst=
+vexit=0
+
+# set SMS Handler:  {SENDSMS}
+SENDSMS=
+sms_handler=$(read_mole_config sms sms_handler)
+if [ "${sms_handler}" == "cnpc" ]; then
+	SENDSMS="$(read_mole_config sms cnpc_smspath)"
+elif [ "${sms_handler}" == "esop" ]; then
+	SENDSMS=
+elif [ "${sms_handler}" == "none" ]; then
+	SENDSMS=
+else
+	SENDSMS=
+fi
+
+# check SMS Handler
+if [ -z "${SENDSMS}" ]; then
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"ERROR: SMS handler not defined. EXIT"
+	faillst="${receviers}"; vexit=1
+	echo -en "${succlst}  ###  ${faillst}"
+	exit "${vexit}"
+elif [ -f "${SENDSMS}" ] && [ -x "${SENDSMS}" ]; then
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"INFO: SMS handler [${SENDSMS}] prepared. CONTINUE"
+else
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"ERROR: SMS handler [${SENDSMS}] not prepared. EXIT"
+	faillst="${receviers}"; vexit=1
+	echo -en "${succlst}  ###  ${faillst}"
+	exit "${vexit}"
+fi
+
+# sending sms
+t_s=0
+t_e=0
+t=$(echo -ne "${receviers}" | awk -v "RS=@" 'END{print --NR}')
+n=0 result=
+if [ "$t" -le "0" ]; then
+	write_log -f "${SENDSMS_LOG}" "[${from}]"\
+		"ERROR: no invalid receviers [${receviers}]"
+else 
+	for x in `echo "${receviers}"`
+	do
+		((n+=1))
+		write_log -f "${SENDSMS_LOG}" "[${from}]"\
+			"INFO: [${n}/${t}], sending SMS to [${x}] ..."
+		result=$( ${SENDSMS} "${x}" "${content}" 2>&1 )
+		if [ "$?" == "0" ]; then
+			((t_s+=1))
+			succlst="${x} ${succlst}"
+		else
+			((t_e+=1))
+			vexit=1
+			faillst="${x} ${faillst}"
+		fi
+		write_log -f "${SENDSMS_LOG}" "[${from}]"\
+			"INFO: [${n}/${t}], sending SMS to [${x}] end. result: ${result}"
+	done
+fi
+
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: end to sendsms. result: [total=${t}  success=${t_s}  fail=${t_e}]"
+write_log -f "${SENDSMS_LOG}" ""
+write_log -f "${SENDSMS_LOG}" ""
+echo -en "${succlst}  ###  ${faillst}"
+exit "${vexit}"

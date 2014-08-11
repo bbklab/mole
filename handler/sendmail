@@ -171,11 +171,7 @@ write_log -f "${SENDMAIL_LOG}" "[${from}]" "INFO: begin to sendmail..."
 
 # read global.name / read plugin mail-receviers 
 gname=$(get_global_name)
-if [ "${level}" == "ovld" ]; then  
-	receviers=$(get_mail_receviers default)  # Read Default mail_receviers directly while level="ovld"
-else
-	receviers=$(get_mail_receviers "${plugin_name}")
-fi
+receviers=$(get_mail_receviers "${plugin_name}")
 write_log -f "${SENDMAIL_LOG}" "[${from}]"\
 	"INFO: set name=[${gname}], receviers=[${receviers}]. CONTINUE"
 

@@ -81,6 +81,7 @@ POSTLOG_LOG="${LOG_DIR}/postlog.log"
 TAKESNAP_LOG="${LOG_DIR}/takesnap.log"
 UPDATE_LOG="${LOG_DIR}/update.log"
 SENDMAIL_LOG="${LOG_DIR}/sendmail.log"
+SENDSMS_LOG="${LOG_DIR}/sendsms.log"
 AUTOCONF_LOG="${LOG_DIR}/autoconf.log"
 ERRLOG="${LOG_DIR}/error.log"
 

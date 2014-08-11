@@ -54,6 +54,7 @@ check() {
 		${TAKESNAP_LOG} 
 		${UPDATE_LOG} 
 		${SENDMAIL_LOG} 
+		${SENDSMS_LOG}
 		${ERRLOG}
 		"${LOG_DIR}/emp_sync_user524.log"
 		"${LOG_DIR}/emp_sync_userfail.log"
