@@ -58,6 +58,7 @@ CHECKCONF_SH="${BIN_DIR}/checkconf"
 POSTLOG_SH="${HANDLER_DIR}/postlog"
 TAKESNAP_SH="${HANDLER_DIR}/takesnap"
 SENDMAIL="${HANDLER_DIR}/sendmail"
+SENDSMS="${HANDLER_DIR}/sendsms"
 SENDEMAIL="${OPT_DIR}/sendEmail"
 MAKEDIR_SH="${BIN_DIR}/makedir"
 SETINIT_SH="${BIN_DIR}/setinit"
@@ -147,6 +148,7 @@ ARRAY_GLOBAL_SECTION=(
   postlog
   sendmail
   takesnap
+  sms
 )
 
 ### SUPPORTED NOTIFY TYPES

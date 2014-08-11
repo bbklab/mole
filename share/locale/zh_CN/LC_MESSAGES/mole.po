@@ -724,6 +724,17 @@ msgstr "详细:"
 msgid "Auto Handle:"
 msgstr "自动处理程序结果:"
 
+### handler/sendsms
+
+msgid "HostName:"
+msgstr "主机:"
+
+msgid "Time:"
+msgstr "时间:"
+
+msgid "Content:"
+msgstr "内容:"
+
 ### bin/setinit
 
 msgid "clear parter id"

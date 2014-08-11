@@ -104,8 +104,17 @@ receviers=$(get_sms_receviers "${plugin_name}")
 write_log -f "${SENDSMS_LOG}" "[${from}]"\
 	"INFO: set name=[${gname}], receviers=[${receviers}]. CONTINUE"
 
+# set sms common info
+sms_common="$(gettext "HostName:")${gname},"
+sms_common="${sms_common} $(gettext "Time:")$(date +%F_%T),"
+sms_common="${sms_common} $(gettext "Content:")"
+
+# reset content (add sms_common)
+content="${sms_common}${content}"
+
+# check sms length
 sms_maxlen=$(read_mole_config sms sms_maxlen)
-! is_int "${sms_maxlen}" || sms_maxlen=140
+is_int "${sms_maxlen}" || sms_maxlen=140
 sms_length=${#content}
 if [ ${sms_length} -gt ${sms_maxlen} ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
@@ -125,32 +134,35 @@ faillst=
 succlst=
 vexit=0
 
-# set SMS Handler:  {SENDSMS}
-SENDSMS=
+# set SMS Handler:  {SMS_HANDLER}
+SMS_HANDLER=
 sms_handler=$(read_mole_config sms sms_handler)
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: sms handler mode [${sms_handler}]. CONTINUE"
+
 if [ "${sms_handler}" == "cnpc" ]; then
-	SENDSMS="$(read_mole_config sms cnpc_smspath)"
+	SMS_HANDLER="$(read_mole_config sms cnpc_smspath)"
 elif [ "${sms_handler}" == "esop" ]; then
-	SENDSMS=
+	SMS_HANDLER=
 elif [ "${sms_handler}" == "none" ]; then
-	SENDSMS=
+	SMS_HANDLER=
 else
-	SENDSMS=
+	SMS_HANDLER=
 fi
 
 # check SMS Handler
-if [ -z "${SENDSMS}" ]; then
+if [ -z "${SMS_HANDLER}" ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
 		"ERROR: SMS handler not defined. EXIT"
 	faillst="${receviers}"; vexit=1
 	echo -en "${succlst}  ###  ${faillst}"
 	exit "${vexit}"
-elif [ -f "${SENDSMS}" ] && [ -x "${SENDSMS}" ]; then
+elif [ -f "${SMS_HANDLER}" ] && [ -x "${SMS_HANDLER}" ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
-		"INFO: SMS handler [${SENDSMS}] prepared. CONTINUE"
+		"INFO: SMS handler [${SMS_HANDLER}] prepared. CONTINUE"
 else
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
-		"ERROR: SMS handler [${SENDSMS}] not prepared. EXIT"
+		"ERROR: SMS handler [${SMS_HANDLER}] not prepared. EXIT"
 	faillst="${receviers}"; vexit=1
 	echo -en "${succlst}  ###  ${faillst}"
 	exit "${vexit}"
@@ -170,7 +182,7 @@ else
 		((n+=1))
 		write_log -f "${SENDSMS_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending SMS to [${x}] ..."
-		result=$( ${SENDSMS} "${x}" "${content}" 2>&1 )
+		result=$( ${SMS_HANDLER} "${x}" "${content}" 2>&1 )
 		if [ "$?" == "0" ]; then
 			((t_s+=1))
 			succlst="${x} ${succlst}"
