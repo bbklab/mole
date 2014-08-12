@@ -1,1 +1,0 @@
-/databuild/esop_codes/esop.spec

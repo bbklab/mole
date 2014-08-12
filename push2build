@@ -22,7 +22,8 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 destdir="/data/esop_codes"
-specfile="${basedir}/esop.spec"
+spec5file="${basedir}/esop_rhel5.spec"
+spec6file="${basedir}/esop_rhel6.spec"
 initfile="${basedir}/esop.init"
 name="mole"
 version="1.0"
@@ -55,8 +56,10 @@ check_rc "copy to ${destdir}/${filename##*/}"
 check_rc "remove local $filename"
 
 # publish agent spec file
-/bin/cp -f "${specfile}" "${destdir}/"
-check_rc "copy to ${destdir}/${specfile##*/}"
+/bin/cp -f "${spec5file}" "${destdir}/"
+check_rc "copy to ${destdir}/${spec5file##*/}"
+/bin/cp -f "${spec6file}" "${destdir}/"
+check_rc "copy to ${destdir}/${spec6file##*/}"
 
 # publish agent init file
 /bin/cp -f "${initfile}" "${destdir}/"

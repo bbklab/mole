@@ -2,7 +2,13 @@
 
 path=$(cd $(dirname $0) && pwd)
 basedir=${path%/*}
-specfile="${path}/esop.spec"
+
+specfile=
+if (uname -r | grep -q el5)>/dev/null 2>&1; then
+	specfile="${path}/esop_rhel5.spec"
+elif (uname -r | grep -q el6)>/dev/null 2>&1; then
+	specfile="${path}/esop_rhel6.spec"
+fi
 
 
 clean(){
@@ -29,11 +35,11 @@ fi
 
 esop_dir="/usr/local/esop"
 if [ -d "${esop_dir}" ]; then
-	cp -a "${esop_dir}" "${path}/SOURCES/${name}-${version}"
-	rm -rf "${esop_dir}"
+	/bin/cp -a "${esop_dir}" "${path}/SOURCES/${name}-${version}"
+	/bin/rm -rf "${esop_dir}"
 	cd "${path}/SOURCES/"
-	tar -czf "${path}/SOURCES/$tgzname" "${name}-${version}"
-	rm -rf "${path}/SOURCES/${name}-${version}"
+	/bin/tar -czf "${path}/SOURCES/$tgzname" "${name}-${version}"
+	/bin/rm -rf "${path}/SOURCES/${name}-${version}"
 else
 	echo "${esop_dir} not prepared, mkrpm exit."
 	exit  1
@@ -44,17 +50,17 @@ cat > ~/.rpmmacros <<EOF
 %debug_package %{nil}
 EOF
 
-cp "${path}/${name}.spec" "${path}"/SPECS/
+/bin/cp "${specfile}" "${path}/SPECS/${name}.spec"
 if [ ! -f "${path}/SPECS/${name}.spec" ]; then
 	echo "${name}.spec file not ready. exit"
 	exit 1
 fi
-cp "${path}/${name}.init" "${path}"/SOURCES/
+/bin/cp "${path}/${name}.init" "${path}/SOURCES/${name}.init"
 if [ ! -f "${path}/SOURCES/${name}.init" ]; then
 	echo "${name}.init file not ready. exit"
 	exit 1
 fi
 
-/usr/bin/rpmbuild -bb "${path}"/SPECS/${name}.spec 
+/usr/bin/rpmbuild -bb "${path}/SPECS/${name}.spec"
 echo;echo;
 find "${path}"/RPMS/ -type f -iname "*.rpm" -print
