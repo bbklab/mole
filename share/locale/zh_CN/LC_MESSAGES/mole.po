@@ -436,19 +436,19 @@ msgid "according by plugin's policy settings,"
 msgstr "根据该插件的策略设定,"
 
 msgid "will continuously send mail noitfy,"
-msgstr "智能运维平台将连续向您发送相同级别的邮件,"
+msgstr "智能运维平台将<font color=#6dbb4a><strong>连续</strong></font>向您发送相同级别的邮件,"
 
 msgid "will send no more than ${m} mail notify, now for the first time,"
-msgstr "智能运维平台最多向您连续发送${m}次相同级别的邮件，本邮件为第1次,"
+msgstr "智能运维平台最多向您<font color=#6dbb4a><strong>连续发送${m}次</strong></font>相同级别的邮件，本邮件为<font color=#6dbb4a><strong>第1次</strong></font>,"
 
 msgid "will send no more than ${m} mail notify, now for the ${n} times,"
-msgstr "智能运维平台最多向您连续发送${m}次相同级别的邮件，本邮件为第${n}次,"
+msgstr "智能运维平台最多向您<font color=#6dbb4a><strong>连续发送${m}次</strong></font>相同级别的邮件，本邮件为<font color=#6dbb4a><strong>第${n}次</strong></font>,"
 
 msgid "will send no more than ${m} mail notify, now for the last time,"
-msgstr "智能运维平台最多向您连续发送${m}次相同级别的邮件，本邮件为最后一次,"
+msgstr "智能运维平台最多向您<font color=#6dbb4a><strong>连续发送${m}次</strong></font>相同级别的邮件，本邮件为<font color=#6dbb4a><strong>最后一次</strong></font>,"
 
 msgid "mail notify range: ${hit_range_detail}"
-msgstr "发送时间范围: ${hit_range_detail}"
+msgstr "发送时间范围: <font color=#6dbb4a><strong>${hit_range_detail}</strong></font>"
 
 ### bin/checkconf
 
