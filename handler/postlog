@@ -914,6 +914,7 @@ sub genjson_config() {
 	'sendmail'		=> '',
 	'postlog'		=> '',
 	'takesnap'		=> '',
+	'sendsms'		=> '',
 	'clear_overdue'		=> '',
 	'log_rotate'		=> '',
 	'self_check'		=> '',
@@ -1161,6 +1162,28 @@ sub genjson_config() {
   }
   my $json_takesnap = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_takesnap);
 
+  my %raw_sendsms = (
+	'sms_handler'	=> '',
+	'cnpc_smspath'	=> '',
+	'sms_maxlen'	=> '',
+  );
+  open $fh, "$mole view sms 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_sendsms) {
+			if(/\A\s*$key\s+(.+)\Z/){
+				$raw_sendsms{$key} = $1;
+				goto POST_END;
+			}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_sendsms = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_sendsms);
+
   my %raw_clear_overdue = (
 	'frequency'		=> '',
 	'exec_tmout'		=> '',
@@ -1303,6 +1326,7 @@ sub genjson_config() {
 	'sendmail'		=> $json_sendmail,
 	'postlog'		=> $json_postlog,
 	'takesnap'		=> $json_takesnap, 
+	'sendsms'		=> $json_sendsms,
 	'clear_overdue'		=> $json_clear_overdue,
 	'log_rotate'		=> $json_log_rotate,
 	'self_check'		=> $json_self_check,
