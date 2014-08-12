@@ -3766,8 +3766,11 @@ process_plugin() {
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${part1}" "sms" "${sms_policy}"); then
 			write_log ${jid} ${plugin_name} "sms notify is allowed by nower"\
 					"heapup-notify number (${hit_rtime_detail}), CONTINUE"
+			local sms_content=
+			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
+			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${output}" 2>&1 )
+						-i "${sms_content}" 2>&1 )
 			result_smslst=" ${s_alert} ### ${result_smslst} "
 
 			# add heapupnotify count for [plugin]-[sms] level=[part1]
@@ -4008,8 +4011,11 @@ process_plugin_timeout() {
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
 			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
 				"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+			local sms_content=
+			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
+			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-								-i "${output}" 2>&1 )
+								-i "${sms_content}" 2>&1 )
 			result_smslst=" ${s_alert} ### ${result_smslst} " 
 
 			# add heapupnotify count for [plugin]-[sms] level=[tmout]
@@ -4145,8 +4151,11 @@ process_sysoverload() {
 	if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
 		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
 				"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+		local sms_content=
+		sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
+		sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${output}" 2>&1 )
+						-i "${sms_content}" 2>&1 )
 		result_smslst=" yes ### ${result_smslst} " 
 
 		# add heapupnotify count for [plugin]-[sms] level=[ovld]
@@ -4266,8 +4275,11 @@ process_kidsexceed() {
 	if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
 		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
 					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+		local sms_content=
+		sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
+		sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${output}" 2>&1 )
+						-i "${sms_content}" 2>&1 )
 		result_smslst=" yes ### ${result_smslst} "
 
 		# add heapupnotify count for [plugin]-[sms] level=[kids]
@@ -4409,8 +4421,11 @@ process_plugin_misform() {
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
 			write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
 					"heapup-notify number (${hit_rtime_detail}), CONTINUE";
+			local sms_content=
+			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
+			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-							-i "${output}" 2>&1 )
+							-i "${sms_content}" 2>&1 )
 			result_smslst=" yes ### ${result_smslst} "
 
 			# add heapupnotify count for [plugin]-[sms] level=[misform]
