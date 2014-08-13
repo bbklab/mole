@@ -1034,7 +1034,7 @@ config_psysload() {
                         	cfg_value="${cfg_value},${cpunum}"
                 	fi  
         	fi  
-		if [ -z "${cfg_value}" ] || [ ! -z "${cfg_value//[0-9.]}" ]; then
+		if [ -z "${cfg_value}" ]; then
 			cfg_value="10,15"
 		fi
 	fi
