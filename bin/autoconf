@@ -140,9 +140,9 @@ ARRAY_EMCOMP=(
   # comp	   # comp_regex									# min_running	 # max_conn
   "syslog"	   "/usr/local/eyou/mail/app/bin/em_syslogd"							"1" 	""
   "rsyslogd"	   "/usr/local/eyou/mail/opt/sbin/rsyslogd.+rsyslogd.conf.+em_rsyslogd.pid.*"			"1" 	""
-  "mysql"  	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1" 	"300"
-  "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"300"
-  "mysql_log"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"	"300"
+  "mysql"  	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my.cnf.+em_mysql.pid.*" 		"1" 	"300,500"
+  "mysql_index"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_index.cnf.+em_mysql_index.pid.*" "1"	"300,500"
+  "mysql_log"	   ".*/mysqld.*--defaults-file=/usr/local/eyou/mail/etc/mysql/my_log.cnf.+em_mysql_log.pid.*"	"1"	"300,500"
   "mproxy"	   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy.pid.*"			"1"	""
   "mproxy_index"   "/usr/local/eyou/mail/opt/mproxy/libexec/mysql-proxy.*em_mproxy_index.pid.*"			"1"	""
   "memcache_session" "/usr/local/eyou/mail/opt/bin/memcached.+memcache_session.pid.*"				"1"	""
@@ -163,17 +163,17 @@ ARRAY_EMCOMP=(
   "filed"	   "/usr/local/eyou/mail/app/bin/em_filed.*"							"3"	""
   "filedrepd"	   "/usr/local/eyou/mail/app/bin/em_filedrepd.*"						"1"	""
   "filedagent"	   "/usr/local/eyou/mail/app/bin/em_filedagent.*"						"3"	""
-  "httpd"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*"						"3"	"1000"
-  "nginx"	   "nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"						"1"	"500"
+  "httpd"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*"						"3"	"1000,1200"
+  "nginx"	   "nginx.*/usr/local/eyou/mail/opt/sbin/nginx.*"						"1"	"500,700"
   "httpd_web"	   "/usr/local/eyou/mail/opt/bin/httpd.+start.*" 						"3" 	"500"
   "bounce"	   "/usr/local/eyou/mail/app/bin/em_bounce"							"3"	""
   "local"	   "/usr/local/eyou/mail/app/bin/em_local"							"3"	""
   "remote"	   "/usr/local/eyou/mail/app/bin/em_remote"							"3"	""
   "mlist"	   "/usr/local/eyou/mail/app/bin/em_mlist"							"3"	""
-  "smtp"	   "/usr/local/eyou/mail/app/bin/em_smtpd"							"6"	"100"
-  "pop"		   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
-  "pop3"	   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300"
-  "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"150"
+  "smtp"	   "/usr/local/eyou/mail/app/bin/em_smtpd"							"6"	"100,200"
+  "pop"		   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300,500"
+  "pop3"	   "/usr/local/eyou/mail/app/bin/em_pop3d"							"6"	"300,500"
+  "imap"	   "/usr/local/eyou/mail/app/bin/em_imapd"							"6"	"150,200"
   "cleanup"	   "/usr/local/eyou/mail/app/bin/em_cleanup.*"							"2"	""
   "qclean"	   "/usr/local/eyou/mail/app/bin/em_qclean.*" 							"3" 	""
   "virusd"	   ""												""	""
@@ -182,7 +182,7 @@ ARRAY_EMCOMP=(
 # ARRAY EMCOMP SPECIAL
 ARRAY_EMCOMP_SPECIAL=(
   # 5.0.4
-  "mysql"	   ".*/mysqld.*--datadir=/usr/local/eyou/mail/data/mysql.*mysql.pid.*"				"1"	"300"
+  "mysql"	   ".*/mysqld.*--datadir=/usr/local/eyou/mail/data/mysql.*mysql.pid.*"				"1"	"300,500"
   # >=8.1.0.4
   "phpd"	   "/usr/local/eyou/mail/opt/bin/php.+bin/em_phpd.*"						"6"	""
   "syslog"	   "/usr/local/eyou/mail/bin/em_syslogd"							"1" 	""
@@ -193,9 +193,9 @@ ARRAY_EMCOMP_SPECIAL=(
   "local"	   "/usr/local/eyou/mail/bin/em_local"								"3"	""
   "remote"	   "/usr/local/eyou/mail/bin/em_remote"								"3"	""
   "mlist"	   "/usr/local/eyou/mail/bin/em_mlist"								"3"	""
-  "smtp"	   "/usr/local/eyou/mail/bin/em_smtpd"								"6"	"100"
-  "pop"		   "/usr/local/eyou/mail/bin/em_pop3d"								"6"	"300"
-  "imap"	   "/usr/local/eyou/mail/bin/em_imapd"								"6"	"150"
+  "smtp"	   "/usr/local/eyou/mail/bin/em_smtpd"								"6"	"100,200"
+  "pop"		   "/usr/local/eyou/mail/bin/em_pop3d"								"6"	"300,500"
+  "imap"	   "/usr/local/eyou/mail/bin/em_imapd"								"6"	"150,200"
   "cleanup"	   "/usr/local/eyou/mail/bin/em_cleanup.*"							"2"	""
 )
 
@@ -759,8 +759,8 @@ config_pcpu_usage() {
 	local rc=0
 
         local plugin="cpu_usage"
-        local cfg1="uplimit"  cfg_value1="75"  cfg2="wa_uplimit" cfg_value2="20"
-	local cfg3="sy_uplimit"  cfg_value3="30"  cfg4="us_uplimit"  cfg_value4="50"
+        local cfg1="uplimit"  cfg_value1="75,85"  cfg2="wa_uplimit" cfg_value2="20,30"
+	local cfg3="sy_uplimit"  cfg_value3="30,50"  cfg4="us_uplimit"  cfg_value4="50,70"
 
         ${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
@@ -807,7 +807,7 @@ config_pdisk_space() {
 	local plugin="disk_space"
 	local file="/etc/mtab"
 	local cfg1="fstype"  cfg_value1="ext2 ext3 ext4"  cfg2="exclude_mpoint"  cfg_value2=
-	local cfg3="space_pct"  cfg_value3="90"  cfg4="inode_pct"  cfg_value4="90"
+	local cfg3="space_pct"  cfg_value3="90,95"  cfg4="inode_pct"  cfg_value4="90,95"
 
 	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		if [ "$(awk '($2=="/boot"){print $2}' "${file}" 2>&-)" != "" ]; then
@@ -830,7 +830,7 @@ config_pdisk_iostat() {
 
 	local plugin="disk_iostat"
 	local file="/etc/mtab"
-	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="70"
+	local cfg1="dev_list"  cfg_value1=  cfg2="util_uplimit"  cfg_value2="70,85"
 
 	if [ -f "${file}" ] && [ -s "${file}" ]; then
 		local devices="$(awk '($3=="ext2" || $3=="ext3" || $3=="ext4") {print $1}' "${file}" 2>&-)"
@@ -864,13 +864,13 @@ config_pmemory() {
 	if [ -f "${file}" ]; then
 		local mem_size=$(awk '/^MemTotal:/ {print $2/1024/1024;exit;}' "${file}" 2>&-)
 		if [ -z "${mem_size}" ] || [ ! -z "${mem_size//[0-9.]}" ]; then
-			cfg_value2=10
+			cfg_value2="10,30"
 		elif [ "$(echo "${mem_size} >= 16" | bc 2>&-)" == "1" ]; then
-                	cfg_value2=10
+                	cfg_value2="10,30"
         	elif [ "$(echo "${mem_size} >=  8" | bc 2>&-)" == "1" ]; then
-                	cfg_value2=20
+                	cfg_value2="20,40"
         	else
-                	cfg_value2=30
+                	cfg_value2="30,50"
         	fi
 	fi
 
@@ -1020,20 +1020,22 @@ config_psysload() {
 	if [ -f "${file}" ]; then
 		local cpunum=$(awk '(/^processor\s*\d*.*$/){x++} END{print x}' "${file}" 2>&-)
 		if ! is_int "${cpunum}"; then
-			cfg_value=10
+			cfg_value="10,15"
 		else
                 	if [ ${cpunum} -le 4 ]; then
-                        	cfg_value=4
+                        	cfg_value="4,8"
                 	elif [ ${cpunum} -le 8 ]; then
-                        	cfg_value=${cpunum}
+                        	cfg_value="${cpunum},$( echo "${cpunum}*1.5" | bc 2>&-)"
                 	elif [ ${cpunum} -le 16 ]; then
-                        	cfg_value=$( echo "${cpunum} * 0.7" | bc 2>&-)
+                        	cfg_value="$( echo "${cpunum} * 0.7" | bc 2>&-)"
+                        	cfg_value="${cfg_value},${cpunum}"
                 	else
                         	cfg_value=$( echo "${cpunum} * 0.5" | bc 2>&-)
+                        	cfg_value="${cfg_value},${cpunum}"
                 	fi  
         	fi  
 		if [ -z "${cfg_value}" ] || [ ! -z "${cfg_value//[0-9.]}" ]; then
-			cfg_value=10
+			cfg_value="10,15"
 		fi
 	fi
 	
@@ -1054,7 +1056,7 @@ config_ptcp_conn() {
 	if [ -f "${sshd_file}" ] && [ -s "${sshd_file}" ]; then
 		local listen_port="$(awk '($0~/^[ \t]*#/){next;} ($1~/^Port\>/){print $2;exit;}' "${sshd_file}" 2>&-)"
 		[ -z "${listen_port}" ] && listen_port="22"
-		cfg_value="${listen_port}:50"
+		cfg_value="${listen_port}:50,70"
 	fi
 
 	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
@@ -1096,7 +1098,7 @@ config_ptraffic() {
 	local plugin="traffic"
 	local cfg="ifdev_lst"  cfg_value=
 	
-	local speed_limit="30M/s:50M/s:0:0"
+	local speed_limit="30M/s,50M/s:50M/s,70M/s:0:0"
 	local netdev=$( get_inetorder 2>&- | awk '{print $1;exit;}' )
 	
 	if [ ! -z "${netdev}" ]; then
@@ -1339,7 +1341,7 @@ config_pemp_mailqueue() {
 	local rc=0
 
 	local plugin="emp_mailqueue"
-	local cfg="uplimit"	cfg_value="1000"
+	local cfg="uplimit"	cfg_value="1000,1500"
 
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
