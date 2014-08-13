@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+
+# === LOAD GETTEXT.SH FILE
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo -en "{unkn}:{str}:{load [/usr/bin/gettext.sh] failed with status $rc}"
+                exit 3
+        }   
+else
+        echo -en "{unkn}:{str}:{[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit}"
+        exit 3
+fi
+
+# === LOAD INCLUDE FILE
+if [ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ]; then
+        source ${BASE_DIR}/bin/include 2>&- 
+else    
+        echo -en "{unkn}:{str}:{include file not exists or empty}"
+        exit 3
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="esop_appbackup"
+else    
+        echo -en "{unkn}:{str}:{locale directory [${LOCALE_DIR}] not exist or accessable, exit}"
+        exit 3
+fi
+
+
+# === SET GLOBAL LOCALE
+glocale=$(get_locale esop_dbbackup)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+fi
+
+
+show_help(){
+cat <<EOF
+Arguments:   {d|data|h|help}  {}
+
+Usage:  
+
+Output:
+
+EOF
+exit 0;
+}
+
+MODE=0
+[ "$1" == "data" -o "$1" == "d" ] && MODE=1
+[ "$1" == "help" -o "$1" == "h" ] && show_help;
+
+# Return Codes
+STATE_SUCC=0
+STATE_WARN=1
+STATE_CRIT=2
+STATE_UNKN=3
+STATE_NOOP=4
+STATE_NOTIFY=5
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=""        ### { ok | warn | crit | unkn | noop | notify }
+TYPE=""         ### { str| file }
+CONTENT=""      ### { strings | /path/to/result.file }
+
+# Read plugin config value here
+backup_savedir=$(read_mole_config esop_dbbackup backup_savedir)
+
+# if null or invalid set default.
+
+# check function here
+check() {
+
+  if [ -z "${backup_savedir}" ]; then
+        EXIT_STATUS=${STATE_UNKN};
+        LEVEL="unkn";
+        TYPE="str";
+        CONTENT="$(gettext "backup_savedir: not defined.")"
+        return
+  fi
+
+  if [ -d "${backup_savedir}" ] && [ -w "${backup_savedir}" ]; then
+	:
+  else
+	EXIT_STATUS=${STATE_UNKN}
+	LEVEL="unkn"
+	TYPE="str"
+	CONTENT="$(eval_gettext "directory: [\${backup_savedir}] not exist or accessable")"
+	return
+  fi
+
+  local result=
+  local critnum=0
+
+  if [ ${critnum} -gt 0 ]; then
+	EXIT_STATUS=${STATE_CRIT};
+	LEVEL="crit";
+	TYPE="str";
+	CONTENT=
+  elif 
+	EXIT_STATUS=${STATE_SUCC};
+  	LEVEL="succ";
+  	TYPE="str";
+	CONTENT=
+  fi
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}
