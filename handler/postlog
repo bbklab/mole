@@ -849,7 +849,8 @@ sub genjson_plugin() {
 
 	# set key: {conf_info}
 	## %conf_info
-	$single_plugin{'conf_info'} = \%conf_info;
+	my $json_confinfo = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%conf_info);
+	$single_plugin{'conf_info'} = \$json_confinfo;
 
 	# convert yes|no  to 1|0
 	$single_plugin{'enable'}  = (defined $single_plugin{'enable'} && $single_plugin{'enable'} eq 'yes') ? 1 : 0;
