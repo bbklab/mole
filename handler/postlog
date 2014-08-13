@@ -114,7 +114,7 @@ getopts('t:p:j:o:h:e:s:f:r:d',\%opts);
 ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = @opts{'t','p','j','o','h','e','s','f','r','d'};
 
 # important to check utf8 flag on/off, or lead to json encode problems
-foreach my $chinese ($output,$houtput){
+foreach my $chinese ($output,$houtput,$eml,$sms){
   unless (Encode::is_utf8($chinese)){
     	Encode::_utf8_on($chinese);
   }
@@ -494,7 +494,7 @@ sub genjson_post {
 		$s_mail =~ s/\A\s+//;
 		if ($s_mail eq 'banned') {
 			$mailflag = 2;
-			my $mail_banreason = (split(/\s+###/,$eml))[1];
+			$mail_banreason = (split(/\s+###/,$eml))[1];
 		} else {
 			$mailflag = ($s_mail eq 'yes') ? 1 : 0;
 			my ($succeml,$faileml) = (split(/\s+###/,$eml))[1,2];
@@ -514,7 +514,7 @@ sub genjson_post {
 		$s_sms =~ s/\A\s+//;
 		if ($s_sms eq 'banned') {
 			$smsflag = 2;
-			my $sms_banreason = (split(/\s+###/,$sms))[1];
+			$sms_banreason = (split(/\s+###/,$sms))[1];
 		} else {
 			$smsflag = ($s_sms eq 'yes') ? 1 : 0;
   			my ($succsms,$failsms) = (split(/\s+###/,$sms))[1,2];
