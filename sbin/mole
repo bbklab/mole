@@ -446,17 +446,17 @@ else
 					add_runlock_on_pid_notexist ${plugin_name}
 					[ "$?" == "0" ] && {
 						jobid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
-						if [ -z "$( echo "${plugin_name}" | grep -E -o "^mole_" )" ]; then
-							process_plugin ${plugin_name} "${jobid}" &
-							_pid=$!
-							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
-							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-1"\
-								"${plugin_name}, save plugin daemon pid [${_pid}]";
-						else
+						if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 							process_inner_plugin ${plugin_name} "${jobid}" &
 							_pid=$!
 							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
 							write_log -f "${INNER_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-2"\
+								"${plugin_name}, save plugin daemon pid [${_pid}]";
+						else
+							process_plugin ${plugin_name} "${jobid}" &
+							_pid=$!
+							echo "${_pid}" > "${RUN_DIR}/${plugin_name}.pid"
+							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-1"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						fi
 					}
@@ -731,7 +731,7 @@ case "$#" in
 		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### is plugin
                         init_plugin  "$arg2"
 		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
-			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then    ### is inner plugin
+			if [[ "${arg2}" =~ ${INNER_BEGIN} ]]; then 		### is inner plugin
 				init_plugin "$arg2"
 			fi
 		else
@@ -829,7 +829,7 @@ case "$#" in
 		elif [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then 	### is plugin
 			. ${REPORT_SH} "$arg2"
 		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
-			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then    ### is inner plugin
+			if [[ "${arg2}" =~ ${INNER_BEGIN} ]]; then 		### is inner plugin
 				. ${REPORT_SH} "$arg2"
 			fi
 		fi
@@ -840,7 +840,7 @@ case "$#" in
 			[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
 			. ${REPORT_SH} -f "$arg2" -i "${output}"
 		elif [ "$(read_mole_section "$arg2")" == "$arg2" ]; then
-			if [ ! -z "$( echo "${2}" | grep -E -o "^mole_" )" ]; then	### is inner plugin
+			if [[ "${arg2}" =~ ${INNER_BEGIN} ]]; then		### is inner plugin
 				output=$( eval "${INNER_DIR}/${2}" 2>&1 )
 				[ "${#output}" -gt 131072 ] && output="${output:0:131000}}"
 			fi
