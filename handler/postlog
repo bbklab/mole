@@ -816,7 +816,9 @@ sub genjson_plugin() {
 	}
 	if (defined $mail_policy && $mail_policy ne '') {
 		$single_plugin{'mailplc_range'} = &hrformat_policy($mail_policy,'range');
+		&log("DEBUG: $logfrom plugin-config [$plugin.mailplc_range]=[$single_plugin{'mailplc_range'}]") if $debug;
 		$single_plugin{'mailplc_rtime'} = &hrformat_policy($mail_policy,'rtime');
+		&log("DEBUG: $logfrom plugin-config [$plugin.mailplc_rtime]=[$single_plugin{'mailplc_rtime'}]") if $debug;
 	}
 
 	# add key:  smsplc_[range|rtime]_
@@ -844,13 +846,16 @@ sub genjson_plugin() {
 	}
 	if (defined $sms_policy && $sms_policy ne '') {
 		$single_plugin{'smsplc_range'} = &hrformat_policy($sms_policy,'range');
+		&log("DEBUG: $logfrom plugin-config [$plugin.smsplc_range]=[$single_plugin{'smsplc_range'}]") if $debug;
 		$single_plugin{'smsplc_rtime'} = &hrformat_policy($sms_policy,'rtime');
+		&log("DEBUG: $logfrom plugin-config [$plugin.smsplc_rtime]=[$single_plugin{'smsplc_rtime'}]") if $debug;
 	}
 
 	# set key: {conf_info}
 	## %conf_info
 	my $json_confinfo = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%conf_info);
-	$single_plugin{'conf_info'} = \$json_confinfo;
+	$single_plugin{'conf_info'} = $json_confinfo;
+ 	&log("DEBUG: $logfrom plugin-config [$plugin.conf_info]=[$single_plugin{'conf_info'}]") if $debug;
 
 	# convert yes|no  to 1|0
 	$single_plugin{'enable'}  = (defined $single_plugin{'enable'} && $single_plugin{'enable'} eq 'yes') ? 1 : 0;
