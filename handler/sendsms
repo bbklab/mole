@@ -160,6 +160,17 @@ if [ -z "${SMS_HANDLER}" ]; then
 elif [ -f "${SMS_HANDLER}" ] && [ -x "${SMS_HANDLER}" ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
 		"INFO: SMS handler [${SMS_HANDLER}] prepared. CONTINUE"
+	sms_dirpath=$(dirname ${SMS_HANDLER} 2>&-)
+	if cd $sms_dirpath >/dev/null 2>&1; then
+		write_log -f "${SENDSMS_LOG}" "[${from}]"\
+			"INFO: changed into ${sms_dirpath}. CONTINUE"
+	else
+		write_log -f "${SENDSMS_LOG}" "[${from}]"\
+			"ERROR: change directory into [${sms_dirpath}] failed. EXIT"
+		faillst="${receviers}"; vexit=1
+		echo -en "${succlst}  ###  ${faillst}"
+		exit "${vexit}"
+	fi
 else
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
 		"ERROR: SMS handler [${SMS_HANDLER}] not prepared. EXIT"
@@ -167,6 +178,20 @@ else
 	echo -en "${succlst}  ###  ${faillst}"
 	exit "${vexit}"
 fi
+
+charset=$(read_mole_config sms character_set)
+envlang=
+if [ "${charset}" == "gbk" ] || [ "${charset}" == "gb2312" ] ; then
+	envlang="zh_CN.GB2312"
+	content="$(echo -e "${content}" | /usr/bin/iconv -f utf8 -t gbk 2>&-)"
+elif [ "${charset}" == "utf8" ]; then
+	envlang="en_US.UTF-8"
+else
+	envlang="zh_CN.GB2312"
+	content="$(echo -e "${content}" | /usr/bin/iconv -f utf8 -t gbk 2>&-)"
+fi
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: charset=[${charset}], set enviroment lang=[${sms_handler}]. CONTINUE"
 
 # sending sms
 t_s=0
@@ -182,7 +207,7 @@ else
 		((n+=1))
 		write_log -f "${SENDSMS_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending SMS to [${x}] ..."
-		result=$( ${SMS_HANDLER} "${x}" "${content}" 2>&1 )
+		result=$( LANG=${envlang} ${SMS_HANDLER} "${x}" "${content}" 2>&1 )
 		if [ "$?" == "0" ]; then
 			((t_s+=1))
 			succlst="${x} ${succlst}"

@@ -20,6 +20,7 @@ Requires:		curl >= 7.15.5, bc >= 1.06
 Requires:		findutils >= 4.2.27, gettext >= 0.14.6
 Requires:		chkconfig >= 1.3.30.1
 Requires:		redhat-lsb >= 3.1
+Requires:		glibc-common >= 2.5
 Requires(pre):		coreutils >= 5.97
 Requires(post): 	chkconfig, coreutils >= 5.97
 Requires(preun): 	chkconfig, initscripts
