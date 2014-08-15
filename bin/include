@@ -3074,7 +3074,7 @@ check_runlock_on_pid_exist() {
 	local timeout_result=( $(timeout_ornot "${plugin_name}") )
 	if [ "${timeout_result[0]}" == "yes" ]; then
 		write_log -f ${logfile} "CKLCK000 MOLE plugin"\
-			"[${plugin_name}] running timeout (${timeout_result[1]}s),"
+			"[${plugin_name}] running timeout (${timeout_result[1]}s),"\
 			"submit to timeout processing"
 		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
 		return 0
