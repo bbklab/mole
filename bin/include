@@ -4001,7 +4001,7 @@ process_plugin_timeout() {
 	local hit_range_detail=  hit_rtime_detail=
 	# check time range of sms notify policy
 	if hit_range_detail=$(hit_policy_range_ornot "${sms_policy}"); then
-		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"
+		write_log -f "${MOLE_LOG}" "${jid} ${plugin_name} sms notify is allowed by nower"\
 							"time range (${hit_range_detail}), CONTINUE";
 		# check rtime of sms notify policy
 		if hit_rtime_detail=$(hit_policy_rtime_ornot "${plugin_name}" "${level}" "sms" "${sms_policy}"); then
