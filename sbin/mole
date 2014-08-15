@@ -286,10 +286,10 @@ else
   		exit 1
 	else
 		echo -e "[$(echo_green "$(gettext "succeed!")")]"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script precheck return succeed[rc=${rc}]. continue..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE script precheck return succeed[rc=${rc}]. continue..."
 	fi
 
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE starting ..."
+	write_log -f "${MOLE_LOG}" "START000 MOLE starting ..."
 
 	# === CHECK id/parter_id/name/receviers
 	gettext "2. verifying id/name/receviers ... "
@@ -316,17 +316,17 @@ else
 	result=$( eval ${CHECKCONF_SH} 2>&1 )
 	rc=$?
 	if [ "$rc" == "2" ]; then	# crit => exit
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return failed[rc=${rc}]. exit"
+		write_log -f "${MOLE_LOG}" "START000 MOLE script checkconf return failed[rc=${rc}]. exit"
   		echo -e "\n$(gettext "Check Config Result: Sorry, Config File Contains Some Mistakes") \n"
   		echo -e "${result}"
   		exit 1
 	elif [ "$rc" == "1" ]; then	# warn => print warnnings, continue
 		echo -e "[$(echo_yellow "warnning!")]"
 		echo -e "${result}"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
 	elif [ "$rc" == "0" ]; then	# succ => continue
 		echo -e "[$(echo_green "$(gettext "succeed!")")]"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE script checkconf return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === MAKEDIR ON Start
@@ -334,13 +334,13 @@ else
 	result=$( eval ${MAKEDIR_SH} 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir return failed[rc=${rc}]. exit"
+		write_log -f "${MOLE_LOG}" "START000 MOLE script makedir return failed[rc=${rc}]. exit"
 		echo -e "\n$(gettext "Create Directory Result: Sorry, Some Mistakes Occured.") \n"
 		echo -e "${result}"
 		exit 1
 	else
 		echo -e "[$(echo_green "$(gettext "succeed!")")]"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir return succeed[rc=${rc}]. continue..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE script makedir return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === DIRECTORY CHECK ON Start
@@ -348,28 +348,28 @@ else
 	result=$( eval "${MAKEDIR_SH} -c" 2>&1 )
 	rc=$?
 	if [ "$rc" != "0" ]; then
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir -c return failed[rc=${rc}]. exit"
+		write_log -f "${MOLE_LOG}" "START000 MOLE script makedir -c return failed[rc=${rc}]. exit"
   		echo -e "\n$(gettext "DirCheck Result: Sorry, Directories not prepared") \n"
   		echo -e "${result}\n"
   		echo -e "$(eval_gettext "Try to Run: \${MAKEDIR_SH}")\n"
   		exit 1
 	else
 		echo -e "[$(echo_green "$(gettext "succeed!")")]"
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE script makedir -c return succeed[rc=${rc}]. continue..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE script makedir -c return succeed[rc=${rc}]. continue..."
 	fi
 
 	# === Execute Inner Plugins ON Start
 	gettext "6. running inner plugins       ... "
 	for plugin_name in mole_clear_overdue mole_log_rotate
 	do
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE executing inner plugins [${plugin_name}] ..."
+		write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [${plugin_name}] ..."
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
 	echo -e "[$(echo_green "$(gettext "succeed!")")]"
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE inner plugins execution done. details in ${INNER_LOG##*/}."
+	write_log -f "${MOLE_LOG}" "START000 MOLE inner plugins execution done. details in ${INNER_LOG##*/}."
 	
 	gettext "7. starting mole cron        ... "
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE starting mole core cron... "
+	write_log -f "${MOLE_LOG}" "START000 MOLE starting mole core cron... "
 
 	cd / >/dev/null 2>&1;
 	if [ "$?" != "0" ] || [ "$(pwd -P)" != "/" ]; then
@@ -411,7 +411,7 @@ else
 			list_running_plugin_section | while read rp
 			do
 				write_log -f "${MOLE_LOG}" "TRAP0000 MOLE try to stop running plugin: [${rp}]"
-				stop_single_plugin "${rp}"
+				stop_single_plugin "${rp}" "TRAP0000"
 				clear_dead_lock_pid "${rp}"			
 			done
 			/bin/rm -f "${PID_FILE}" 1>&- 2>&-
@@ -430,7 +430,7 @@ else
 			list_running_plugin_section | while read rp
 			do
 				write_log -f "${MOLE_LOG}" "MIS00000 MOLE try to stop running plugin: [${rp}]"
-				stop_single_plugin "${rp}"
+				stop_single_plugin "${rp}" "START000"
 				clear_dead_lock_pid "${rp}" 
 			done
 			/bin/rm -f "${PID_FILE}" 1>&- 2>&-
@@ -483,7 +483,7 @@ else
 	### save daemon pid
 	echo $! > ${PID_FILE}
 	echo -e "[$(echo_green "$(gettext "succeed!")")]"
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE start finished, pid=[$!]"
+	write_log -f "${MOLE_LOG}" "START000 MOLE start finished, pid=[$!]"
 fi 
 
 }
@@ -506,20 +506,20 @@ stop_core_cron() {
   gettext "trying to stop mole ... "
   status=$( show_status 2>&1 )
   if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
-  	write_log -f "${MOLE_LOG}" "S0000000 MOLE stopping..."
+  	write_log -f "${MOLE_LOG}" "STOP0000 MOLE stopping..."
 
-	write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole core cron"
-	stopps_by_pidfile ${PID_FILE} ${max_wait}	# max_wait to ensure mole could caught singla TERM
+	write_log -f "${MOLE_LOG}" "STOP0000 MOLE stop mole core cron"
+	stopps_by_pidfile ${PID_FILE} ${max_wait} "STOP0000" # max_wait to ensure mole could caught singla TERM
 	rc=$?
 
 	case "$rc" in
 	"0")
 		echo_green "$(gettext " [OK]")"; echo
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole done"
+		write_log -f "${MOLE_LOG}" "STOP0000 MOLE stop mole done"
 		;;
 	*)
 		echo_red "$(gettext " [FAIL]")";echo
-		write_log -f "${MOLE_LOG}" "S0000000 MOLE stop mole return error(${rc})"
+		write_log -f "${MOLE_LOG}" "STOP0000 MOLE stop mole return error(${rc})"
 		;;
 	esac
 	
@@ -547,8 +547,8 @@ reload_core_cron(){
   status=$( show_status 2>&1 )
   if [ "$?" == "0" ]; then   ### mole is running      status: fake? is DANGEROUS ! ==> SKIP
   	read pid < "${PID_FILE}"
-	write_log -f "${MOLE_LOG}" "R0000000 MOLE Deamon is Running, PID: [${pid}]"
-	write_log -f "${MOLE_LOG}" "R0000000 MOLE Reloading Include File, Sending Signal 1 to MOLE Daemon: [${pid}]"
+	write_log -f "${MOLE_LOG}" "RELOAD00 MOLE Deamon is Running, PID: [${pid}]"
+	write_log -f "${MOLE_LOG}" "RELOAD00 MOLE Reloading Include File, Sending Signal 1 to MOLE Daemon: [${pid}]"
 	kill -1 "${pid}" 2>&-   ### send signal 1 to mole daemon.
 	echo_green "$(gettext "  [OK]")"; echo
 	return 0
