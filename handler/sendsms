@@ -191,12 +191,12 @@ else
 	content="$(echo -e "${content}" | /usr/bin/iconv -f utf8 -t gbk 2>&-)"
 fi
 write_log -f "${SENDSMS_LOG}" "[${from}]"\
-	"INFO: charset=[${charset}], set enviroment lang=[${sms_handler}]. CONTINUE"
+	"INFO: charset=[${charset}], set enviroment lang=[${envlang}]. CONTINUE"
 
 # sending sms
 t_s=0
 t_e=0
-t=$(echo -ne "${receviers}" | awk -v "RS=@" 'END{print --NR}')
+t=$(echo -ne "${receviers}" | awk -v "RS=[ \t]" 'END{print --NR}')
 n=0 result=
 if [ "$t" -le "0" ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
