@@ -3045,13 +3045,12 @@ add_runlock_on_pid_notexist(){
 # Check run-lock on plugin while pid file exists
 # Note:		called to check run-lock at next scan period begins
 #		previous plugin instance's pidfile is still exists (running ?)
-# Output: 	0 1 2 3 4
-# Steps:
-#   0: running, but timeout, submit to process_plugin_timeout()
-#   1: running, and NOT timeout, nothing did
-#   2: linkerror, nothing did
-#   3: nolock, nothing did
-#   4: unknown, nothing did
+# Note:
+#   running, but timeout, submit to process_plugin_timeout()
+#   running, and NOT timeout, nothing did
+#   linkerror, nothing did
+#   nolock, nothing did
+#   unknown, nothing did
 # Usage:	check_runlock_on_pid_exist  plugin_name
 # Example:	check_runlock_on_pid_exist  check_sysload   
 # LogFlag: 	CKLCK000
@@ -3076,23 +3075,19 @@ check_runlock_on_pid_exist() {
 		write_log -f ${logfile} "CKLCK000 MOLE plugin"\
 			"[${plugin_name}] running timeout (${timeout_result[1]}s),"\
 			"submit to timeout processing"
+		# this operation may blocking the whole mole-core-cron
 		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
-		return 0
 	else    
-		return 1	
 	fi
   elif [ "${lockinfo}" == "linkerror" ]; then
   	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
 		"[${plugin_name}] runlock status ${lockinfo}, nothing did";
-	return 2
   elif [ "${lockinfo}" == "nolock" ]; then
   	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
 		"[${plugin_name}] runlock status ${lockinfo}, nothing did";
-	return 3
   else
   	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
 		"[${plugin_name}] runlock status unknown (${lockinfo}), nothing did";
-	return 4
   fi
 
 }
