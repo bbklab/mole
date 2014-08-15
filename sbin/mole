@@ -390,6 +390,10 @@ else
 	#exec 1>&-
 	#exec 2>&-
 
+
+	### make sure every operation in while loop should NOT be blocked,
+	### also statement like [wait] which lead to blocking wait should NOT appears in this while loop
+	### or mole-core-cron will be blocked.
 	while : ; do
 		
 		### trap signal HUP to reload bin/include
@@ -435,16 +439,18 @@ else
 		fi
 		
 		### Important !!!  
-		### [wait] can NOT be placed in  "list|while ... done"  struct  !!!
-		### as wait will lead to mole haning up.
+		### [wait] can NOT be placed in  this loop !!!
+		### as wait will lead to mole-core-cron blocking wait for backgroup process to be finished.
+		### which will lead to plugin running one-by-one, not running concurrently you expectly.
 
 		list_enabled_plugin_section | while read plugin_name
 		do
 			clear_dead_lock_pid "${plugin_name}"
 			if [ "$(time2run_ornot "${plugin_name}")" == "yes" ]; then
 				if [ ! -s "${RUN_DIR}/${plugin_name}.pid" ]; then
+					# take care this operation may blocking
 					add_runlock_on_pid_notexist ${plugin_name}
-					[ "$?" == "0" ] && {
+					if [ "$?" == "0" ]; then
 						jobid=$( ${PLUTIL} unique_digest )      ### set random/unique jid
 						if [[ "${plugin_name}" =~ ${INNER_BEGIN} ]]; then
 							process_inner_plugin ${plugin_name} "${jobid}" &
@@ -459,8 +465,9 @@ else
 							write_log -f "${MOLE_LOG}" "${jobid} MOLE PLUGIN:::LAUCH-1"\
 								"${plugin_name}, save plugin daemon pid [${_pid}]";
 						fi
-					}
+					fi
 				else
+					# take care this operation may blocking
 					check_runlock_on_pid_exist ${plugin_name}
 				fi
 			fi
