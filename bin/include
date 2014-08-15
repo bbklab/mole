@@ -1902,7 +1902,6 @@ get_nextrun() {
 
 # Update timestamp of plugin last-run and next-run
 # Note: 	only called on plugin finished.
-# LogFlag:	CRIT0000 | 00000000
 #
 update_lastrun_and_nextrun() {
   local plugin_name=$1  jobid=$2	# get jobid only for log record
@@ -1934,7 +1933,7 @@ update_lastrun_and_nextrun() {
 	errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${now}"'/' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-		write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on"\
+		write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on"\
 			"[${plugin_name}] for [empty, add new lastrun item as nower: ${now}]"\
 			"error: [${errinfo}]";
 	else
@@ -1948,7 +1947,7 @@ update_lastrun_and_nextrun() {
 	errinfo=$( sed -i '/^'"${plugin_name}"'\>/c'"${plugin_name}"' '"${now}"'' ${TMP_LASTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+                write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
 			"[${plugin_name}] for [update lastrun time as nower: ${now}]"\
 			"error: [${errinfo}]";
 	else
@@ -1971,7 +1970,7 @@ update_lastrun_and_nextrun() {
         errinfo=$( sed -i '$s/$/\n'"${plugin_name}"' '"${nextrun}"'/' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+                write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
 			"[${plugin_name}] for [empty, add new nextrun item as ${nextrun} (${frequency} later)]"\
 			"error: [${errinfo}]";
 	else
@@ -1985,7 +1984,7 @@ update_lastrun_and_nextrun() {
         errinfo=$( sed -i '/^'${plugin_name}'\>/c'"${plugin_name}"' '"${nextrun}"'' ${TMP_NEXTRUN} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-                write_log -f "${logfile}" "CRIT0000 update_lastrun_and_nextrun on:"\
+                write_log -f "${logfile}" "$jobid update_lastrun_and_nextrun on:"\
 			"[${plugin_name}] for [update nextrun as ${nextrun}] (${frequency} later)"\
 			"error: [${errinfo}]";
 	else
@@ -2029,7 +2028,7 @@ update_status() {
 	echo "${n_record}" >> ${TMP_STATUS} 2>/dev/null
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-	       write_log -f "${logfile}" "E0000000 update_status on"\
+	       write_log -f "${logfile}" "$jobid update_status on"\
 			"[${plugin_name}] for [append newitem] error";
 	else
 	       write_log -f "${logfile}" "$jobid update_status on"\
@@ -2041,7 +2040,7 @@ update_status() {
 	errinfo=$( sed -i '/^'"${plugin_name}"'\>/d' ${TMP_STATUS} 2>&1 1>/dev/null )
 	rc=$?
 	if [ "${rc}" != "0" ]; then
-	       write_log -f "${logfile}" "E0000000 update_status on:"\
+	       write_log -f "${logfile}" "$jobid update_status on:"\
 			"[${plugin_name}] for [delete olditem error: ${errinfo}]";
 	else
 	       write_log -f "${logfile}" "$jobid update_status on:"\
@@ -2049,7 +2048,7 @@ update_status() {
 	       echo "${n_record}" >> ${TMP_STATUS} 2>/dev/null
 	       rc=$?
 	       if [ "${rc}" != "0" ]; then
-			write_log -f "${logfile}" "E0000000 update_status on:"\
+			write_log -f "${logfile}" "$jobid update_status on:"\
 				"[${plugin_name}] for [append newitem] error";
 	       else
 			write_log -f "${logfile}" "$jobid update_status on:"\
@@ -2158,7 +2157,7 @@ add_repeat_errcount() {
   fi
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${MOLE_LOG}" "E0000000 add_repeat_errcount (mode=${mode}) on:"\
+	write_log -f "${MOLE_LOG}" "$jobid add_repeat_errcount (mode=${mode}) on:"\
 		"[${plugin_name}] for [ ${repeat_errcount} +1 = ${num} ]"\
 		"error: [${errinfo}]";
   else
@@ -2194,7 +2193,7 @@ reset_repeat_errcount() {
 	write_log -f "${MOLE_LOG}" "$jobid reset_repeat_errcount on"\
 		"[${plugin_name}] success."
   else
-	write_log -f "${MOLE_LOG}" "E0000000 reset_repeat_errcount on"\
+	write_log -f "${MOLE_LOG}" "$jobid reset_repeat_errcount on"\
 		"[${plugin_name}] error: [${errinfo}]"
   fi
 
@@ -2312,7 +2311,7 @@ add_heapuprc_count() {
 			"[${plugin_name}] status switch from [${change_from}] to [${plugin_rc}] success."
 	fi
   else
-	write_log -f "${MOLE_LOG}" "E0000000 add_heapuprc_count (mode=${mode}) on"\
+	write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
 		"[${plugin_name}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] error: [${errinfo}]"
 	if [ -n "${change_from}" ]; then
 		write_log -f "${MOLE_LOG}" "$jobid add_heapuprc_count (mode=${mode}) on"\
@@ -2455,7 +2454,7 @@ add_heapupnotify_count() {
 	write_log -f "${MOLE_LOG}" "$jobid add_heapupnotify_count (mode=${mode}) on"\
 		"[${index}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] success."
   else
-	write_log -f "${MOLE_LOG}" "E0000000 add_heapupnotify_count (mode=${mode}) on"\
+	write_log -f "${MOLE_LOG}" "$jobid add_heapupnotify_count (mode=${mode}) on"\
 		"[${index}] [${plugin_rc}] for [ ${heaped_upcount} + 1 = ${num} ] error: [${errinfo}]"
   fi
 
@@ -2606,10 +2605,10 @@ gen_tmpfile() {
   rc=$?
   if [ "${rc}" == "0" ]; then
   	echo "${filepath}"
-	write_log -f "${MOLE_LOG}" "00000000 gen_tmpfile success:"\
+	write_log -f "${MOLE_LOG}" "$jobid gen_tmpfile success:"\
 		"[${filepath}]";
   else
-	write_log -f "${MOLE_LOG}" "E0000000 gen_tmpfile error:"\
+	write_log -f "${MOLE_LOG}" "$jobid gen_tmpfile error:"\
 		"touch tmpfile [${filepath}]"\
 		"return error: [${errinfo}]";
   fi
@@ -2653,10 +2652,10 @@ gen_lock() {
   errinfo=$( ln -s "${p_path}" "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" "E0000000 gen_lock on plugin:"\
+	write_log -f "${logfile}" "GELCKERR gen_lock on plugin:"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" "00000000 gen_lock on plugin:"\
+	write_log -f "${logfile}" "GELCKSUC gen_lock on plugin:"\
 		"[${plugin_name}] success.";
   fi
 
@@ -2712,7 +2711,7 @@ del_fpid() {
   errinfo=$( /bin/rm -f "${RUN_DIR}/${plugin_name}.pid" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" "E0000000 del_fpid on"\
+	write_log -f "${logfile}" "$jobid del_fpid on"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
 	write_log -f "${logfile}" "$jobid del_fpid on"\
@@ -2827,13 +2826,13 @@ stopps_by_pid() {
   local pid=$1 sig=$2 jobid=$3 cmdline=
   
   if ! is_int "${pid}"; then
-        write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pid error:"\
+        write_log -f "${MOLE_LOG}" "$jobid stopps_by_pid error:"\
                 "argument invalid, pid=[${pid}] must be interger";
         return 1
   fi
 
   if [ "${sig}" != "15" ] && [ "${sig}" != "9" ]; then
-	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pid error:"\
+	write_log -f "${MOLE_LOG}" "$jobid stopps_by_pid error:"\
 		"argument invalid, sig=[${sig}] must be 15 or 9";
 	return 1
   else
@@ -2957,7 +2956,7 @@ stopps_by_pidfile() {
 		return 4
 	fi
   else
-	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pidfile error:"\
+	write_log -f "${MOLE_LOG}" "$jobid stopps_by_pidfile error:"\
 		"specified pidfile not exists: [${fpid}]";
 	return 3
   fi
@@ -3016,7 +3015,7 @@ timeout_ornot() {
 # 		No need to check previous plugin running timeout or not
 # Output:	0 1   ==>  Succ | Fail
 # Usage:        add_runlock_on_pid_notexist      plugin_name
-# LogFlag: 	P0000000
+# LogFlag: 	LOCK0000
 #
 add_runlock_on_pid_notexist(){
   local plugin_name=$1 _rc=
@@ -3033,11 +3032,11 @@ add_runlock_on_pid_notexist(){
   gen_lock "${plugin_name}"
   _rc=$?
   if [ "${_rc}" != "0" ]; then
-	write_log -f ${logfile} "P0000000 MOLE add runlock on"\
-		"[${plugin_name}]: without pidfile but add runlock: failed. EXIT";
+	write_log -f ${logfile} "LOCK0000 MOLE add runlock on"\
+		"[${plugin_name}]: without pidfile but add runlock: failed(${_rc}). EXIT";
 	return 1
   else
-	write_log -f ${logfile} "P0000000 MOLE add runlock on"\
+	write_log -f ${logfile} "LOCK0000 MOLE add runlock on"\
 		"[${plugin_name}]: without pidfile and add runlock: succeed. OK";
 	return 0
   fi
