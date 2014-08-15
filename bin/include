@@ -2683,10 +2683,10 @@ un_lock() {
   errinfo=$( unlink "${RUN_DIR}/${plugin_name}.lock" 2>&1 1>/dev/null )
   rc=$?
   if [ "${rc}" != "0" ]; then
-	write_log -f "${logfile}" "E0000000 un_lock on"\
+	write_log -f "${logfile}" "${jobid} un_lock on"\
 		"[${plugin_name}] error: [${errinfo}]";
   else
-	write_log -f "${logfile}" "$jobid un_lock on"\
+	write_log -f "${logfile}" "${jobid} un_lock on"\
 		"[${plugin_name}] success";
   fi
   return "${rc}"
@@ -2775,7 +2775,7 @@ check_lock() {
 # LogFlag:	CLEAR000
 #
 clear_dead_lock_pid() {
-  local _p=$1  _rc=
+  local _p=$1 _rc=
   if [ -z "${_p}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 clear_dead_lock_pid error: missing plugin name";
 	return 1
@@ -2819,13 +2819,12 @@ clear_dead_lock_pid() {
 
 # According to input pid to stop process.
 # Note: 	called by  stopps_by_pidfile()
-# Usage:	stopps_by_pid  {pid}  {signal}
+# Usage:	stopps_by_pid  {pid}  {signal}  {jobid}
 # Note:		{signal} only allowed: 15, 9 
-# Example:	stopps_by_pid  1992  15
-# LogFlag:      STP00000
+# Example:	stopps_by_pid  1992  15  0123abcde
 #
 stopps_by_pid() {
-  local pid=$1 sig=$2 cmdline=
+  local pid=$1 sig=$2 jobid=$3 cmdline=
   
   if ! is_int "${pid}"; then
         write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pid error:"\
@@ -2838,23 +2837,23 @@ stopps_by_pid() {
 		"argument invalid, sig=[${sig}] must be 15 or 9";
 	return 1
   else
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating pid:"\
+	write_log -f "${MOLE_LOG}" "${jobid} terminating pid:"\
 		"set pid=[${pid}], singal=[${sig}]";
   fi
 
   if [ -d "/proc/${pid}" ]; then	# try to stop pid
   	cmdline=$(ps -p "${pid}" -o cmd= 2>&-)
 	if [ -z "${cmdline}" ]; then	# skip stop pid
-		write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating pid:"\
+		write_log -f "${MOLE_LOG}" "${jobid} terminating pid:"\
 			"cmdline empty, maybe [${pid}] already exit, nothing to do";
 		return 1
 	else				# send siginal to pid
-		write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating pid:"\
+		write_log -f "${MOLE_LOG}" "${jobid} terminating pid:"\
 			"sending SIG:[${sig}] to pid:[${pid}] (${cmdline})";
 		kill -${sig}  "${pid}" 1>&- 2>&- 
 	fi
   else					# skip stop pid
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE terminating pid:"\
+	write_log -f "${MOLE_LOG}" "${jobid} terminating pid:"\
 		"/proc/${pid} not exist, maybe [${pid}] already exit, nothing to do";
 	return 1
   fi
@@ -2872,17 +2871,16 @@ stopps_by_pid() {
 # 2. remove pid file
 #  2.1 skip   if process running
 #  2.2 remove if process dead
-# Usage:	stopps_by_pidfile   /path/to/pid/file		10
-# Example:	stopps_by_pidfile   /var/run/crond.pid		5
+# Usage:	stopps_by_pidfile   /path/to/pid/file		10	{jobid}
+# Example:	stopps_by_pidfile   /var/run/crond.pid		5	{jobid}
 # Return:	0	stop success, remove pid file success
 #		1	missing argument fpid
 #		2	stop success, but remove pid file failed
 #		3	specified pid file not exists
 #		4	stop failed, process still running
-# LogFlag: 	STP00000
 #
 stopps_by_pidfile() {
-  local fpid=$1  confirm_wait=$2
+  local fpid=$1  confirm_wait=$2  jobid=$3
   [ -z "${fpid}" ] && {
 	write_log -f "${MOLE_LOG}" "E0000000 stopps_by_pidfile error:"\
 		"missing arguments, fpid=[${fpid}]";
@@ -2890,41 +2888,41 @@ stopps_by_pidfile() {
   }
   
   if [ -z "${confirm_wait}" ] || [ ! -z "${confirm_wait//[0-9]}" ]; then
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE confirm wait seconds"\
+	write_log -f "${MOLE_LOG}" "${jobid} confirm wait seconds"\
 		"missing, set as default 3 seconds";
 	confirm_wait=3
   else
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE confirm wait seconds"\
+	write_log -f "${MOLE_LOG}" "${jobid} confirm wait seconds"\
 		"was set as ${confirm_wait} seconds";
   fi
 
   if [ -f "${fpid}" ]; then
 	read line < ${fpid}    ### step: 1
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE read pids from pidfile:"\
+	write_log -f "${MOLE_LOG}" "${jobid} read pids from pidfile:"\
 		"[${fpid}] result: [${line}]";
 
 	for x in `echo ${line}`;do
 		if [ -z "${x//[0-9]/}" ] && [ -d "/proc/${x}" ]; then
 			local kidpids=$(get_pidkids_bypid ${x})    ### step: 1.1
-			write_log -f "${MOLE_LOG}" "STP00000 MOLE get_kidpids for pid:[${x}] result:[${kidpids}]";
+			write_log -f "${MOLE_LOG}" "${jobid} get_kidpids for pid:[${x}] result:[${kidpids}]";
 
 			for cpid in `echo ${kidpids}`    ### step: 1.2
 			do
-				stopps_by_pid  ${cpid} 15
+				stopps_by_pid  ${cpid} 15 "${jobid}"
 			done
 
 			local cmdline1=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.3
-			stopps_by_pid  ${x} 15		 ### step: 1.4
-			sleep ${confirm_wait}		 ### in case the process trap signal TERM
+			stopps_by_pid  ${x} 15 "${jobid}"	### step: 1.4
+			sleep ${confirm_wait}		 	### in case the process trap signal TERM
 
 			if [ -d "/proc/${x}" ]; then
 				local cmdline2=$(cat /proc/${x}/cmdline 2>&-)    ### step: 1.5
 				local kn=1  kmax=3
 				until [ "${cmdline1}" != "${cmdline2}" ]     ### step: 1.6
 				do
-					write_log -f "${MOLE_LOG}" "STP00000 MOLE father pid:"\
+					write_log -f "${MOLE_LOG}" "${jobid} father pid:"\
 						"[${x}] still running, try to stop it by SIG:KILL, times:[${kn}]";
-					stopps_by_pid ${x} 9
+					stopps_by_pid ${x} 9 "${jobid}"
 					sleep 0.1
 					local cmdline2=$(cat /proc/${x}/cmdline 2>&-)
 					((kn++))
@@ -2932,29 +2930,29 @@ stopps_by_pidfile() {
 					[ "$( echo "${kn}>${kmax}" | bc 2>&- )" == "1" ] && break
 				done
 			else
-				write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate father pid:"\
+				write_log -f "${MOLE_LOG}" "${jobid} terminate father pid:"\
 					"[${x}] => [${cmdline1}] SIG:TERM success";
 			fi
 		fi
 	done
 
 	if ! check_ps_by_pid_file "${fpid}" >/dev/null 2>&1; then
-		write_log -f "${MOLE_LOG}" "STP00000 MOLE terminate"\
+		write_log -f "${MOLE_LOG}" "${jobid} terminate"\
 			"process according by [${fpid}] success"
 		local errinfo=  rc=
   		errinfo=$( /bin/rm -f "${fpid}" 2>&1 1>/dev/null )    ### step: 2
 		rc=$?
 		if [ "${rc}" != "0" ]; then
-			write_log -f "${MOLE_LOG}" "STP00000 MOLE remove pidfile:"\
+			write_log -f "${MOLE_LOG}" "${jobid} remove pidfile:"\
 				"[${fpid}] error: [${errinfo}]";
 			return 2
 		else
-			write_log -f "${MOLE_LOG}" "STP00000 MOLE remove pidfile:"\
+			write_log -f "${MOLE_LOG}" "${jobid} remove pidfile:"\
 				"[${fpid}] success";
 			return 0
 		fi
 	else					# process is still running here !!!
-		write_log -f "${MOLE_LOG}" "STP00000 MOLE CRIT ALERT!"\
+		write_log -f "${MOLE_LOG}" "${jobid} CRIT ALERT!"\
 			"REMOVE PIDFILE: [${fpid}] SKIP, as PROCESS STILL RUNNING!"
 		return 4
 	fi
@@ -2966,22 +2964,21 @@ stopps_by_pidfile() {
 }
 
 # Stop plugin	( stop process / remove pid / unlock )
-# Usage:	stop_single_plugin   plugin_name
-# LogFlag: 	STP00000 
+# Usage:	stop_single_plugin   plugin_name  {jobid}
 #
 stop_single_plugin() {
-  local plugin_name=$1  
+  local plugin_name=$1  jobid=$2
   local pidfile="${RUN_DIR}/${plugin_name}.pid"
   if [ -z "${plugin_name}" ]; then
 	write_log -f "${MOLE_LOG}" "E0000000 stop_single_plugin error: missing plugin name";
 	return 1
   else
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE stop plugin"\
+	write_log -f "${MOLE_LOG}" "${jobid} stop plugin"\
 		"[${plugin_name}]: 1 => stop process on pidfile: [${pidfile}]";
-  	stopps_by_pidfile "${pidfile}" 1
-	write_log -f "${MOLE_LOG}" "STP00000 MOLE stop plugin"\
+  	stopps_by_pidfile "${pidfile}" 1 "${jobid}"
+	write_log -f "${MOLE_LOG}" "${jobid} stop plugin"\
 		"[${plugin_name}]: 2 => remove lockfile";
-  	un_lock "${plugin_name}"
+  	un_lock "${plugin_name}" "${jobid}"
   fi
 }
 
@@ -3076,14 +3073,14 @@ check_runlock_on_pid_exist() {
   local lockinfo=$(check_lock "${plugin_name}")
   if is_int "${lockinfo}" ; then	### is running
 	local timeout_result=( $(timeout_ornot "${plugin_name}") )
-	if [ "${timeout_result[0]}" == "yes" ]; then   ### condition: 0
+	if [ "${timeout_result[0]}" == "yes" ]; then
 		write_log -f ${logfile} "CKLCK000 MOLE plugin"\
 			"[${plugin_name}] running timeout (${timeout_result[1]}s),"
 			"submit to timeout processing"
 		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
 		return 0
 	else    
-		return 1	### condition: 1
+		return 1	
 	fi
   elif [ "${lockinfo}" == "linkerror" ]; then
   	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
@@ -3923,14 +3920,14 @@ process_plugin_timeout() {
   # Step 0: update status
   update_status "${plugin_name}" "${jid}" "${output}"
 
-  # Step x: update headed up rc number.
+  # Step x: update heaped up rc number.
   add_heapuprc_count "${plugin_name}" "${level}" "${jid}"
 
   # Step 1: update lastrun and nextrun
   update_lastrun_and_nextrun "${plugin_name}" "${jid}"
 
   # Step 2: stop timeout plugin 
-  stop_single_plugin "${plugin_name}"
+  stop_single_plugin "${plugin_name}" "${jid}"
   # return here while inner plugin
   [[ "${plugin_name}" =~ ${INNER_BEGIN} ]] && return 0
 
