@@ -171,6 +171,10 @@ ARRAY_CONFIG_RULES=(
 	"postlog=>post_timeout"			"int:1:300"
 	"postlog=>post_max_length"		"int:1:50001"
 	"postlog=>post_debug"			"set:[yes|no]"
+	"sms=>sms_handler"			"set:[cnpc|esop|none]"
+	#"sms=>cnpc_smspath"
+	"sms=>sms_maxlen"			"int:0:500"
+	"sms=>character_set"			"set:[gbk|utf8]"
 )
 
 
