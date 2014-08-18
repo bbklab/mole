@@ -175,6 +175,7 @@ ARRAY_CONFIG_RULES=(
 	#"sms=>cnpc_smspath"
 	"sms=>sms_maxlen"			"int:0:500"
 	"sms=>character_set"			"set:[gbk|utf8]"
+	"sms=>timeout"				"int:0:60"
 )
 
 
