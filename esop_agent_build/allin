@@ -25,6 +25,12 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+if [ -z "$1" ]; then
+  echo "version required!"
+  echo "example: 1.0.1  1.1.0"
+  exit 1
+fi
+
 if rpm -qi esop >/dev/null; then
 	echo -en "uninstall pre esop ... \c "
 	if rpm -e esop ; then
@@ -42,7 +48,16 @@ if [ -f $sh1 -a -x $sh1 -a -f $sh2 -a -x $sh2 -a -f $sh3 -a -x $sh3 ]; then
 	clean
 	[ "$1" == "clean" ] && exit 0
 	echo "build all ..."
-	${sh1} && ${sh2} && ${sh3}
+	output=$( ${sh1} && ${sh2} && ${sh3} )
+	rpm=$(echo -e "${output}" | tail -n1)
+	if [ -f "${rpm}" ] && [ -s "${rpm}" ]; then
+		testcodes_dir="/var/www/html/esop.repo/esop-testcodes/esop/"
+		version_dir="${testcodes_dir}/$1"
+		remote_date="$(ssh -p 2237 root@ota.eyou.net "/bin/date +%F")"
+		dest_pubdir="${version_dir}/${remote_date}"
+		ssh -p 2237 root@ota.eyou.net "/bin/mkdir -p ${dest_pubdir}"
+		scp -P 2237 "${rpm}" root@ota.eyou.net:"${dest_pubdir}"
+	fi
 else
 	echo $sh1,$sh2,$sh3 not prepared.
 	exit 1
