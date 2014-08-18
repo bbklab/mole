@@ -3077,7 +3077,6 @@ check_runlock_on_pid_exist() {
 			"submit to timeout processing"
 		# this operation may blocking the whole mole-core-cron
 		process_plugin_timeout "${plugin_name}" "${timeout_result[1]}"
-	else    
 	fi
   elif [ "${lockinfo}" == "linkerror" ]; then
   	write_log -f ${logfile} "CKLCK000 MOLE plugin"\
