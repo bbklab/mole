@@ -3807,7 +3807,7 @@ process_plugin() {
 
 			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 						-i "${output}" -h "${hd_output}" \
-						-p "${mail_policy_detail}" 2>&1 )
+						-p "${mail_policy_detail}" 2>/dev/null )
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 
 			# add heapupnotify count for [plugin]-[mail] level=[part1]
@@ -4053,7 +4053,7 @@ process_plugin_timeout() {
 							"${hit_rtime_detail}" )
 			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 								-i "${output}" -h "${hd_output}" \
-								-p "${mail_policy_detail}" 2>&1 )
+								-p "${mail_policy_detail}" 2>/dev/null )
 			result_emllst=" ${m_alert} ### ${result_emllst} " 
 
 			# add heapupnotify count for [plugin]-[mail] level=[tmout]
@@ -4187,7 +4187,7 @@ process_sysoverload() {
 						"${hit_rtime_detail}" )
 		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 						-i "${output}" -h "${hd_output}" \
-						-p "${mail_policy_detail}" 2>&1 )
+						-p "${mail_policy_detail}" 2>/dev/null )
 		result_emllst=" yes ### ${result_emllst} " 
 
 		# add heapupnotify count for [plugin]-[mail] level=[ovld]
@@ -4311,7 +4311,7 @@ process_kidsexceed() {
 						"${hit_rtime_detail}" )
 		result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 						-i "${output}" -h "${hd_output}" \
-						-p "${mail_policy_detail}" 2>&1 )
+						-p "${mail_policy_detail}" 2>/dev/null )
 		result_emllst=" yes ### ${result_emllst} "
 
 		# add heapupnotify count for [plugin]-[mail] level=[kids]
@@ -4456,7 +4456,7 @@ process_plugin_misform() {
 								"${hit_rtime_detail}" )
 			result_emllst=$( ${SENDMAIL} -f "${plugin_name}" -s "${jid}" \
 							-i "${output}" -h "${hd_output}" \
-							-p "${mail_policy_detail}" 2>&1 )
+							-p "${mail_policy_detail}" 2>/dev/null )
 			result_emllst=" yes ### ${result_emllst} "
 
 			# add heapupnotify count for [plugin]-[mail] level=[misform]
