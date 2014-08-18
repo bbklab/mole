@@ -179,6 +179,7 @@ else
 	exit "${vexit}"
 fi
 
+# set charset / convert encoding for {content}
 charset=$(read_mole_config sms character_set)
 envlang=
 if [ "${charset}" == "gbk" ] || [ "${charset}" == "gb2312" ] ; then
@@ -193,11 +194,19 @@ fi
 write_log -f "${SENDSMS_LOG}" "[${from}]"\
 	"INFO: charset=[${charset}], set enviroment lang=[${envlang}]. CONTINUE"
 
+# set timeout
+timeout=$(read_mole_config sms timeout)
+if ! is_int "${timeout}"; then
+	timeout=10
+fi
+write_log -f "${SENDSMS_LOG}" "[${from}]"\
+	"INFO: timeout=[${timeout}]. CONTINUE"
+
 # sending sms
 t_s=0
 t_e=0
-t=$(echo -ne "${receviers}" | awk -v "RS=[ \t]" 'END{print --NR}')
-n=0 result=
+t=$(echo -ne "${receviers}" | awk 'END{print NF}')
+n=0
 if [ "$t" -le "0" ]; then
 	write_log -f "${SENDSMS_LOG}" "[${from}]"\
 		"ERROR: no invalid receviers [${receviers}]"
@@ -207,17 +216,55 @@ else
 		((n+=1))
 		write_log -f "${SENDSMS_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending SMS to [${x}] ..."
-		result=$( LANG=${envlang} ${SMS_HANDLER} "${x}" "${content}" 2>&1 )
-		if [ "$?" == "0" ]; then
+		(LANG=${envlang} ${SMS_HANDLER} "${x}" "${content}" >/dev/null 2>&1) &
+		pid=$!
+		write_log -f "${SENDSMS_LOG}" "[${from}]"\
+			"INFO: [${n}/${t}], sendsms backgroup pid: ${pid}"
+		timer=0
+		while [ -d "/proc/${pid}" ]
+		do
+			((timer++))
+			sleep 1
+			if [ "$(echo "${timer}>=${timeout}"|bc 2>&-)" == "1" ]; then
+				write_log -f "${SENDSMS_LOG}" "[${from}]"\
+					"INFO: [${n}/${t}], sendsms timeout [${timer} >= ${timeout}]"
+				kidpids=$(get_pidkids_bypid "${pid}")
+				write_log -f "${SENDSMS_LOG}" "[${from}]"\
+					"INFO: [${n}/${t}], terminating all kid pids: ${kidpids}"
+				for cpid in `echo ${kidpids}`
+				do
+					if [ -d "/proc/${cpid}" ]; then
+						 kill -15  "${cpid}" 1>&- 2>&-
+					fi
+				done
+				sleep 0.3
+				if [ -d "/proc/${pid}" ]; then
+					write_log -f "${SENDSMS_LOG}" "[${from}]"\
+						"INFO: [${n}/${t}], sending SIGTERM to father pid: ${pid}"
+					kill -15  "${pid}" 1>&- 2>&-
+				fi
+				sleep 0.3
+				if [ -d "/proc/${pid}" ]; then
+					write_log -f "${SENDSMS_LOG}" "[${from}]"\
+						"INFO: [${n}/${t}], sending SIGKILL to father pid: ${pid}"
+					kill -9   "${pid}" 2>&- 2>&-
+				fi
+			fi
+		done
+		wait ${pid} 2>/dev/null
+		_rc=$?
+		if [ "${_rc}" == "0" ]; then
 			((t_s+=1))
 			succlst="${x} ${succlst}"
+			write_log -f "${SENDSMS_LOG}" "[${from}]"\
+				"INFO: [${n}/${t}], sending SMS to [${x}] succeed!"
 		else
 			((t_e+=1))
 			vexit=1
 			faillst="${x} ${faillst}"
+			write_log -f "${SENDSMS_LOG}" "[${from}]"\
+				"INFO: [${n}/${t}], sending SMS to [${x}] failed! (rc=${_rc})"
 		fi
-		write_log -f "${SENDSMS_LOG}" "[${from}]"\
-			"INFO: [${n}/${t}], sending SMS to [${x}] end. result: ${result}"
 	done
 fi
 
