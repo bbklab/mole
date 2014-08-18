@@ -223,8 +223,8 @@ msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 失败"
 msgid "update [$arg2]-[$arg3]:[$arg4] failed"
 msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 失败"
 
-msgid "pid file: ${PID_FILE} already exist."
-msgstr "PID文件 ${PID_FILE} 已经存在"
+msgid "mole already running"
+msgstr "实例已经在运行"
 
 msgid "succeed!"
 msgstr "正常"

@@ -245,15 +245,15 @@ show_status() {
 	read pid < "${PID_FILE}"
 	if [ -z "${pid//[0-9]}" ] && [ -d "/proc/${pid}" ]; then    ###  numberic => running
 		local cmdline=$(cat /proc/${pid}/cmdline 2>&-)
-		[ "$(sub_str "${cmdline}" "mole")" == "yes" ] && {    ### cmdline contains "mole" ==> mole running
+		if [ "$(sub_str "${cmdline}" "mole")" == "yes" ]; then   ### cmdline contains "mole" ==> mole running
 			echo_green "$(eval_gettext "mole (pid: \${pid}) running ...")" ; echo
 			return 0
-		} || {
+		else
 			### fake?
 			echo_yellow "$(eval_gettext "mole (pid: \${pid}) running ... but seems fake?")  [CMD: "${cmdline}"]" ;
 			echo  
 			return 3
- 		}
+ 		fi
 	else
 		### not numberic ==> dead and pidfile left
 		echo_yellow "$(eval_gettext "mole dead, but pid file: \${PID_FILE} left dead.")" ;
@@ -271,8 +271,13 @@ show_status() {
 start_core_cron() {
 
 local result=  rc=
-if [ -e "${PID_FILE}" ]; then   ## exit while pid file exist
-	echo_yellow "$(eval_gettext "pid file: \${PID_FILE} already exist.")" && echo && show_status
+
+local status=
+status=$( show_status >/dev/null 2>&1 )
+rc=$?
+if [ "${rc}" == "0" ]; then	## exit while mole running
+	echo_yellow "$(gettext "mole already running")"
+	echo -e "${status}"
 	return 1
 else
 
