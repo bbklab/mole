@@ -295,19 +295,23 @@ else
 	gettext "2. verifying id/name/receviers ... "
 	mole_id=$(get_mole_id)
 	if [ "${mole_id}" == "0000000000" ]; then
-        	. ${SETINIT_SH} rpminit
+		gettext "need to be initialized, please run: mole init"
+		exit 1
 	fi
 	mole_name=$(get_global_name)
 	if [ "${mole_name}" == "mole__ops.eyou.net" ]; then
-        	. ${SETINIT_SH}
+		gettext "need to be initialized, please run: mole init"
+		exit 1
 	fi
 	parter_id=$(get_parter_id)
 	if [ "${parter_id}" == "0000000000" ]; then
-		. ${SETINIT_SH}
+		gettext "need to be initialized, please run: mole init"
+		exit 1
 	fi
 	default_receviers=$(get_mail_receviers default)
 	if [ "${default_receviers}" == "root_bbk@126.com" ]; then
-        	. ${SETINIT_SH}
+		gettext "need to be initialized, please run: mole init"
+		exit 1
 	fi
   	echo -e "[$(echo_green "$(gettext "succeed!")")]"
 
@@ -641,6 +645,8 @@ case "$#" in
 		show_confexample		;;
 	"?"|"/?")
 		show_shorttips			;;
+	"init")
+		. ${SETINIT_SH} rpminit 	;;
 	*)
 		show_help
 		show_example			;;

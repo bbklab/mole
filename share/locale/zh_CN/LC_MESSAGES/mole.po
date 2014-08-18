@@ -55,6 +55,9 @@ msgstr "当前系统环境无法正常运行实例"
 msgid "2. verifying id/name/receviers ... "
 msgstr "2. 校验ID/名称/默认收件人 ... "
 
+msgid "need to be initialized, please run: mole init"
+msgstr "需要先进行初始化配置, 请先执行 mole init"
+
 msgid "3. checking config file        ... "
 msgstr "3. 检查配置文件           ... "
 
