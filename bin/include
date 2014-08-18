@@ -3760,7 +3760,7 @@ process_plugin() {
 			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
 			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${sms_content}" 2>&1 )
+						-i "${sms_content}" 2>/dev/null )
 			result_smslst=" ${s_alert} ### ${result_smslst} "
 
 			# add heapupnotify count for [plugin]-[sms] level=[part1]
@@ -4005,7 +4005,7 @@ process_plugin_timeout() {
 			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
 			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-								-i "${sms_content}" 2>&1 )
+								-i "${sms_content}" 2>/dev/null )
 			result_smslst=" ${s_alert} ### ${result_smslst} " 
 
 			# add heapupnotify count for [plugin]-[sms] level=[tmout]
@@ -4145,7 +4145,7 @@ process_sysoverload() {
 		sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
 		sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${sms_content}" 2>&1 )
+						-i "${sms_content}" 2>/dev/null )
 		result_smslst=" yes ### ${result_smslst} " 
 
 		# add heapupnotify count for [plugin]-[sms] level=[ovld]
@@ -4269,7 +4269,7 @@ process_kidsexceed() {
 		sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
 		sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 		result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-						-i "${sms_content}" 2>&1 )
+						-i "${sms_content}" 2>/dev/null )
 		result_smslst=" yes ### ${result_smslst} "
 
 		# add heapupnotify count for [plugin]-[sms] level=[kids]
@@ -4415,7 +4415,7 @@ process_plugin_misform() {
 			sms_content="$(${PLUTIL} "parted_output" "4" "${output}")"
 			sms_content="${sms_content} $(${PLUTIL} "parted_output" "5" "${output}")"
 			result_smslst=$( ${SENDSMS} -f "${plugin_name}" -s "${jid}" \
-							-i "${sms_content}" 2>&1 )
+							-i "${sms_content}" 2>/dev/null )
 			result_smslst=" yes ### ${result_smslst} "
 
 			# add heapupnotify count for [plugin]-[sms] level=[misform]
