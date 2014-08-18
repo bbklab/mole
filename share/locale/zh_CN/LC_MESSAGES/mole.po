@@ -226,6 +226,9 @@ msgstr "修改插件 $arg2 配置项 $arg3 的值为 $arg4 失败"
 msgid "mole already running"
 msgstr "实例已经在运行"
 
+msgid "a fake mole is running?"
+msgstr "一个占用了PID的伪装实例在运行?"
+
 msgid "succeed!"
 msgstr "正常"
 

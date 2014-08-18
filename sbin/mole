@@ -273,10 +273,14 @@ start_core_cron() {
 local result=  rc=
 
 local status=
-status=$( show_status >/dev/null 2>&1 )
+status=$( show_status 2>&1 )
 rc=$?
 if [ "${rc}" == "0" ]; then	## exit while mole running
-	echo_yellow "$(gettext "mole already running")"
+	echo_yellow "$(gettext "mole already running")";echo;
+	echo -e "${status}"
+	return 1
+elif [ "${rc}" == "3" ]; then
+	echo_yellow "$(gettext "a fake mole is running?")";echo;
 	echo -e "${status}"
 	return 1
 else
