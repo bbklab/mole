@@ -176,23 +176,24 @@ if [ "${mole_id}" == "0000000000" ]; then
 
 		echo -en "${mole_uuid}\n${mole_id}\n" > "${UUID_FILE}" 2>&-
 		
-		echo -en "$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
+		init_result="$(gettext "initialized set mole_id as") [$(echo_green "${mole_id}")] ... "
 		write_log -f "${MOLE_LOG}" "SETINITX mole_id=[${mole_id}], set by mole_uuid=[${mole_uuid}]"
 		update_mole_config force global id "${mole_id}"
 		rc=$?
 		case "${rc}" in
-		"0")	echo -e "${OK}" 	;;
-		"2")	echo -e "${SKIP}"	;;
+		"0")	init_result=				;;
+		"2")	init_result=				;;
 		"5")	add_mole_config force global id "${mole_id}"
 			rc=$?
 			case "${rc}" in
-			"0") echo -e "${OK}"	;;
-			"2") echo -e "${SKIP}"	;;
-			*)   echo -e "${FAIL}"  ;;
+			"0") init_result=			  ;;
+			"2") init_result=			  ;;
+			*)   init_result="${init_result} ${FAIL}" ;;
 			esac
-			;;
-		*)	echo -e "${FAIL}"
+								;;
+		*)	init_result="${init_result} ${FAIL}" 	;;
 		esac
+		[ -n "${init_result}" ] && echo -e "${init_result}"
 		exit 0
 	fi
 else
