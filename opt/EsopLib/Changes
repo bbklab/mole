@@ -1,0 +1,6 @@
+Revision history for Perl extension EsopLib.
+
+0.01  Thu Aug 21 14:57:35 2014
+	- original version; created by h2xs 1.23 with options
+		-AcXn EsopLib
+

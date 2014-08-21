@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/EsopLib.t
+lib/EsopLib.pm
