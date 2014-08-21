@@ -381,6 +381,9 @@ msgstr "插件 ${plugin_name} 已经被终止"
 msgid "Plugin: [${plugin_name}] execution timeout, has been terminated."
 msgstr "插件 [${plugin_name}] 执行超时, 已经被终止."
 
+msgid "has been running for ${durationtime} seconds"
+msgstr "共运行了 ${durationtime} 秒."
+
 msgid "System OverLoad"
 msgstr "系统过载"
 

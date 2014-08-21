@@ -3900,7 +3900,8 @@ process_plugin_timeout() {
   local level="tmout"
   local output="{${level}}:{str}:{ $(eval_gettext "Plugin \${plugin_name} Execution TimeOut")"\
 "| $(date +%F_%T): $(eval_gettext "\${plugin_name} has been terminated")"\
-"| $(html_red "$(eval_gettext "Plugin: [\${plugin_name}] execution timeout, has been terminated.")") ### }";
+"| $(html_red "$(eval_gettext "Plugin: [\${plugin_name}] execution timeout, has been terminated.")") "\
+"### $(html_red "$(eval_gettext "has been running for \${durationtime} seconds")") }";
 
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name} running timeout"\
 	"has been running for ${durationtime} seconds"
