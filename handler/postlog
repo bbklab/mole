@@ -6,6 +6,7 @@ our $mole = "$basedir/sbin/mole";
 BEGIN {
   my $basedir = '/usr/local/esop/agent/mole';
   my $pllib_dir = "$basedir/opt/plmods";
+  my $esoplib_dir = "$basedir/opt/EsopLib";
   my @incs = (    # set additional path
   	# rhel5 32bit
   	$pllib_dir.'/lib/perl5/',
@@ -25,6 +26,8 @@ BEGIN {
   	# rhel6 64bit
   	$pllib_dir.'/lib64/perl5/',
   	$pllib_dir.'/share/perl5/',
+	# esop lib
+	$esoplib_dir.'/lib/',
   );
 
   push @INC, @incs;
@@ -41,6 +44,7 @@ use Benchmark ':hireswallclock';
 use JSON;
 use Time::HiRes;
 use POSIX qw(strftime);
+use EsopLib;
 # use Smart::Comments;
 
 binmode(STDIN, ":encoding(utf8)");
@@ -79,35 +83,12 @@ if($fh){
   }
 }
 
-our $parter_id = '0000000000';
-open $fh, "$mole view global parter_id 2>&- | ";
-if($fh){
-  while(<$fh>){
-	chomp; $parter_id = $_;
-	last;
-  }
+our $parter_id = read_mole_config('global','parter_id');
+our $hid = read_mole_config('global','id');
+our $hname = read_mole_config('global','name');
+if ($hid && $hname) {
+    $hname = $hid . '__' . $hname;
 }
-
-our $hid = '0000000000';
-open $fh, "$mole view global id 2>&- | ";
-if($fh){
-  while(<$fh>){
-	chomp; $hid = $_;
-	last;
-  }
-}
-
-our $hname = '0000000000__mole__ops.eyou.net';
-open $fh, "$mole view global name 2>&- | ";
-if($fh){
-  while(<$fh>){
-	chomp; $hname = $hid.'__'.$_;
-	last;
-  }
-}
-close $fh if ($fh);
-
-
 
 # read args from cli
 getopts('t:p:j:o:h:e:s:f:r:d',\%opts);
@@ -175,29 +156,22 @@ if ($type eq 'post') {
 &log("INFO: $logfrom script postlog start");
 
 # check global {parter_id}, {hid}, {hname}
-if (!$parter_id || $parter_id eq '' || $parter_id eq '0000000000') {
+if (!$parter_id || $parter_id eq '') {
 	&log("CRIT: $logfrom parter_id is empty, script postlog exit.");
 	exit 3;
 }
-if (!$hid || $hid eq '' || $hid eq '0000000000') {
+if (!$hid || $hid eq '') {
 	&log("CRIT: $logfrom hid is empty, script postlog exit.");
 	exit 3;
 }
-if (!$hname || $hname eq '' || $hname eq '0000000000__mole__ops.eyou.net') {
+if (!$hname || $hname eq '') {
 	&log("CRIT: $logfrom hname is empty, script postlog exit.");
 	exit 3;
 }
 
 # set debug flag
 if(!defined $debug || $debug eq ''){
-  open my $fh, "$mole view postlog post_debug 2>&- |";
-  if($fh){
-	while(<$fh>){
-		chomp; $debug = ($_ eq 'yes') ? 1 : 0;
-		last;
-	}
-  }
-  close $fh if ($fh);
+  $debug = (read_mole_config('postlog','post_debug') eq 'yes') ? 1 : 0;
   &log("INFO: $logfrom set debug=[$debug] from config file.");
 } else {
   &log("INFO: $logfrom set debug=[$debug] from cli argument.");
@@ -257,29 +231,29 @@ if ($json_result) {
 
 # set post address
 our %post_server = (
-  'post_server'		=> '127.0.0.1',
+  'post_server'		=> '',
   'post_server_port'	=> '',
   'post_port_type'	=> '',
   'post_timeout'	=> '',
-  'post_max_length'	=> 50000,
+  'post_max_length'	=> '',
 );
 foreach my $key (keys %post_server) {
-  open my $fh, "$mole view postlog $key 2>&- |";
-  if($fh){
-	while(<$fh>){
-		chomp; $post_server{$key} = $_;
-		last;
-	}
-  }
-}
-
-unless ($post_length <= $post_server{'post_max_length'}) {
-  &log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
-  exit 1;
+  $post_server{$key} = read_mole_config('postlog',$key);
 }
 
 unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
   &log("CRIT: $logfrom post server address not defined. exit");
+  exit 1;
+}
+
+unless (exists $post_server{'post_max_length'} && $post_server{'post_max_length'} ne '') {
+  $post_server{'post_max_length'} = 50000;
+} elsif ($post_server{'post_max_length'} =~ /\D/) {
+  $post_server{'post_max_length'} = 50000;
+}
+
+unless ($post_length <= $post_server{'post_max_length'}) {
+  &log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
   exit 1;
 }
 
@@ -759,29 +733,21 @@ sub genjson_plugin() {
 		next if $key eq 'mailplc_rtime';
 		next if $key eq 'smsplc_range';
 		next if $key eq 'smsplc_rtime';
-		open my $fh, "$mole view $plugin $single_plugin{$key} 2>&- | ";
+
 		my $default_flag = 0;
-		if($fh){
-			my $value = <$fh>;
-			chomp $value if ($value);
-			if (!defined $value || $value eq '') {
-				open my $fh1, "$mole view default $single_plugin{$key} 2>&- | ";
-				$default_flag = 1;
-				if($fh1){
-					my $default_value = <$fh1>;
-					if (defined $default_value && $default_value ne '') {
-						chomp $default_value;
-						$single_plugin{$key} = $default_value;
-					} else {
-						$single_plugin{$key} = '';
-					}
-				}
-				close $fh1 if ($fh1);
+		my $value = read_plugin_config($plugin,$single_plugin{$key});
+		if (!defined $value || $value eq '') {
+			$default_flag = 1;
+			my $default_value = read_mole_config('default',$single_plugin{$key}); 
+			if (defined $default_value && $default_value ne '') {
+				$single_plugin{$key} = $default_value;
 			} else {
-				$single_plugin{$key} = $value; 
+				$single_plugin{$key} = '';
 			}
+		} else {
+			$single_plugin{$key} = $value; 
 		}
-		close $fh if ($fh);
+
 		if ($default_flag) {
 			push @{$conf_info{'default'}}, $key;
 			&log("DEBUG: $logfrom plugin-config [$plugin.$key]=[$single_plugin{$key}] (default)") if $debug;
@@ -793,26 +759,16 @@ sub genjson_plugin() {
 
 	# add key:  mailplc_[range|rtime]_
 	my $mail_policy;
-	open my $fh2, "$mole view $plugin mail_policy 2>&- | ";
-	if ($fh2) {
-		my $value = <$fh2>;
-		chomp $value if ($value);
-		if (!defined $value || $value eq '') {
-			open my $fh2_2, "$mole view default mail_policy 2>&- | ";
-			push @{$conf_info{'default'}}, ('mailplc_range','mailplc_rtime');
-			if ($fh2_2) {
-				my $default_value = <$fh2_2>;
-				if (defined $default_value && $default_value ne '') {
-					chomp $default_value;
-					$mail_policy = $default_value;
-				}
-				close $fh2_2 if ($fh2_2);
-			}
-		} else {
-			$mail_policy = $value;
-			push @{$conf_info{'customize'}}, ('mailplc_range','mailplc_rtime');
+	my $value = read_plugin_config($plugin,'mail_policy');
+	if (!defined $value || $value eq '') {
+		push @{$conf_info{'default'}}, ('mailplc_range','mailplc_rtime');
+		my $default_value = read_mole_config('default','mail_policy');
+		if (defined $default_value && $default_value ne '') {
+			$mail_policy = $default_value;
 		}
-		close $fh2 if ($fh2);
+	} else {
+		$mail_policy = $value;
+		push @{$conf_info{'customize'}}, ('mailplc_range','mailplc_rtime');
 	}
 	if (defined $mail_policy && $mail_policy ne '') {
 		$single_plugin{'mailplc_range'} = &hrformat_policy($mail_policy,'range');
@@ -823,26 +779,16 @@ sub genjson_plugin() {
 
 	# add key:  smsplc_[range|rtime]_
 	my $sms_policy;
-	open my $fh3, "$mole view $plugin sms_policy 2>&- | ";
-	if ($fh3) {
-		my $value = <$fh3>;
-		chomp $value if ($value);
-		if (!defined $value || $value eq '') {
-			open my $fh3_3, "$mole view default sms_policy 2>&- | ";
-			push @{$conf_info{'default'}}, ('smsplc_range','smsplc_rtime');
-			if ($fh3_3) {
-				my $default_value = <$fh3_3>;
-				if (defined $default_value && $default_value ne '') {
-					chomp $default_value;
-					$sms_policy = $default_value;
-				}
-				close $fh3_3 if ($fh3_3);
-			}
-		} else {
-			$sms_policy = $value;
-			push @{$conf_info{'customize'}}, ('smsplc_range','smsplc_rtime');
+	$value = read_plugin_config($plugin,'sms_policy');
+	if (!defined $value || $value eq '') {
+		push @{$conf_info{'default'}}, ('smsplc_range','smsplc_rtime');
+		my $default_value = read_mole_config('default','sms_policy');
+		if (defined $default_value && $default_value ne '') {
+			$sms_policy = $default_value;
 		}
-		close $fh3 if ($fh3);
+	} else {
+		$sms_policy = $value;
+		push @{$conf_info{'customize'}}, ('smsplc_range','smsplc_rtime');
 	}
 	if (defined $sms_policy && $sms_policy ne '') {
 		$single_plugin{'smsplc_range'} = &hrformat_policy($sms_policy,'range');
