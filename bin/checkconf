@@ -598,7 +598,7 @@ fi
 parter_id=$(get_parter_id)
 if [ "${parter_id}" == "0000000000" ]; then
 	((critnum++))
-	echo -e "${FAIL} : $(gettext "[parter_id] is empty. try") ${SETINIT_SH}"
+	echo -e "${FAIL} : $(gettext "[parter_id] is empty. try") mole init"
 else
 	((oknum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[parter_id] =") [${parter_id}]."
@@ -608,7 +608,7 @@ fi
 mole_name=$(get_global_name)
 if [ "${mle_name}" == "mole__ops.eyou.net" ]; then
 	((warnnum++))
-	echo -e "${WARN} : $(gettext "[mole_name] is empty. try") ${SETINIT_SH}"
+	echo -e "${WARN} : $(gettext "[mole_name] is empty. try") mole init"
 else
 	((oknum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[mole_name] =") [${mole_name}]."
@@ -618,7 +618,7 @@ fi
 default_receviers=$(get_mail_receviers default)
 if [ "${default_receviers}" == "root_bbk@126.com" ]; then
 	((warnnum++))
-	echo -e "${WARN} : $(gettext "[default_receviers] is empty. try") ${SETINIT_SH}"
+	echo -e "${WARN} : $(gettext "[default_receviers] is empty. try") mole init"
 else
 	((oknum++))
 	[ "${VERBOSE}" == "1" ] && echo -e "${OK} : $(gettext "[default_receviers] =") [${default_receviers}]."
