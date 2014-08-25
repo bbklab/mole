@@ -39,7 +39,7 @@ fi
 
 
 # === SET GLOBAL LOCALE
-glocale=$(get_locale esop_dbbackup)
+glocale=$(get_locale esop_appbackup)
 if [ -z "${glocale}" ]; then
         export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
 elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
@@ -82,12 +82,44 @@ TYPE=""         ### { str| file }
 CONTENT=""      ### { strings | /path/to/result.file }
 
 # Read plugin config value here
-backup_savedir=$(read_mole_config esop_dbbackup backup_savedir)
+backup_lst=$(read_mole_config esop_appbackup backup_lst)
+backup_savedir=$(read_mole_config esop_appbackup backup_savedir)
 
 # if null or invalid set default.
 
 # check function here
 check() {
+
+  local target_lst=   missing_lst=
+  for t in `echo "${backup_lst}"`
+  do
+	basedir=$(echo "${t}" | awk -F":" '{print $1}')
+	lstarry=$(echo "${t}" | awk -F":" '{print $2}' | tr ',' ' ')	
+	for l in `echo "${lstarry}"`
+	do
+		if [ -e "${basedir}/${l}" ]; then
+			target_lst="${target_lst} ${basedir}/${l}"
+		else
+			missing_lst="${missing_lst} ${basedir}/${l}"
+		fi
+	done
+  done
+
+  if [ -n "${missing_lst}" ]; then
+        EXIT_STATUS=${STATE_UNKN};
+        LEVEL="unkn";
+        TYPE="str";
+        CONTENT="$(eval_gettext "targets missing: \${missing_lst}.")"
+        return
+  fi
+
+  if [ -z "${target_lst}" ]; then
+        EXIT_STATUS=${STATE_UNKN};
+        LEVEL="unkn";
+        TYPE="str";
+        CONTENT="$(gettext "no targets to be backed up.")"
+        return
+  fi
 
   if [ -z "${backup_savedir}" ]; then
         EXIT_STATUS=${STATE_UNKN};
@@ -97,8 +129,9 @@ check() {
         return
   fi
 
+  local backup_filename=
   if [ -d "${backup_savedir}" ] && [ -w "${backup_savedir}" ]; then
-	:
+	backup_filename="${backup_savedir}/$(date +%F_%H-%M-%S).tar.gz"
   else
 	EXIT_STATUS=${STATE_UNKN}
 	LEVEL="unkn"
@@ -107,19 +140,47 @@ check() {
 	return
   fi
 
-  local result=
-  local critnum=0
+  if [ -f "/bin/tar" ] && [ -x "/bin/tar" ]; then
+	:
+  else
+	EXIT_STATUS=${STATE_UNKN}
+	LEVEL="unkn"
+	TYPE="str"
+	CONTENT="$(eval_gettext "util [/bin/tar] not prepared")"
+	return
+  fi
 
-  if [ ${critnum} -gt 0 ]; then
+  if [ -f "/bin/gzip" ] && [ -x "/bin/gzip" ]; then
+	:
+  else
+	EXIT_STATUS=${STATE_UNKN}
+	LEVEL="unkn"
+	TYPE="str"
+	CONTENT="$(eval_gettext "util [/bin/gzip] not prepared")"
+	return
+  fi
+
+  local result= size= crit=0
+  result=$( /bin/tar -czf "${backup_filename}" ${target_lst} 2>&1 )
+
+  if [ $? -eq 0 ]; then
+	size=$( /usr/bin/du -sk "${backup_filename}" 2>&- | awk '{print $1}' )
+	result="$(eval_gettext "backup file path: \${backup_filename}") ### $(eval_gettext "backup file size: \${size}K ")"
+  else
+	((crit++))
+	result="$(html_red "${result}")"
+  fi
+
+  if [ $crit -gt 0 ]; then
 	EXIT_STATUS=${STATE_CRIT};
 	LEVEL="crit";
 	TYPE="str";
-	CONTENT=
-  elif 
+	CONTENT="$(gettext "Esop App Backup CRITICAL") | $(gettext "Esop App Backup CRITICAL") | ${result}";
+  else
 	EXIT_STATUS=${STATE_SUCC};
   	LEVEL="succ";
   	TYPE="str";
-	CONTENT=
+	CONTENT="$(gettext "Esop App Backup SUCCESS") | $(gettext "Esop App Backup SUCCESS") | ${result} ";
   fi
 }
 
