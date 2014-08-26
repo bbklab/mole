@@ -71,10 +71,12 @@ sub read_ini {
 	}
 	if (m/\A\s*$key\s*=\s*(.+)\s*\Z/) {
 		if ($flag) {
+			close FH;
 			return $1;
 		}
 	}
     }
+    close FH;
 }
 
 1;
