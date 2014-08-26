@@ -19,6 +19,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw(
     read_mole_config
     read_plugin_config
+    read_file_recvlst
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -26,6 +27,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw(
     read_mole_config
     read_plugin_config
+    read_file_recvlst
 );
 
 our $VERSION = '0.01';
@@ -84,6 +86,42 @@ sub read_ini {
     }
     close FH;
     return undef;	# this is important, otherwise return 1
+}
+
+sub read_file_recvlst {
+    my ($config,$comment) = @_;
+	
+    unless ($config) {
+	return undef;
+    }
+	
+    $config =~ s/\A\s*file://gi;
+    unless ($config =~ m/\A\//) {
+	my $basedir = '/usr/local/esop/agent/mole/';
+	$config = $basedir . $config;
+    }
+
+    unless (open FH, "<", $config) {
+	return undef;
+    }
+
+    unless($comment) {
+	$comment = '#';
+    }
+
+    my $result = undef;
+    while (<FH>) {
+	next if (m/\A\s*\Q$comment\E/);
+	next if (m/\A\s*\Z/);
+	chomp;
+	$result .= $_ . ' ';
+    }
+
+    unless ($result) {
+    	return undef;
+    } else {
+	return $result;
+    }
 }
 
 1;
