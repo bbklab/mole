@@ -6,6 +6,7 @@ our $mole = "$basedir/sbin/mole";
 BEGIN {
   my $basedir = '/usr/local/esop/agent/mole';
   my $pllib_dir = "$basedir/opt/plmods";
+  my $esoplib_dir = "$basedir/opt/EsopLib";
   my @incs = (    # set additional path
         # rhel5 32bit
         $pllib_dir.'/lib/perl5/',
@@ -25,6 +26,8 @@ BEGIN {
         # rhel6 64bit
         $pllib_dir.'/lib64/perl5/',
         $pllib_dir.'/share/perl5/',
+	# esop lib
+	$esoplib_dir.'/lib/',
   );
 
   push @INC, @incs;
@@ -37,6 +40,7 @@ use Digest::MD5 qw(md5_hex);
 use MIME::Base64 qw(encode_base64);
 use Locale::Messages qw (textdomain bindtextdomain gettext nl_putenv);
 use POSIX qw (setlocale LC_ALL);
+use EsopLib;
 # use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
