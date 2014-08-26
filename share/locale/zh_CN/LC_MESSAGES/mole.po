@@ -436,16 +436,16 @@ msgid "Plugin Output Misform, Nothing to do"
 msgstr "插件输出不合规范, 无自动处理"
 
 msgid "banned by mail notify time-range"
-msgstr "邮件通知动作被插件的通知策略禁止，原因：通知时间"
+msgstr "邮件通知的时间不在策略设定的时间范围内"
 
 msgid "banned by mail notify nower heapup-notify number"
-msgstr "邮件通知动作被插件的通知策略禁止，原因：重复次数"
+msgstr "邮件通知次数已达到策略设定的次数上限"
 
 msgid "banned by sms notify nower heapup-notify number"
-msgstr "短信通知动作被插件的通知策略禁止，原因：重复次数"
+msgstr "短信通知次数已达到策略设定的次数上限"
 
 msgid "banned by sms notify time-range"
-msgstr "短信通知动作被插件的通知策略禁止，原因：通知时间"
+msgstr "短信通知的时间不在策略设定的时间范围内"
 
 msgid "according by plugin's policy settings,"
 msgstr "根据该插件的策略设定,"
