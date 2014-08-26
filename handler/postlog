@@ -757,6 +757,14 @@ sub genjson_plugin() {
 		}
 	}
 
+	# process mail_rec|sms_rec
+	if ($single_plugin{'mail_rec'} =~ m/\A\s*file:/i) {
+		$single_plugin{'mail_rec'} = read_file_recvlst($single_plugin{'mail_rec'},'#') || '';
+	}
+	if ($single_plugin{'sms_rec'} =~ m/\A\s*file:/i) {
+		$single_plugin{'sms_rec'} = read_file_recvlst($single_plugin{'sms_rec'},'#') || '';
+	}
+
 	# add key:  mailplc_[range|rtime]_
 	my $mail_policy;
 	my $value = read_plugin_config($plugin,'mail_policy');
@@ -1025,10 +1033,16 @@ sub genjson_config() {
                 }
                 if(/\A\s*mail_receviers\s+(.+)\Z/){
                         $raw_default{'mail_rec'} = $1; 
+			if ($raw_default{'mail_rec'} =~ m/\A\s*file:/i) {
+				$raw_default{'mail_rec'} = read_file_recvlst($raw_default{'mail_rec'},'#') || '';
+			}
                         next;
                 }
                 if(/\A\s*sms_receviers\s+(.+)\Z/){
                         $raw_default{'sms_rec'} = $1; 
+			if ($raw_default{'sms_rec'} =~ m/\A\s*file:/i) {
+				$raw_default{'sms_rec'} = read_file_recvlst($raw_default{'sms_rec'},'#') || '';
+			}
                         next;
                 }
                 if(/\A\s*mail_policy\s+(.+)\Z/){
