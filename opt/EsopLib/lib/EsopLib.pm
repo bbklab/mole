@@ -49,15 +49,15 @@ sub read_ini {
     my ($section,$key,$file) = @_;
 
     unless (-f $file && -s $file) {
-	return;
+	return undef;
     }
 	
     unless ($section && $key) {
-	return;
+	return undef;
     }
 
     unless (open FH, "<", $file) {
-	return;
+	return undef;
     }
 
     my $flag = 0;
@@ -77,6 +77,7 @@ sub read_ini {
 	}
     }
     close FH;
+    return undef;	# this is important, otherwise return 1
 }
 
 1;
