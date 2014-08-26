@@ -3,7 +3,7 @@ package EsopLib;
 use 5.010001;
 use strict;
 use warnings;
-use Smart::Comments;
+# use Smart::Comments;
 
 require Exporter;
 
@@ -71,8 +71,14 @@ sub read_ini {
 	}
 	if (m/\A\s*$key\s*=\s*(.+)\s*\Z/) {
 		if ($flag) {
+			### $&
+			### $`
+			### $'
+			my $value = $1;
+			$value =~ s/\A\s*//g;
+			$value =~ s/\s*\Z//g;
 			close FH;
-			return $1;
+			return $value;
 		}
 	}
     }
