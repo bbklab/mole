@@ -216,7 +216,11 @@ else
 		((n+=1))
 		write_log -f "${SENDSMS_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sending SMS to [${x}] ..."
-		(LANG=${envlang} ${SMS_HANDLER} "${x}" "${content}" >/dev/null 2>&1) &
+		(
+			export LANG=${envlang};
+			export LC_ALL=${envlang};
+			${SMS_HANDLER} "${x}" "${content}" >/dev/null 2>&1
+		) &
 		pid=$!
 		write_log -f "${SENDSMS_LOG}" "[${from}]"\
 			"INFO: [${n}/${t}], sendsms backgroup pid: ${pid}"
