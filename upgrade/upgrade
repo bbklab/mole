@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+#
+# This Script Responsible for Upgrade Esop Agent
+# 
+# Return Code:  0|1   OK|FAIL
+#
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Check Running ENV
+if [ "${ESOP_UPGRADE_MODE}" != "1" ] || [ "${ESOP_RPM_UPGRADE}" != "1" ];  then
+	echo_red "only running on esop rpm upgrade!";echo;
+	exit 1
+fi
+
+# Set Return Codes
+STATE_OK=0
+STATE_FAIL=1
+
+# Set Upgrade Configs
+ARRAY_MOLECONF_UPGRADE=(
+	"global"	"id"
+	"global"	"parter_id"
+	"global"	"name"
+	"global"	"scan_interval"
+	"global"	"attach_ini_mail"
+	"global"	"sysload_uplimit"
+	"global"	"max_kidsnum"
+	"global"	"plugin_maxlen"
+	"global"	"handler_maxlen"
+	"global"	"notify_onmisform"
+	"global"	"locale"
+)
