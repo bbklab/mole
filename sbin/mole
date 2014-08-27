@@ -937,7 +937,12 @@ case "$#" in
 		do
 			if [  "${arg2}" == "${ARRAY_INNER_FUNC_MAPS[$i]}" ]; then
 				cmd=""${ARRAY_INNER_FUNC_MAPS[${i}+1]}""
-				cmd="$(echo -e "${cmd}" | sed -e 's/'"${INNERARGS_HOLDER}"'/'"${arg3}"'/g' 2>&-)"
+				if [ "${arg3}" == "ARGNULL" ]; then
+					cmd="$(echo -e "${cmd}" | sed -e 's/'"${INNERARGS_HOLDER}"'//g' 2>&-)"
+				else
+					arg3="${arg3//;/}"		# remove all of (;)
+					cmd="$(echo -e "${cmd}" | sed -e 's/'"${INNERARGS_HOLDER}"'/'"${arg3}"'/g' 2>&-)"
+				fi
 				break
 			fi
 		done
