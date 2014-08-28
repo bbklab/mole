@@ -27,24 +27,137 @@ fi
 # Check Running ENV
 if [ "${ESOP_UPGRADE_MODE}" != "1" ] || [ "${ESOP_RPM_UPGRADE}" != "1" ];  then
 	echo_red "only running on esop rpm upgrade!";echo;
+	write_log -f "${UPGRADE_LOG}" "[ERROR] only running on esop rpm upgrade!"
 	exit 1
 fi
 
-# Set Return Codes
-STATE_OK=0
-STATE_FAIL=1
+# RPM Previous Action Result
+OLD_MOLE_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
+OLD_MOLE_VERFILE="${OLD_MOLE_SAVEDIR}/.version_upgrade"
 
-# Set Upgrade Configs
+# Check Previous Version
+OLD_MOLE_VERSION="$(cat ${OLD_MOLE_VERFILE} 2>&- | tr -d '\012\015')"
+if [ -z "${OLD_MOLE_VERSION}" ]; then
+	echo_red "previous esop version unknown, maybe already has been upgraded!";echo;
+	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version unknown, maybe already has been upgraded!"
+	exit 1
+fi
+if [ "${OLD_MOLE_VERSION}" != "1.0.1" ]; then
+	echo_red "previous esop version [${OLD_MOLE_VERSION}] not supported!";echo;
+	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version [${OLD_MOLE_VERSION}] not supported!"
+	exit 1
+fi
+
+# Set Old Mole Config File Path
+OLD_MOLE_CONF="${OLD_MOLE_SAVEDIR}/conf/.mole.ini"
+if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
+	:
+else
+	echo_red "previous esop rpmsave mole config file not prepared!";echo;
+	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop rpmsave mole config file not prepared!"
+	exit 1
+fi
+
+# Set Upgrade Configs (1.0.1 configs)
 ARRAY_MOLECONF_UPGRADE=(
-	"global"	"id"
-	"global"	"parter_id"
-	"global"	"name"
-	"global"	"scan_interval"
-	"global"	"attach_ini_mail"
-	"global"	"sysload_uplimit"
-	"global"	"max_kidsnum"
-	"global"	"plugin_maxlen"
-	"global"	"handler_maxlen"
-	"global"	"notify_onmisform"
-	"global"	"locale"
+	"global"	"scan_interval attach_ini_mail sysload_uplimit 
+			max_kidsnum plugin_maxlen handler_maxlen notify_onmisform locale "
+        "default"       "enable comment frequency exec_tmout maxerr_times take_snapshot mail_notify
+			sms_notify post_notify mail_receviers sms_receviers attsnap_mail auto_handle
+			auto_handler locale debug "
+        "mole_clear_overdue"    "frequency exec_tmout tmpfile_reserve_time logfile_reserve_time 
+				snapfile_reserve_time snapdir_maxsize"
+        "mole_log_rotate"       "frequency exec_tmout force_size_uplimit take_over_proxylog"
+        "mole_self_check"       "frequency exec_tmout"
+        "mole_iam_alive"        "frequency exec_tmout"
+        "mole_check_remote"     "frequency exec_tmout"
+        "mole_report_conf"      "frequency exec_tmout"
+        "sendmail"      "smtp_server smtp_server_port auth_user auth_pass timeout charset"
+        "postlog"       "post_server post_server_port post_port_type post_timeout post_max_length post_debug"
 )
+ARRAY_MOLEFORCECONF_UPGRADE=(
+	"global"	"id parter_id name"
+)
+
+# Initialize Counter
+mole_upgrade_skip=0
+mole_upgrade_succ=0
+mole_upgrade_fail=0
+
+
+#
+# Func Def
+#
+
+restore_config() {
+	local section=$1  key=$2  is_force=$3
+	local old=$(read_mole_config -f "${OLD_MOLE_CONF}" "${section}" "${key}")
+	local new=$(read_mole_config "${section}" "${key}")
+	local rc=
+	if [ "${old}" != "${new}" ]; then
+		if [ "${is_force}" == "1" ]; then
+			update_mole_config "force" "${section}" "${key}" "${old}"
+		else
+			update_mole_config "${section}" "${key}" "${old}"
+		fi
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			((mole_upgrade_fail++))
+			write_log -f "${UPGRADE_LOG}"  "[FAIL] restore mole config [${section}-${key}] => [${old}] (${rc})"
+		else
+			((mole_upgrade_succ++))
+			write_log -f "${UPGRADE_LOG}"  "[SUCC] restore mole config [${section}-${key}] => [${old}] (${rc})"
+		fi
+		return $rc
+	else
+		((mole_upgrade_skip++))	
+		write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole config [${section}-${key}] unchanged!"
+	fi
+}
+
+
+#
+# Main Body Begin ...
+#
+
+write_log -f "${UPGRADE_LOG}" ''
+write_log -f "${UPGRADE_LOG}" ''
+write_log -f "${UPGRADE_LOG}" '[INFO] esop upgrade from 1.0.1 to 1.1.0 start.'
+
+for ((i=0;i<${#ARRAY_MOLECONF_UPGRADE[*]};i++))
+do
+	if (( $i%2 == 0)); then
+		section=${ARRAY_MOLECONF_UPGRADE[$i]}
+	else
+		keyarry=( ${ARRAY_MOLECONF_UPGRADE[$i]} )
+		for ((x=0;x<${#keyarry[*]};x++))
+		do
+			key="${keyarry[$x]}"
+			restore_config "${section}" "${key}"
+		done
+	fi
+done
+
+for ((i=0;i<${#ARRAY_MOLEFORCECONF_UPGRADE[*]};i++))
+do
+	if (( $i%2 == 0)); then
+		section=${ARRAY_MOLEFORCECONF_UPGRADE[$i]}
+	else
+		keyarry=( ${ARRAY_MOLEFORCECONF_UPGRADE[$i]} )
+		for ((x=0;x<${#keyarry[*]};x++))
+		do
+			key="${keyarry[$x]}"
+			restore_config "${section}" "${key}" "1"
+		done
+	fi
+done
+
+errstr=$(/bin/cp /dev/null "${OLD_MOLE_VERFILE}" 2>&1 1>/dev/null)
+if [ $? -eq 0 ]; then
+	write_log -f "${UPGRADE_LOG}"  "[INFO] empty upgrade tag file ${OLD_MOLE_VERFILE}"
+else
+	write_log -f "${UPGRADE_LOG}"  "[ERROR] empty upgrade tag file ${OLD_MOLE_VERFILE} [${errstr}]"
+fi
+
+write_log -f "${UPGRADE_LOG}"  "[INFO] esop upgrade from 1.0.1 to 1.1.0 finished. "\
+					"[skip=${mole_upgrade_skip}, succ=${mole_upgrade_succ}, fail=${mole_upgrade_fail}]"
