@@ -46,6 +46,7 @@ LOG_DIR="${BASE_DIR}/log"
 BACK_DIR="${LOG_DIR}/backup"
 SNAPSHOT_DIR="${LOG_DIR}/snapshot"
 SHARE_DIR="${BASE_DIR}/share"
+UPGRADE_DIR="${BASE_DIR}/upgrade"
 LOCALE_DIR="${SHARE_DIR}/locale"
 PLLIB_DIR="${OPT_DIR}/plmods"
 
