@@ -31,19 +31,17 @@ if [ "${ESOP_UPGRADE_MODE}" != "1" ] || [ "${ESOP_RPM_UPGRADE}" != "1" ];  then
 	exit 1
 fi
 
-# RPM Previous Action Result
+# RPM (%pre) Previous Action Result
 OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
 OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
 
 # Check Previous Version
 OLD_ESOP_VERSION="$(cat ${OLD_ESOP_VERFILE} 2>&- | tr -d '\012\015')"
 if [ -z "${OLD_ESOP_VERSION}" ]; then
-	echo_red "previous esop version unknown, maybe has already been upgraded!";echo;
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version unknown, maybe already has been upgraded!"
 	exit 1
 fi
 if [ "${OLD_ESOP_VERSION}" != "1.0.1" ]; then
-	echo_red "previous esop version [${OLD_ESOP_VERSION}] not supported!";echo;
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version [${OLD_ESOP_VERSION}] not supported!"
 	exit 1
 fi
@@ -53,7 +51,6 @@ OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
 if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
 	:
 else
-	echo_red "previous esop rpmsave mole config file not prepared!";echo;
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop rpmsave mole config file not prepared!"
 	exit 1
 fi
