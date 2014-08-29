@@ -4153,7 +4153,9 @@ process_plugin_timeout() {
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"post notify enabled. CONTINUE"
 	[ "${hd_output}" == "auto handle is disabled. Nothing to do" ] && hd_output="disabled"
-  	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+	local _now_errcount=$( get_maxerr_times "${plugin_name}" )
+	[ -z "${_now_errcount}" ] && _now_errcount=0
+  	${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r "${_now_errcount}" 2>&1
         write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 		"post alert finished, details in ${POSTLOG_LOG##*/}. CONTINUE"
   fi
@@ -4556,7 +4558,9 @@ process_plugin_misform() {
   write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
         "posting notify data"
   [ "${hd_output}" == "Plugin Output Misform, Nothing to do" ] && hd_output="disabled"
-  ${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r 0 2>&1
+  local _now_errcount=$( get_maxerr_times "${plugin_name}" )
+  [ -z "${_now_errcount}" ] && _now_errcount=0
+  ${POSTLOG_SH} -t "post" -p "${plugin_name}" -j "$jid" -o "${output}" -h "${hd_output}" -e "${result_emllst}" -s "${result_smslst}" -f "${snapfile}" -r "${_now_errcount}" 2>&1
 }
 
 
