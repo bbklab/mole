@@ -148,7 +148,7 @@ restore_mole_all_config() {
 
 restore_proxy_all_config() {
 	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
-	NEWINST_DIR="/usr/local/eyou/toolmail"
+	NEWINST_DIR="/usr/local/esop/agent"
 	local rc= errstr=
 	for ((i=0;i<${#ARRAY_OLD_PROXY_CONF[*]};i++))
 	do
