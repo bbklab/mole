@@ -33,7 +33,7 @@ source0="mole-1.0-beta1.tgz"
 mkdir -p $basedir/${name}-${version}
 check_rc "create directory $basedir/$name-$version"
 
-cp -a "${basedir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,share,tmp} $basedir/${name}-${version}/
+cp -a "${basedir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,upgrade,share,tmp} $basedir/${name}-${version}/
 check_rc "copy bin sbin conf docs handler log opt plugin share tmp"
 
 cd $basedir
