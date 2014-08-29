@@ -91,9 +91,17 @@ restore_mole_single_config() {
 	local rc=
 	if [ "${old}" != "${new}" ]; then
 		if [ "${is_force}" == "1" ]; then
-			update_mole_config "force" "${section}" "${key}" "${old}"
+			if [ -z "${old}" ]; then
+				clear_mole_config "force" "${section}" "${key}"
+			else
+				update_mole_config "force" "${section}" "${key}" "${old}"
+			fi
 		else
-			update_mole_config "${section}" "${key}" "${old}"
+			if [ -z "${old}" ]; then
+				clear_mole_config "${section}" "${key}"
+			else
+				update_mole_config "${section}" "${key}" "${old}"
+			fi
 		fi
 		rc=$?
 		if [ $rc -ne 0 ]; then
