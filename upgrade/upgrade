@@ -121,7 +121,7 @@ upgrade_note=0
 
 restore_mole_single_config() {
 	local configfile=$1 section=$2  key=$3  is_force=$4
-	local old=$(read_mole_config -f "${OLD_MOLE_CONF}" "${section}" "${key}")
+	local old=$(read_mole_config -f "${configfile}" "${section}" "${key}")
 	local new=$(read_mole_config "${section}" "${key}")
 	local rc=
 	if [ "${old}" != "${new}" ]; then
