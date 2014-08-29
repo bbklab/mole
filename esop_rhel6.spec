@@ -121,9 +121,7 @@ fi
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
 
 # upgrade old version
-ESOP_UPGRADE_MODE=1
-ESOP_RPM_UPGRADE=1
-/bin/bash /usr/local/%{name}/agent/mole/upgrade/upgrade
+ESOP_UPGRADE_MODE=1 ESOP_RPM_UPGRADE=1 /bin/bash /usr/local/%{name}/agent/mole/upgrade/upgrade
 
 # register as linux system startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
@@ -166,6 +164,7 @@ fi
 - 发布: 正式版 1.1.0
 - 新增: 客户端通知(SMS/Email)的策略控制,可配置通知次数和时间范围
 - 新增: 客户端部分插件允许分别设定告警阈值和故障阈值
+- 新增: RPM升级过程中自动进行旧版保留数据的升级和校验
 - 优化: 大幅加速plugin协议数据的搜集速度,且大幅减少CPU开销
 - 调整: 调整安装后的自动化插件配置,减少默认配置情况下的告警通知
 - 调整: 代理通道proxy的日志内容和格式
