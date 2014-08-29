@@ -46,15 +46,6 @@ if [ "${OLD_ESOP_VERSION}" != "1.0.1" ]; then
 	exit 1
 fi
 
-# Set Old Mole Config File Path
-OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
-if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
-	:
-else
-	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop rpmsave mole config file not prepared!"
-	exit 1
-fi
-
 # Set Upgrade Configs (1.0.1 configs)
 ARRAY_MOLECONF_UPGRADE=(
 	"global"	"scan_interval attach_ini_mail sysload_uplimit 
@@ -77,16 +68,16 @@ ARRAY_MOLEFORCECONF_UPGRADE=(
 )
 
 # Initialize Counter
-mole_upgrade_skip=0
-mole_upgrade_succ=0
-mole_upgrade_fail=0
+upgrade_skip=0
+upgrade_succ=0
+upgrade_fail=0
 
 
 #
 # Func Def
 #
 
-restore_config() {
+restore_mole_single_config() {
 	local section=$1  key=$2  is_force=$3
 	local old=$(read_mole_config -f "${OLD_MOLE_CONF}" "${section}" "${key}")
 	local new=$(read_mole_config "${section}" "${key}")
@@ -99,18 +90,87 @@ restore_config() {
 		fi
 		rc=$?
 		if [ $rc -ne 0 ]; then
-			((mole_upgrade_fail++))
+			((upgrade_fail++))
 			write_log -f "${UPGRADE_LOG}"  "[FAIL] restore mole config [${section}-${key}] => [${old}] (${rc})"
 		else
-			((mole_upgrade_succ++))
+			((upgrade_succ++))
 			write_log -f "${UPGRADE_LOG}"  "[SUCC] restore mole config [${section}-${key}] => [${old}] (${rc})"
 		fi
 		return $rc
 	else
-		((mole_upgrade_skip++))	
+		((upgrade_skip++))	
 		write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole config [${section}-${key}] unchanged!"
 	fi
 }
+
+restore_mole_all_config() {
+	OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
+	if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
+		for ((i=0;i<${#ARRAY_MOLECONF_UPGRADE[*]};i++))
+		do
+			if (( $i%2 == 0)); then
+				section=${ARRAY_MOLECONF_UPGRADE[$i]}
+			else
+				keyarry=( ${ARRAY_MOLECONF_UPGRADE[$i]} )
+				for ((x=0;x<${#keyarry[*]};x++))
+				do
+					key="${keyarry[$x]}"
+					restore_mole_single_config "${section}" "${key}"
+				done
+			fi
+		done
+
+		for ((i=0;i<${#ARRAY_MOLEFORCECONF_UPGRADE[*]};i++))
+		do
+			if (( $i%2 == 0)); then
+				section=${ARRAY_MOLEFORCECONF_UPGRADE[$i]}
+			else
+				keyarry=( ${ARRAY_MOLEFORCECONF_UPGRADE[$i]} )
+				for ((x=0;x<${#keyarry[*]};x++))
+				do
+					key="${keyarry[$x]}"
+					restore_mole_single_config "${section}" "${key}" "1"
+				done
+			fi
+		done
+	else
+		write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop rpmsave mole config file not prepared!"
+		return 1
+	fi
+}
+
+restore_proxy_all_config() {
+	ARRAY_OLD_PROXY_CONF=(
+		"etc/etm_agent.ini"
+		"etc/etm_phptd.ini"
+		"etc/php/php.ini"
+	)
+	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
+	NEWINST_DIR="/usr/local/eyou/toolmail"
+	local rc= errstr=
+	for ((i=0;i<${#ARRAY_OLD_PROXY_CONF[*]};i++))
+	do
+		src="${OLDSAVE_DIR}/${ARRAY_OLD_PROXY_CONF[$i]}"
+		dst="${NEWINST_DIR}/${ARRAY_OLD_PROXY_CONF[$i]}"
+		if [ -f "${src}" ]; then
+			errstr=$( /bin/cp -f "${src}" "${dst}" 2>&1 1>/dev/null )
+			rc=$?
+			if [ $rc -eq 0 ]; then
+				((upgrade_succ++))
+				write_log -f "${UPGRADE_LOG}"  "[SUCC] restore proxy config [${ARRAY_OLD_PROXY_CONF[$i]}] (${rc})"
+			else
+				((upgrade_fail++))
+				write_log -f "${UPGRADE_LOG}"  "[FAIL] restore proxy config [${ARRAY_OLD_PROXY_CONF[$i]}] (${rc}) (${errstr})"
+			fi
+		else
+			((upgrade_skip++))
+			write_log -f "${UPGRADE_LOG}"  "[SKIP] restore proxy config [${src}] not exists!"
+		fi
+	done
+}
+
+
+# Set Old Mole Config File Path
 
 
 #
@@ -121,33 +181,9 @@ write_log -f "${UPGRADE_LOG}" ''
 write_log -f "${UPGRADE_LOG}" ''
 write_log -f "${UPGRADE_LOG}" '[INFO] esop upgrade from 1.0.1 to 1.1.0 start.'
 
-for ((i=0;i<${#ARRAY_MOLECONF_UPGRADE[*]};i++))
-do
-	if (( $i%2 == 0)); then
-		section=${ARRAY_MOLECONF_UPGRADE[$i]}
-	else
-		keyarry=( ${ARRAY_MOLECONF_UPGRADE[$i]} )
-		for ((x=0;x<${#keyarry[*]};x++))
-		do
-			key="${keyarry[$x]}"
-			restore_config "${section}" "${key}"
-		done
-	fi
-done
+restore_mole_all_config
+restore_proxy_all_config
 
-for ((i=0;i<${#ARRAY_MOLEFORCECONF_UPGRADE[*]};i++))
-do
-	if (( $i%2 == 0)); then
-		section=${ARRAY_MOLEFORCECONF_UPGRADE[$i]}
-	else
-		keyarry=( ${ARRAY_MOLEFORCECONF_UPGRADE[$i]} )
-		for ((x=0;x<${#keyarry[*]};x++))
-		do
-			key="${keyarry[$x]}"
-			restore_config "${section}" "${key}" "1"
-		done
-	fi
-done
 
 errstr=$(/bin/cp /dev/null "${OLD_ESOP_VERFILE}" 2>&1 1>/dev/null)
 if [ $? -eq 0 ]; then
@@ -157,4 +193,4 @@ else
 fi
 
 write_log -f "${UPGRADE_LOG}"  "[INFO] esop upgrade from 1.0.1 to 1.1.0 finished. "\
-					"[skip=${mole_upgrade_skip}, succ=${mole_upgrade_succ}, fail=${mole_upgrade_fail}]"
+					"[skip=${upgrade_skip}, succ=${upgrade_succ}, fail=${upgrade_fail}]"
