@@ -1341,7 +1341,17 @@ config_pemp_mailqueue() {
 	local rc=0
 
 	local plugin="emp_mailqueue"
-	local cfg="uplimit"	cfg_value="1000,1500"
+	local cfg="uplimit"	
+	local p_version=$( ${PLUGIN_DIR}/${plugin} "version" 2>&- )
+	if is_int "${p_version}" || is_float "${p_version}"; then
+		if is_between "${p_version}" "0.2" "99999"; then
+			local cfg_value="1000,1500"
+		else
+			local cfg_value="1000"
+		fi
+	else
+		local cfg_value="1000"
+	fi
 
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
