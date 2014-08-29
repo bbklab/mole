@@ -150,6 +150,7 @@ array_base_cmd=(
   /usr/bin/stat
   /bin/touch
   /bin/rm
+  /bin/mv
   /bin/tar
   /bin/gzip
   /bin/chmod

@@ -77,7 +77,7 @@ check() {
 					dstfile="${basefile}_${seqnum}"
 				done
 
-		    		mv  "${file}" "${dstfile}" 2>&-
+		    		/bin/mv  "${file}" "${dstfile}" 2>&-
 				((rollnum++))
 		    		result="${result} [${file}] filesize:[${size}M >= ${force_size_uplimit}M] ### rollback:[${dstfile}] ### ### "
 		    		continue
@@ -98,7 +98,7 @@ check() {
 				dstfile="${basefile}_${seqnum}"
 			done	
 			
-			mv "${file}" "${dstfile}" 2>&-
+			/bin/mv "${file}" "${dstfile}" 2>&-
 			((rollnum++))
 			result="${result} [${file}] newday:[$(date +%F_%T)] ### rollback:[${dstfile}] ### ###"
 			continue
@@ -120,7 +120,7 @@ check() {
 					dstfile="${basefile}_${seqnum}"
 				done
 
-			    	mv "${file}" "${dstfile}" 2>&-
+			    	/bin/mv "${file}" "${dstfile}" 2>&-
 				((rollnum++))
 			    	result="${result} [${file}] newlog:[${tail_day} <> ${head_day}] ### rollback:[${dstfile}] ### ###"
 			    	continue
@@ -142,7 +142,7 @@ check() {
 					dstfile="${basefile}_${seqnum}"
 				done
 	
-				mv "${file}" "${dstfile}" 2>&-
+				/bin/mv "${file}" "${dstfile}" 2>&-
 				((rollnum++))
 				result="${result} [${file}] headday:[${head_day} <> today] ### rollback:[${dstfile}] ### ###"
 				continue
