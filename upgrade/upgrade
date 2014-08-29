@@ -46,7 +46,7 @@ if [ "${OLD_ESOP_VERSION}" != "1.0.1" ]; then
 	exit 1
 fi
 
-# Set Upgrade Configs (1.0.1 configs)
+# Set Upgrade Mole Configs (1.0.1 configs)
 ARRAY_MOLECONF_UPGRADE=(
 	"global"	"scan_interval attach_ini_mail sysload_uplimit 
 			max_kidsnum plugin_maxlen handler_maxlen notify_onmisform locale "
@@ -65,6 +65,13 @@ ARRAY_MOLECONF_UPGRADE=(
 )
 ARRAY_MOLEFORCECONF_UPGRADE=(
 	"global"	"id parter_id name"
+)
+
+# Set Upgrade Proxy Configs (1.0.1 configs)
+ARRAY_OLD_PROXY_CONF=(
+	"etc/etm_agent.ini"
+	"etc/etm_phptd.ini"
+	"etc/php/php.ini"
 )
 
 # Initialize Counter
@@ -140,11 +147,6 @@ restore_mole_all_config() {
 }
 
 restore_proxy_all_config() {
-	ARRAY_OLD_PROXY_CONF=(
-		"etc/etm_agent.ini"
-		"etc/etm_phptd.ini"
-		"etc/php/php.ini"
-	)
 	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
 	NEWINST_DIR="/usr/local/eyou/toolmail"
 	local rc= errstr=
