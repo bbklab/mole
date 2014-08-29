@@ -85,8 +85,8 @@ UPDATE_LOG="${LOG_DIR}/update.log"
 SENDMAIL_LOG="${LOG_DIR}/sendmail.log"
 SENDSMS_LOG="${LOG_DIR}/sendsms.log"
 AUTOCONF_LOG="${LOG_DIR}/autoconf.log"
-UPGRADE_LOG="${LOG_DIR}/upgrade.log"
 ERRLOG="${LOG_DIR}/error.log"
+UPGRADE_LOG="${UPGRADE_DIR}/upgrade.log"
 
 # CFG DEF
 CONFIG_FILE="${CONF_DIR}/.mole.ini"
