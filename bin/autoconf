@@ -1119,7 +1119,7 @@ config_pdns_svr() {
 	local cfg1="dns_check_lst"   cfg_value1=   cfg2="max_wait_time"   cfg_value2="10"
 		
 	local base_domain="$(get_basedomain)"
-	if [ ! -z "${base_domain}" ]; then
+	if [ ! -z "${base_domain}" ] && [ "${base_domain}" != "test.eyou.net" ] ; then
 		cfg_value1="${base_domain}:mx,ns"
 	fi
 
