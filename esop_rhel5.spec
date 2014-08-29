@@ -95,6 +95,22 @@ else
 		exit 1		# exit with non-zero so rpm installation progress won't continue.
 	fi
 fi
+
+# backup old version config files / save old version
+if /bin/rpm -qi "esop" >/dev/null 2>&1; then
+	OLD_ESOP_VERSION=$( /bin/rpm -q --queryformat "%{version}" "esop" 2>&- )
+	if [ -n "${OLD_ESOP_VERSION}" ]; then
+		OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
+		OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
+		if /bin/mkdir -p "${OLD_ESOP_SAVEDIR}" >/dev/null 2>&1; then
+			if echo -en "${OLD_ESOP_VERSION}" > "${OLD_ESOP_VERFILE}" 2>/dev/null; then
+				PROXY_CONF_PATH="/usr/local/esop/agent/etc"
+				MOLE_CONF_PATH="/usr/local/esop/agent/mole/conf"
+				/bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${OLD_ESOP_SAVEDIR}" >/dev/null 2>&1
+			fi
+		fi
+	fi
+fi
 :
 
 %post
@@ -103,6 +119,11 @@ fi
 
 # init all basic plugins' configs
 /bin/bash /usr/local/%{name}/agent/mole/bin/autoconf rpminit all
+
+# upgrade old version
+ESOP_UPGRADE_MODE=1
+ESOP_RPM_UPGRADE=1
+/bin/bash /usr/local/%{name}/agent/mole/upgrade/upgrade
 
 # register as linux system startups
 /sbin/chkconfig --add %{name} >/dev/null 2>&1
