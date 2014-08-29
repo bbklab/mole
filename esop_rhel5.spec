@@ -98,7 +98,9 @@ fi
 
 # backup old version config files / save old version
 if /bin/rpm -qi "esop" >/dev/null 2>&1; then
-	OLD_ESOP_VERSION=$( /bin/rpm -q --queryformat "%{version}" "esop" 2>&- )
+	# following abandoned: as %{version} will be replaced by fix string {VERSION} on rpm executing
+	# OLD_ESOP_VERSION=$( /bin/rpm -q --queryformat "%{version}" "esop" 2>&- )
+	OLD_ESOP_VERSION=$( ${MOLE_INIT} version 2>&- )
 	if [ -n "${OLD_ESOP_VERSION}" ]; then
 		OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
 		OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
