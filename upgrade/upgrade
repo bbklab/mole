@@ -32,24 +32,24 @@ if [ "${ESOP_UPGRADE_MODE}" != "1" ] || [ "${ESOP_RPM_UPGRADE}" != "1" ];  then
 fi
 
 # RPM Previous Action Result
-OLD_MOLE_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
-OLD_MOLE_VERFILE="${OLD_MOLE_SAVEDIR}/.version_upgrade"
+OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
+OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
 
 # Check Previous Version
-OLD_MOLE_VERSION="$(cat ${OLD_MOLE_VERFILE} 2>&- | tr -d '\012\015')"
-if [ -z "${OLD_MOLE_VERSION}" ]; then
-	echo_red "previous esop version unknown, maybe already has been upgraded!";echo;
+OLD_ESOP_VERSION="$(cat ${OLD_ESOP_VERFILE} 2>&- | tr -d '\012\015')"
+if [ -z "${OLD_ESOP_VERSION}" ]; then
+	echo_red "previous esop version unknown, maybe has already been upgraded!";echo;
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version unknown, maybe already has been upgraded!"
 	exit 1
 fi
-if [ "${OLD_MOLE_VERSION}" != "1.0.1" ]; then
-	echo_red "previous esop version [${OLD_MOLE_VERSION}] not supported!";echo;
-	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version [${OLD_MOLE_VERSION}] not supported!"
+if [ "${OLD_ESOP_VERSION}" != "1.0.1" ]; then
+	echo_red "previous esop version [${OLD_ESOP_VERSION}] not supported!";echo;
+	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version [${OLD_ESOP_VERSION}] not supported!"
 	exit 1
 fi
 
 # Set Old Mole Config File Path
-OLD_MOLE_CONF="${OLD_MOLE_SAVEDIR}/conf/.mole.ini"
+OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
 if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
 	:
 else
@@ -152,11 +152,11 @@ do
 	fi
 done
 
-errstr=$(/bin/cp /dev/null "${OLD_MOLE_VERFILE}" 2>&1 1>/dev/null)
+errstr=$(/bin/cp /dev/null "${OLD_ESOP_VERFILE}" 2>&1 1>/dev/null)
 if [ $? -eq 0 ]; then
-	write_log -f "${UPGRADE_LOG}"  "[INFO] empty upgrade tag file ${OLD_MOLE_VERFILE}"
+	write_log -f "${UPGRADE_LOG}"  "[INFO] empty upgrade tag file ${OLD_ESOP_VERFILE}"
 else
-	write_log -f "${UPGRADE_LOG}"  "[ERROR] empty upgrade tag file ${OLD_MOLE_VERFILE} [${errstr}]"
+	write_log -f "${UPGRADE_LOG}"  "[ERROR] empty upgrade tag file ${OLD_ESOP_VERFILE} [${errstr}]"
 fi
 
 write_log -f "${UPGRADE_LOG}"  "[INFO] esop upgrade from 1.0.1 to 1.1.0 finished. "\
