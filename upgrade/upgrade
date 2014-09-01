@@ -262,6 +262,78 @@ restore_mole_all_config() {
 	fi
 }
 
+restore_mole_opt_files() {
+	if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
+		local default_mailrec=$(read_mole_config -f "${OLD_MOLE_CONF}" "default" "mail_receviers")
+		if [ "${default_mailrec}" == "file:opt/receviers.lst" ]; then
+			if [ -f "${OLD_ESOP_SAVEDIR}/opt/receviers.lst" ]; then
+				local rc= errstr=
+				errstr=$( /bin/cp -f "${OLD_ESOP_SAVEDIR}/opt/receviers.lst" "${OPT_DIR}/receviers.lst" 2>&1 1>/dev/null )
+				rc=$?
+				if [ $rc -eq 0 ]; then	
+					((upgrade_succ++))				
+					write_log -f "${UPGRADE_LOG}"  "[SUCC] restore mole opt-file [opt/receviers.lst] (${rc})"
+				else
+					((upgrade_fail++))
+					write_log -f "${UPGRADE_LOG}"  "[FAIL] restore mole opt-file [opt/receviers.lst] (${rc}) (${errstr})"
+				fi
+			else
+				((upgrade_skip++))
+				write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/receviers.lst], as previous backup not exists!"
+			fi
+		else
+			((upgrade_skip++))
+			write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/receviers.lst], as previous config = [${default_mailrec}]"
+		fi
+
+		local default_smsrec=$(read_mole_config -f "${OLD_MOLE_CONF}" "default" "sms_receviers")
+		if [ "${default_smsrec}" == "file:opt/sms.lst" ]; then
+			if [ -f "${OLD_ESOP_SAVEDIR}/opt/sms.lst" ]; then
+				local rc= errstr=
+				errstr=$( /bin/cp -f "${OLD_ESOP_SAVEDIR}/opt/sms.lst" "${OPT_DIR}/sms.lst" 2>&1 1>/dev/null )
+				rc=$?
+				if [ $rc -eq 0 ]; then	
+					((upgrade_succ++))				
+					write_log -f "${UPGRADE_LOG}"  "[SUCC] restore mole opt-file [opt/sms.lst] (${rc})"
+				else
+					((upgrade_fail++))
+					write_log -f "${UPGRADE_LOG}"  "[FAIL] restore mole opt-file [opt/sms.lst] (${rc}) (${errstr})"
+				fi
+			else
+				((upgrade_skip++))
+				write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/sms.lst], as previous backup not exists!"
+			fi
+		else
+			((upgrade_skip++))
+			write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/sms.lst], as previous config = [${default_smsrec}]"
+		fi
+	fi
+	
+	if [ -f "${OLD_ESOP_SAVEDIR}/conf/process.ini" ] && [ -s "${OLD_ESOP_SAVEDIR}/conf/process.ini" ]; then
+		local process_psfile=$(read_mole_config -f "${OLD_ESOP_SAVEDIR}/conf/process.ini" "process" "pslist_file")
+		if [ "${process_psfile}" == "file:opt/process.lst" ]; then
+			if [ -f "${OLD_ESOP_SAVEDIR}/opt/process.lst" ]; then
+				local rc= errstr=
+				errstr=$( /bin/cp -f "${OLD_ESOP_SAVEDIR}/opt/process.lst" "${OPT_DIR}/process.lst" 2>&1 1>/dev/null )
+				rc=$?
+				if [ $rc -eq 0 ]; then	
+					((upgrade_succ++))				
+					write_log -f "${UPGRADE_LOG}"  "[SUCC] restore mole opt-file [opt/process.lst] (${rc})"
+				else
+					((upgrade_fail++))
+					write_log -f "${UPGRADE_LOG}"  "[FAIL] restore mole opt-file [opt/process.lst] (${rc}) (${errstr})"
+				fi
+			else
+				((upgrade_skip++))
+				write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/process.lst], as previous backup not exists!"
+			fi
+		else
+			((upgrade_skip++))
+			write_log -f "${UPGRADE_LOG}"  "[SKIP] restore mole opt-file [opt/process.lst], as previous config = [${process_psfile}]"
+		fi
+	fi
+}
+
 restore_proxy_all_config() {
 	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
 	NEWINST_DIR="/usr/local/esop/agent"
@@ -300,6 +372,7 @@ write_log -f "${UPGRADE_LOG}" ''
 write_log -f "${UPGRADE_LOG}" '[INFO] esop upgrade from 1.0.1 to 1.1.0 start.'
 
 restore_mole_all_config
+restore_mole_opt_files
 restore_proxy_all_config
 
 
