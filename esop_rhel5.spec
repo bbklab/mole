@@ -104,11 +104,13 @@ if /bin/rpm -qi "esop" >/dev/null 2>&1; then
 	if [ -n "${OLD_ESOP_VERSION}" ]; then
 		OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
 		OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
-		if /bin/mkdir -p "${OLD_ESOP_SAVEDIR}" >/dev/null 2>&1; then
+		if /bin/mkdir -p "${OLD_ESOP_SAVEDIR}/opt" >/dev/null 2>&1; then
 			if echo -en "${OLD_ESOP_VERSION}" > "${OLD_ESOP_VERFILE}" 2>/dev/null; then
 				PROXY_CONF_PATH="/usr/local/esop/agent/etc"
 				MOLE_CONF_PATH="/usr/local/esop/agent/mole/conf"
+				MOLE_OPT_PATH="/usr/local/esop/agent/mole/opt"
 				/bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${OLD_ESOP_SAVEDIR}" >/dev/null 2>&1
+				/bin/cp -arf  "${MOLE_OPT_PATH}"/{process.lst,receviers.lst,sms.lst} "${OLD_ESOP_SAVEDIR}/opt" >/dev/null 2>&1
 			fi
 		fi
 	fi
