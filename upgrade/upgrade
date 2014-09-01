@@ -65,8 +65,9 @@ ARRAY_OLDMOLE_BASECONF=(
   debug
 )
 
-# Set Upgrade Mole Configs (1.0.1 configs)
-ARRAY_MOLECONF_UPGRADE=(
+# Set Restore Mole Configs (1.0.1 configs)
+# List all 1.0.1 configs here.
+ARRAY_MOLECONF_RESTORE=(
 	"global"		"scan_interval attach_ini_mail sysload_uplimit 
 				max_kidsnum plugin_maxlen handler_maxlen notify_onmisform locale "
         "default"       	"enable comment frequency exec_tmout maxerr_times take_snapshot mail_notify
@@ -97,11 +98,34 @@ ARRAY_MOLECONF_UPGRADE=(
 	"tcp_conn"		"${ARRAY_OLDMOLE_BASECONF[*]} port_list"
 	"traffic"		"${ARRAY_OLDMOLE_BASECONF[*]} ifdev_lst"
 )
-ARRAY_MOLEFORCECONF_UPGRADE=(
-	"global"	"id parter_id name"
+ARRAY_MOLEFORCECONF_RESTORE=(
+	"global"		"id parter_id name"
+)
+# Skip restore configs, which will use new value instead restoring old values, 
+# Only skip the [section]-[key] if the old value equals {old-value}, as bin/autoconf
+# runs before upgrade/upgrade, so skipped [section]-[key] here use new value.
+# Note: {old-value} empty means skip forcely, without old-value checking.
+ARRAY_SKIP_RESTORE_CONF=(
+	#section		#key		#old-value
+	"cpu_usage"		"uplimit"	"75"
+	"cpu_usage"		"wa_uplimit"	"20"
+	"cpu_usage"		"sy_uplimit"	"30"
+	"cpu_usage"		"us_uplimit"	"50"
+	"disk_fs"		"maxerr_times"	"3"
+	"disk_iostat"		"util_uplimit"	"70"
+	"disk_space"		"space_pct"	"90"
+	"disk_space"		"inode_pct"	"90"
+	"memory"		"exec_tmout"	"1min"
+	"notify_syslogin"	"mail_notify"	"all"
+	"notify_syslogin"	"post_notify"	"all"
+	"port"			"exec_tmout"	"1min"
+	"port"			"maxerr_times"	"1"
+	"port"			"port_list"	""
+	"tcp_conn"		"port_list"	""
+	"traffic"		"ifdev_lst"	"eth0:30M/s:50M/s:0:0"
 )
 
-# Set Upgrade Proxy Configs (1.0.1 configs)
+# Set Restore Proxy Configs (1.0.1 configs)
 ARRAY_OLD_PROXY_CONF=(
 	"etc/etm_agent.ini"
 	"etc/etm_phptd.ini"
@@ -119,12 +143,37 @@ upgrade_note=0
 # Func Def
 #
 
+is_should_skip() {
+	local section=$1  key=$2  value=$3
+
+	for((i=0;i<${#ARRAY_SKIP_RESTORE_CONF[*]};i++))
+	do
+		if [ "${ARRAY_SKIP_RESTORE_CONF[$i]}" == "${section}" ]; then
+			if [ "${ARRAY_SKIP_RESTORE_CONF[$i+1]}" == "${key}" ]; then
+				if [ -z "${ARRAY_SKIP_RESTORE_CONF[$i+2]}" ]; then
+					return 0
+				elif [ "${ARRAY_SKIP_RESTORE_CONF[$i+2]}" == "${value}" ]; then
+					return 0
+				else
+					continue
+				fi
+			fi
+		fi
+	done
+	
+	return 1
+}
+
 restore_mole_single_config() {
 	local configfile=$1 section=$2  key=$3  is_force=$4
 	local old=$(read_mole_config -f "${configfile}" "${section}" "${key}")
 	local new=$(read_mole_config "${section}" "${key}")
 	local rc=
-	if [ "${old}" != "${new}" ]; then
+
+	if is_should_skip "${section}" "${key}" "${old}" >/dev/null 2>&1; then
+		((upgrade_skip++))	
+		write_log -f "${UPGRADE_LOG}"  "[SKIP] restore config [${section}-${key}], as old valud = [${old}]"
+	elif [ "${old}" != "${new}" ]; then
 		if [ "${is_force}" == "1" ]; then
 			if [ -z "${old}" ]; then
 				clear_mole_config "force" "${section}" "${key}"
@@ -156,12 +205,12 @@ restore_mole_single_config() {
 restore_mole_all_config() {
 	OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
 	if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
-		for ((i=0;i<${#ARRAY_MOLECONF_UPGRADE[*]};i++))
+		for ((i=0;i<${#ARRAY_MOLECONF_RESTORE[*]};i++))
 		do
 			if (( $i%2 == 0)); then
-				section=${ARRAY_MOLECONF_UPGRADE[$i]}
+				section=${ARRAY_MOLECONF_RESTORE[$i]}
 			else
-				keyarry=( ${ARRAY_MOLECONF_UPGRADE[$i]} )
+				keyarry=( ${ARRAY_MOLECONF_RESTORE[$i]} )
 				for ((x=0;x<${#keyarry[*]};x++))
 				do
 					key="${keyarry[$x]}"
@@ -182,12 +231,12 @@ restore_mole_all_config() {
 			fi
 		done
 
-		for ((i=0;i<${#ARRAY_MOLEFORCECONF_UPGRADE[*]};i++))
+		for ((i=0;i<${#ARRAY_MOLEFORCECONF_RESTORE[*]};i++))
 		do
 			if (( $i%2 == 0)); then
-				section=${ARRAY_MOLEFORCECONF_UPGRADE[$i]}
+				section=${ARRAY_MOLEFORCECONF_RESTORE[$i]}
 			else
-				keyarry=( ${ARRAY_MOLEFORCECONF_UPGRADE[$i]} )
+				keyarry=( ${ARRAY_MOLEFORCECONF_RESTORE[$i]} )
 				for ((x=0;x<${#keyarry[*]};x++))
 				do
 					key="${keyarry[$x]}"
