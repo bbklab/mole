@@ -146,6 +146,7 @@ upgrade_note=0
 is_should_skip() {
 	local section=$1  key=$2  value=$3
 
+	local i=
 	for((i=0;i<${#ARRAY_SKIP_RESTORE_CONF[*]};i++))
 	do
 		if [ "${ARRAY_SKIP_RESTORE_CONF[$i]}" == "${section}" ]; then
@@ -205,6 +206,7 @@ restore_mole_single_config() {
 restore_mole_all_config() {
 	OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
 	if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
+		local i=  x=
 		for ((i=0;i<${#ARRAY_MOLECONF_RESTORE[*]};i++))
 		do
 			if (( $i%2 == 0)); then
@@ -231,6 +233,7 @@ restore_mole_all_config() {
 			fi
 		done
 
+		i=  x=
 		for ((i=0;i<${#ARRAY_MOLEFORCECONF_RESTORE[*]};i++))
 		do
 			if (( $i%2 == 0)); then
@@ -338,6 +341,7 @@ restore_proxy_all_config() {
 	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
 	NEWINST_DIR="/usr/local/esop/agent"
 	local rc= errstr=
+	local i=
 	for ((i=0;i<${#ARRAY_OLD_PROXY_CONF[*]};i++))
 	do
 		src="${OLDSAVE_DIR}/${ARRAY_OLD_PROXY_CONF[$i]}"
