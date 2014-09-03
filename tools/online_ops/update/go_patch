@@ -4,7 +4,11 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 
 # BASE DIR DEF
 BASE_DIR=$( cd $(dirname $0) && pwd)
+
+# INST DIR DEF 
 INST_DIR="/usr/local/eyou/toolmail"
+
+# SEP DEF
 SEPERATOR="~~~"
 
 # REQUIRED_UTILS DEF
@@ -20,8 +24,26 @@ REQUIRED_UTILS=(
 	"/usr/bin/tr"
 )
         
+# UPDATE def
+update_path="${BASE_DIR}/${updatename}"
+update_back="${update_path}/pre-backup"
+update_fcfg="${update_path}/update.cfg"
+update_flog="${update_path}/update.log"
 
 #### Function Def ####
+
+# Print Help
+# 
+show_help() {
+cat << EOF
+Usage:          ./${0##*/}   	update_dirname  [workmode]
+    workmode ~   print, check, backup, go
+Example:        ./${0##*/}   	2014.6.17_hotfix_16320   print
+Example:        ./${0##*/}   	2014.6.17_hotfix_16320   check
+Example:        ./${0##*/}   	2014.6.17_hotfix_16320   go
+EOF
+exit 0
+}
 
 # Terminal color
 #
@@ -38,31 +60,16 @@ echo_red() {
   echo -e "\033[1;31m${content}\033[0m\c "
 }
 
-# Print Help
-# 
-show_help() {
-cat << EOF
-        Usage:          ./${0##*/}   	update_dirname  [workmode]
-			workmode ~   	print, check, backup, go
-        Example:        ./${0##*/}   	2014.6.17_hotfix_16320   print
-        Example:        ./${0##*/}   	2014.6.17_hotfix_16320   check
-        Example:        ./${0##*/}   	2014.6.17_hotfix_16320   go
-EOF
-exit 0
-}
-
 # Util Check
 #
 util_check() {
-  local total=0 err=0 lacklst=
+  local lacklst=
   for util in ${REQUIRED_UTILS[*]}; do
-        ((total++))
         if [ ! -f "${util}" ] || [ ! -x "${util}" ]; then
-                ((err++))
                 lacklst="${lacklst} ${util}"
         fi
   done
-  [ $err -ne 0 ] && echo -en "${lacklst}"
+  [ -n "${lacklst}" ] && echo -en "${lacklst}"
 }
 
 # Read INI File Section
@@ -71,10 +78,10 @@ util_check() {
 #
 read_ini() {
 	local inifile="$1"  section="$2"
-	/bin/cat "${inifile}" 2>&- | tr '\t' ' ' | /bin/awk -F"=" '\
+	/bin/cat "${inifile}" 2>&- | tr '\t' ' ' | /bin/awk '\
 		($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next} \
 		( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit} \
-		(k==1 && x==1 && $0!~/^[ \t]*$/ && $0!~/^[ \t]*;/){print $1}' |\
+		(k==1 && x==1 && $0!~/^[ \t]*$/ && $0!~/^[ \t]*;/){print}' |\
 	/bin/sed -e 's/^[ \t]*//; s/[ \t]*$//; s/^\"//; s/\"$//' 2>&-
 }
 
@@ -210,11 +217,6 @@ else
 	show_help
 fi
 
-# 3. update def
-update_path="${BASE_DIR}/${updatename}"
-update_back="${update_path}/pre-backup"
-update_fcfg="${update_path}/update.cfg"
-update_flog="${update_path}/update.log"
 
 # 4. check update.cfg
 if [ -f "${update_fcfg}" ] && [ -s "${update_fcfg}" ]; then

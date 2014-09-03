@@ -33,9 +33,9 @@ REQUIRED_UTILS=(
 # 
 show_help() {
 cat << EOF
-	Usage:		./${0##*/}  srcdir(old)  dstdir(new)   [cfg] [prefix]
-	Example:	./${0##*/}  /etc/   /tmp/etc.1
-	Example:	./${0##*/}  srcdir  dstdir   cfg  "esop_web/files/"
+Usage:		./${0##*/}  srcdir(old)  dstdir(new)   [cfg] [prefix]
+Example:	./${0##*/}  /etc/   /tmp/etc.1
+Example:	./${0##*/}  srcdir  dstdir   cfg  "esop_web/files/"
 EOF
 exit 0
 }
