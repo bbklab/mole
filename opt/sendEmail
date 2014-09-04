@@ -49,7 +49,7 @@ my %conf = (
     "version"              => '1.56',                              ## The version of this program
     "authorName"           => 'Brandon Zehm',                      ## Author's Name
     "authorEmail"          => 'caspian@dotconf.net',               ## Author's Email Address
-    "timezone"             => '+0000',                             ## We always use +0000 for the time zone
+    "timezone"             => '+0800',                             ## We always use +0800 for the time zone
     "hostname"             => 'changeme',                          ## Used in printmsg() for all output (is updated later in the script).
     "debug"                => 0,                                   ## Default debug level
     "error"                => '',                                  ## Error messages will often be stored here
@@ -1822,7 +1822,7 @@ $message =~ s/(\015)(\012|$)?/\015\012/g;
 $message =~ s/(^|$CRLF)(\.{1})($CRLF|$)/$1.$2$3/g;
 
 ## Get the current date for the email header
-my ($sec,$min,$hour,$mday,$mon,$year,$day) = gmtime();
+my ($sec,$min,$hour,$mday,$mon,$year,$day) = localtime();
 $year += 1900; $mon = return_month($mon); $day = return_day($day);
 my $date = sprintf("%s, %s %s %d %.2d:%.2d:%.2d %s",$day, $mday, $mon, $year, $hour, $min, $sec, $conf{'timezone'});
 
