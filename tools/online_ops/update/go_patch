@@ -20,7 +20,6 @@ REQUIRED_UTILS=(
 	"/bin/rm"
 	"/bin/mkdir"
         "/usr/bin/md5sum"
-        "/usr/bin/tee"
 	"/usr/bin/tr"
 )
         
@@ -88,12 +87,6 @@ read_ini() {
 # Write Log
 # 
 log() {
-	echo "$(date +%s)" "$(date +%F_%T)" "${*}"  | /usr/bin/tee -a ${update_flog}
-}
-
-# Log Only
-# 
-_log() {
 	echo "$(date +%s)" "$(date +%F_%T)" "${*}" >> ${update_flog}
 }
 
@@ -243,13 +236,9 @@ modifynum=$( echo -e "${modifylst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END
 backupnum=$( echo -e "${backuplst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
 
 log "newadd: (${newaddnum})"
-_log "newadd: (${newaddnum}) ${newaddlst}"
 log "remove: (${removenum})"
-_log "remove: (${removenum}) ${removelst}"
 log "modify: (${modifynum})"
-_log "modify: (${modifynum}) ${modifylst}"
 log "backup: (${backupnum})"
-_log "backup: (${backupnum}) ${backuplst}"
 
 # 7. action do backup
 if [ -n "${backuplst}" ]; then

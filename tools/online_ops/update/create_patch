@@ -6,8 +6,8 @@ export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:
 BASE_DIR=$( cd $(dirname $0) && pwd)
 
 # FILE DEF
-SRC_FTMP="/var/tmp/.srcdir.md5db"
-DST_FTMP="/var/tmp/.dstdir.md5db"
+OLD_FTMP="/var/tmp/.olddir.md5db"
+NEW_FTMP="/var/tmp/.newdir.md5db"
 RESULT_F="/var/tmp/diffdir.result"
 RESULT_CFG="/var/tmp/update.cfg"
 
@@ -33,9 +33,9 @@ REQUIRED_UTILS=(
 # 
 show_help() {
 cat << EOF
-Usage:		./${0##*/}  srcdir(old)  dstdir(new)   [cfg] [prefix]
-Example:	./${0##*/}  /etc/   /tmp/etc.1
-Example:	./${0##*/}  srcdir  dstdir   cfg  "esop_web/files/"
+Usage:		./${0##*/}  olddir   newdir   [cfg]   [prefix]
+Example:	./${0##*/}  /etc.1   /etc
+Example:	./${0##*/}  olddir   newdir   cfg     esop_web/files/
 EOF
 exit 0
 }
@@ -94,30 +94,44 @@ build_md5db() {
   fi
 }
 
+#  Different Files List
+#
+diff_files() {
+  local oldlst="${1}"  newlst="${2}"   wanted="${3}"
+  local tmplst=        result=
+  tmplst=$( echo -e "${oldlst}\n${newlst}" | /bin/sort | /usr/bin/uniq -u )  ### \n is important
+  if [ "${wanted}" == "old" ]; then
+  	result=$( echo -e "${oldlst}\n${tmplst}" | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ *#'${OLDDIR}'#' )
+  elif [ "${wanted}" == "new" ]; then
+	result=$( echo -e "${newlst}\n${tmplst}" | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ *#'${NEWDIR}'#' )
+  fi
+  echo -e "${result}"
+}
+
 ### Main Body Begin
 
 # 0. check utils
-UTIL_LACK=$( util_check )
-if [ -n "${UTIL_LACK}" ]; then
-        echo_red "lack utils: [${UTIL_LACK}]";echo
+util_lack=$( util_check )
+if [ -n "${util_lack}" ]; then
+        echo_red "lack utils: [${util_lack}]";echo
         exit 1
 fi
 
 # 1. remove last /
-srcdir=$(echo "$1"|sed -e 's#/$##')
-dstdir=$(echo "$2"|sed -e 's#/$##')
+OLDDIR=$(echo "$1"|sed -e 's#/$##')
+NEWDIR=$(echo "$2"|sed -e 's#/$##')
 workmode="$3"
 prefix="$4"
 MODE=0
 
 # 2. check input args 
-if [ -z "${srcdir}" ] || [ -z "${dstdir}" ]; then
+if [ -z "${OLDDIR}" ] || [ -z "${NEWDIR}" ]; then
 	show_help
-elif [ ! -d "${srcdir}" ]; then
-	echo_red "[${srcdir}] isn't an exist directory.";echo
+elif [ ! -d "${OLDDIR}" ]; then
+	echo_red "[${OLDDIR}] isn't an exist directory.";echo
 	exit 1
-elif [ ! -d "${dstdir}" ]; then
-	echo_red "[${dstdir}] isn't an exist directory.";echo
+elif [ ! -d "${NEWDIR}" ]; then
+	echo_red "[${NEWDIR}] isn't an exist directory.";echo
 	exit 1
 fi
 
@@ -135,43 +149,51 @@ else
 	fi
 fi
 
-# 3. build md5sum list 
-if build_md5db "${srcdir}" "${SRC_FTMP}"; then
-	if build_md5db "${dstdir}" "${DST_FTMP}"; then
-		src_files=$( /bin/awk '{$1="";print;}' "${SRC_FTMP}" 2>&- )
-		dst_files=$( /bin/awk '{$1="";print;}' "${DST_FTMP}" 2>&- )
-		echo "$(date +%F_%T) $(echo_green "[OK]") building md5sum list."
+# 3. get file list
+old_files=
+new_files=
+if build_md5db "${OLDDIR}" "${OLD_FTMP}"; then
+	if build_md5db "${NEWDIR}" "${NEW_FTMP}"; then
+		old_files=$( /bin/awk '{$1="";print;}' "${OLD_FTMP}" 2>&- )
+		new_files=$( /bin/awk '{$1="";print;}' "${NEW_FTMP}" 2>&- )
+		echo "$(echo_green "[OK]") build md5lst."
 	else
-		echo_red "build md5sum list for [${dstdir}] failed!";echo
+		echo_red "build md5sum list for [${NEWDIR}] failed!";echo
 		exit 1
 	fi
 else
-	echo_red "build md5sum list for [${srcdir}] failed!";echo
+	echo_red "build md5sum list for [${OLDDIR}] failed!";echo
 	exit 1
 fi
 
 # 4. check add/delete
-tmp_files=$( echo -e "${src_files}\n${dst_files}" | /bin/sort | /usr/bin/uniq -u )  ### \n is important
-src_only=$( echo -e "${src_files}\n${tmp_files}"  | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ .#'${srcdir}'#' )
-dst_only=$( echo -e "${dst_files}\n${tmp_files}"  | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ .#'${dstdir}'#' )
-src_onlynum=$( echo -e "${src_only}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-dst_onlynum=$( echo -e "${dst_only}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-echo "$(date +%F_%T) $(echo_green "[OK]") check +/- files."
+del_files=$( diff_files "${old_files}" "${new_files}" "old" )
+add_files=$( diff_files "${old_files}" "${new_files}" "new" )
+del_nums=$( echo -e "${del_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+add_nums=$( echo -e "${add_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+echo "$(echo_green "[OK]") check +/- files."
 
 # 5. check modify 
-mod_files=$( while read  -a line ; do awk -v s="${srcdir}" -v d="${dstdir}" '( $1!="'"${line[0]}"'" && $2=="'"${line[1]}"'" ) {gsub(/ *\.\//,"/",$2);printf "%s%s %s%s\n",s,$2,d,$2;exit;}' "${DST_FTMP}" ; done < "${SRC_FTMP}" )
+mod_files=$( while read  -a line
+	     do 
+		/bin/awk -v s="${OLDDIR}" -v d="${NEWDIR}" '\
+			( $1!="'"${line[0]}"'" && $2=="'"${line[1]}"'" ) \
+			{gsub(/ *\.\//,"/",$2); printf "%s%s %s%s\n",s,$2,d,$2; exit;}' \
+			"${NEW_FTMP}" ; 
+	     done < "${OLD_FTMP}"
+           )
 mod_filesnum=$( echo -e "${mod_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-echo "$(date +%F_%T) $(echo_green "[OK]") check <> files."
+echo "$(echo_green "[OK]") check <> files."
 
 # 6. output result
 echo;echo;
 if [ "${MODE}" == "0" ]; then
 	{ 
-	echo -e "$(echo_green "Files Only in [${srcdir}] (${src_onlynum}):")"
-	echo -e "${src_only}"
+	echo -e "$(echo_green "Files Only in [${OLDDIR}] (${del_nums}):")"
+	echo -e "${del_files}"
 	echo -e "\n"
-	echo -e "$(echo_green "Files Only in [${dstdir}] (${dst_onlynum}):")"
-	echo -e "${dst_only}"
+	echo -e "$(echo_green "Files Only in [${NEWDIR}] (${add_nums}):")"
+	echo -e "${add_files}"
 	echo -e "\n"
 	echo -e "$(echo_green "Files Different (${mod_filesnum}):")"
 	echo -e "${mod_files}" | /usr/bin/column -t
@@ -182,23 +204,19 @@ elif [ "${MODE}" == "1" ]; then
 	echo_green "Result File: ${RESULT_CFG}";echo;echo;
 	{
 	echo -e "[remove]"
-	echo -e "${src_only}\n" | while read file
+	echo -e "${del_files}\n" | while read file
 	do
 		[ -z "${file}" ] && continue 1
-		# file=$(echo -e "${file}" | awk -F "${srcdir}|${dstdir}" '{gsub(/^\//,"",$2);print $2;exit;}')
-		# trim all space in result, this lead to can NOT deal with file with space, fuck that kind of file
-		file=$(echo -e "${file}" | awk -F "${srcdir}|${dstdir}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+		file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
 		echo -e "${file}"
 	done
 	echo
 
 	echo -e "[add]"
-	echo -e "${dst_only}\n" | while read file
+	echo -e "${add_files}\n" | while read file
 	do
 		[ -z "${file}" ] && continue 1
-		# file=$(echo -e "${file}" | awk -F "${srcdir}|${dstdir}" '{gsub(/^\//,"",$2);print $2;exit;}')
-		# trim all space in result, this lead to can NOT deal with file with space, fuck that kind of file
-		file=$(echo -e "${file}" | awk -F "${srcdir}|${dstdir}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+		file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
 		echo -e "${file}${SEPERATOR}${prefix}"
 	done
 	echo
@@ -207,8 +225,7 @@ elif [ "${MODE}" == "1" ]; then
 	echo -e "${mod_files}\n" | while read file
 	do
 		[ -z "${file}" ] && continue 1
-		# trim all space in result, this lead to can NOT deal with file with space, fuck that kind of file
-		file=$(echo -e "${file}" | awk -F "${srcdir}|${dstdir}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+		file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
 		echo -e "${file}${SEPERATOR}${prefix}"
 	done
 	echo
