@@ -120,8 +120,6 @@ ARRAY_SKIP_RESTORE_CONF=(
 	"notify_syslogin"	"post_notify"	"all"
 	"port"			"exec_tmout"	"1min"
 	"port"			"maxerr_times"	"1"
-	"port"			"port_list"	""
-	"tcp_conn"		"port_list"	""
 	"traffic"		"ifdev_lst"	"eth0:30M/s:50M/s:0:0"
 )
 
