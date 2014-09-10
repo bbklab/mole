@@ -8,6 +8,10 @@ BASE_DIR=$( cd $(dirname $0) && pwd)
 # INST DIR DEF 
 INST_DIR="/usr/local/eyou/toolmail"
 
+# UPDATE DEF
+UPDATE_FLOG="${BASE_DIR}/update.log"
+UPDATE_BACK="${BASE_DIR}/pre-backup"
+
 # SEP DEF
 SEPERATOR="~~~"
 
@@ -18,16 +22,13 @@ REQUIRED_UTILS=(
         "/bin/sed"
 	"/bin/cp"
 	"/bin/rm"
+	"/bin/tar"
+	"/bin/gzip"
 	"/bin/mkdir"
         "/usr/bin/md5sum"
 	"/usr/bin/tr"
 )
         
-# UPDATE def
-update_path="${BASE_DIR}/${updatename}"
-update_back="${update_path}/pre-backup"
-update_fcfg="${update_path}/update.cfg"
-update_flog="${update_path}/update.log"
 
 #### Function Def ####
 
@@ -35,11 +36,13 @@ update_flog="${update_path}/update.log"
 # 
 show_help() {
 cat << EOF
-Usage:          ./${0##*/}   	update_dirname  [workmode]
-    workmode ~   print, check, backup, go
-Example:        ./${0##*/}   	2014.6.17_hotfix_16320   print
-Example:        ./${0##*/}   	2014.6.17_hotfix_16320   check
-Example:        ./${0##*/}   	2014.6.17_hotfix_16320   go
+Usage:          ./${0##*/}   	[{cfgfile}]  {workmode}
+Note:	cfgfile	 ~   not necessary
+Note:	workmode ~   print, check, backup, go	(default: print)
+Example:        ./${0##*/}   	print
+Example:        ./${0##*/}   	check
+Example:        ./${0##*/}   	backup
+Example:        ./${0##*/}   	go
 EOF
 exit 0
 }
@@ -77,7 +80,7 @@ util_check() {
 #
 read_ini() {
 	local inifile="$1"  section="$2"
-	/bin/cat "${inifile}" 2>&- | tr '\t' ' ' | /bin/awk '\
+	/bin/cat "${inifile}" 2>&- | /usr/bin/tr '\t' ' ' | /bin/awk '\
 		($0~/^ *\[ *'${section}' *\] *$/){k=1;x=1;next} \
 		( x==1 && $0~/^ *\[ *.* *\] *$/ && $0!~/^ *\[ *'${section}' *\] *$/ ){exit} \
 		(k==1 && x==1 && $0!~/^[ \t]*$/ && $0!~/^[ \t]*;/){print}' |\
@@ -87,30 +90,38 @@ read_ini() {
 # Write Log
 # 
 log() {
-	echo "$(date +%s)" "$(date +%F_%T)" "${*}" >> ${update_flog}
+	echo "$(date +%s)" "$(date +%F_%T)" "${*}" >> ${UPDATE_FLOG}
 }
 
 # do add
 do_add() {
 	local src="$1"  dst="$2"
-	/bin/cp -f "$src" "$dst" >> ${update_flog} 2>&1
+	local errstr=
+	errstr=$( /bin/cp -f "$src" "$dst" 2>&1 1>/dev/null )
 	if [ "$?" == "0" ]; then
-		log "$(echo_green "[OK]"): add [$src] to [$dst]"
+		log " [SUCC] addnew [$src] to [$dst]"
+		((succnum++))
+		return 0
 	else
-		log "$(echo_red "[ERROR]"): add [$src] to [$dst]"
-		exit 1
+		log " [FAIL] addnew [$src] to [$dst] (${errstr})"
+		((failnum++))
+		return 1
 	fi
 }
 
 # do replace
 do_replace() {
 	local src="$1"  dst="$2"
-	/bin/cp -f "$src" "$dst" >> ${update_flog} 2>&1
+	local errstr=
+	errstr=$( /bin/cp -f "$src" "$dst" 2>&1 1>/dev/null )
 	if [ "$?" == "0" ]; then
-		log "$(echo_green "[OK]"): replace [$src] to [$dst]"
+		log " [SUCC] replace [$src] to [$dst]"
+		((succnum++))
+		return 0
 	else
-		log "$(echo_red "[ERROR]"): replace [$src] to [$dst]"
-		exit 1
+		log " [FAIL] replace [$src] to [$dst] (${errstr})"
+		((failnum++))
+		return 1
 	fi
 }
 
@@ -120,22 +131,29 @@ copy_check() {
 	local md51=$( /usr/bin/md5sum "$src" 2>&- | /bin/awk '{print $1}' )
 	local md52=$( /usr/bin/md5sum "$dst" 2>&- | /bin/awk '{print $1}' )
 	if [ "${md51}" == "${md52}" ]; then
-		log "$(echo_green "[OK]"): copy check [$src] and [$dst] (${md51})"
+		log " [SUCC] md5check [$src] == [$dst]"
+		((succnum++))
+		return 0
 	else
-		log "$(echo_red "[ERROR]"): copy check [$src](${md51}) and [$dst](${md52})"
-		exit 1
+		log " [FAIL] md5check [$src] <> [$dst]"
+		((failnum++))
+		return 1
 	fi
 }
 
 # update remove
 do_remove() {
 	local file="$1"
-	/bin/rm -f "$file" >> ${update_flog} 2>&1
+	local errstr=
+	errstr=$( /bin/rm -f "$file" 2>&1 1>/dev/null )
 	if [ "$?" == "0" ]; then
-		log "$(echo_green "[OK]"): remove [$file]"
+		log " [SUCC] remove [$file]"
+		((succnum++))
+		return 0
 	else
-		log "$(echo_red "[ERROR]"): remove [$file]"
-		exit 1
+		log " [FAIL] remove [$file] (${errstr})"
+		((failnum++))
+		return 1
 	fi
 }
 
@@ -143,40 +161,48 @@ do_remove() {
 remove_check() {
 	local file="$1"
 	if [ ! -e "$file" ]; then
-		log "$(echo_green "[OK]"): remove check [$file]"
+		log " [SUCC] remove check [$file]"
+		((succnum++))
+		return 0
 	else
-		log "$(echo_red "[ERROR]"): remove check [$file]"
-		exit 1
+		log " [FAIL] remove check [$file]"
+		((failnum++))
+		return 1
 	fi
 }
 
 # backup
 do_backup() {
 	local src="$1"  backup_dst="$2"
-	/bin/mkdir -p "${backup_dst}"  >> ${update_flog} 2>&1
-	if [ -d "${backup_dst}" ]; then
-		log "$(echo_green "[OK]"): create backup directory [${backup_dst}]"
-		/bin/cp -afL "${src}" "${backup_dst}" >> ${update_flog} 2>&1
+	local errstr=
+	errstr=$( /bin/mkdir -p "${backup_dst}"  2>&1 1>/dev/null )
+	if [ "$?" == "0" ]; then
+		errstr=$( /bin/cp -afL "${src}" "${backup_dst}" 2>&1 1>/dev/null )
 		if [ "$?" == "0" ]; then
-			log "$(echo_green "[OK]"): backup [$src]"
+			log " [SUCC] backup [$src] to [${backup_dst}]"
+			((succnum++))
+			return 0
 		else
-			log "$(echo_red "[ERROR]"): backup [$src]"
-			exit 1
+			log " [FAIL] backup [$src] to [${backup_dst}] (${errstr})"
+			((failnum++))
+			return 1
 		fi
 	else
-		log "$(echo_red "[ERROR]"): create backup directory [${backup_dst}]"
-		exit 1
+		log " [FAIL] create backup directory [${backup_dst}] (${errstr})"
+		((failnum++))
+		return 1
 	fi
 }
+
 
 
 # Main Begin ...
 #
 
 # check utils
-UTIL_LACK=$( util_check )
-if [ -n "${UTIL_LACK}" ]; then
-        echo_red "lack utils: [${UTIL_LACK}]";echo
+util_lack=$( util_check )
+if [ -n "${util_lack}" ]; then
+        echo_red "lack utils: [${util_lack}]";echo
         exit 1
 fi
 
@@ -186,67 +212,75 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+
 # 1. get args
-updatename=$1
-workmode=$2		# print, check, backup, go
-MODE=0
+update_fcfg="$1"
+workmode="$2"		# print, check, backup, go  (default=print)
+
 
 # 2. check args
-if [ -z "${updatename}" ]; then
-	show_help
-fi
-if [ -z "${workmode}" ]; then
-	workmode="print"
-fi
-if [ "${workmode}" == "print" ]; then
-	MODE=0
-elif [ "${workmode}" == "check" ]; then
-	MODE=1
-elif [ "${workmode}" == "backup" ]; then
-	MODE=2
-elif [ "${workmode}" == "go" ]; then
-	MODE=3
-else
-	show_help
-fi
-
-
-# 4. check update.cfg
+[ -z "${update_fcfg}" ] && update_fcfg="update.cfg"
 if [ -f "${update_fcfg}" ] && [ -s "${update_fcfg}" ]; then
 	:
 else
-	echo_red "[${update_fcfg}] not exist or empty!";echo
+	echo_red "$(echo_red "[${update_fcfg}] not prepared!")";echo;
 	exit 1
 fi
 
-# 5. log start
+case "${workmode}" in
+"")				workmode="print"	;;
+("print"|"check"|"backup"|"go")
+				:			;;
+*)
+				show_help		;;
+esac
+
+# 3. log start
 log
 log
 log "update start ..."
 
-# 6. read change lst
-newaddlst=$( read_ini "${update_fcfg}" add 2>&- )
+# 4. read change lst
+newaddlst=$( read_ini "${update_fcfg}" addnew 2>&- )
 removelst=$( read_ini "${update_fcfg}" remove 2>&- )
 modifylst=$( read_ini "${update_fcfg}" modify 2>&- )
 backuplst=$( read_ini "${update_fcfg}" backup 2>&- )
+newaddnum=$( echo -e "${newaddlst}" | /bin/sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+removenum=$( echo -e "${removelst}" | /bin/sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+modifynum=$( echo -e "${modifylst}" | /bin/sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+backupnum=$( echo -e "${backuplst}" | /bin/sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+log "newaddnum=${newaddnum}, remove=${removenum}, modify=${modifynum}, backup=${backupnum}"
 
-newaddnum=$( echo -e "${newaddlst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-removenum=$( echo -e "${removelst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-modifynum=$( echo -e "${modifylst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
-backupnum=$( echo -e "${backuplst}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+failnum=0
+succnum=0
+total=0
 
-log "newadd: (${newaddnum})"
-log "remove: (${removenum})"
-log "modify: (${modifynum})"
-log "backup: (${backupnum})"
-
-# 7. action do backup
+# 5. action do backup
 if [ -n "${backuplst}" ]; then
-	backup_path="${update_back}/$(date +%F_%T)"
+	backup_path="${UPDATE_BACK}/$(date +%Y%m%d-%H%M%S)"
 	for fbackup in `echo "${backuplst}"`
 	do
 		fbackup="${INST_DIR}/${fbackup}"
-		do_backup "${fbackup}" "${backup_path}"
+		if [ "${workmode}" == "print" ]; then
+			echo "[backup] 	${fbackup}"
+		elif [ "${workmode}" == "check" ]; then
+			if [ -f "${fbackup}" ]; then
+				echo "$(echo_green "[SUCC]") module=[backup] action=[check] ${fbackup} prepared!"
+			else
+				echo "$(echo_red "[FAIL]") module=[backup] action=[check] ${fbackup} not prepared!"
+			fi
+		elif [ "${workmode}" == "backup" ]; then
+			((total++))
+			do_backup "${fbackup}" "${backup_path}"
+			if [ "$?" == "0" ]; then
+				echo "$(echo_green "[SUCC]") module=[backup] action=[backup] ${fbackup}"
+			else
+				echo "$(echo_red "[FAIL]") module=[backup] action=[backup] ${fbackup}"
+			fi
+		elif [ "${workmode}" == "go" ]; then
+			((total++))
+			do_backup "${fbackup}" "${backup_path}"
+		fi
 	done
 fi
 
@@ -255,8 +289,21 @@ if [ -n "${removelst}" ]; then
 	for fremove in `echo "${removelst}"`
 	do
 		fremove_dst="${INST_DIR}/${fremove}"
-		do_remove "${fremove_dst}"
-		remove_check "${fremove_dst}"
+		if [ "${workmode}" == "print" ]; then
+			echo "[remove]  ${fremove_dst}"
+		elif [ "${workmode}" == "check" ]; then
+			if [ -f "${fremove_dst}" ]; then
+				echo "$(echo_green "[SUCC]") module=[remove] action=[check] ${fremove_dst} prepared!"
+			else
+				echo "$(echo_red "[FAIL]") module=[remove] action=[check] ${fremove_dst} not prepared!"
+			fi
+		elif [ "${workmode}" == "backup" ]; then
+			break;
+		elif [ "${workmode}" == "go" ]; then
+			((total++))
+			do_remove "${fremove_dst}"
+			remove_check "${fremove_dst}"
+		fi
 	done
 fi
 
@@ -266,10 +313,28 @@ if [ -n "${newaddlst}" ]; then
 	do
 		fadd_src=$(echo -e "${fadd}" | /bin/awk -F "${SEPERATOR}" '{print $2}')
 		fadd_dst=$(echo -e "${fadd}" | /bin/awk -F "${SEPERATOR}" '{print $1}')
-		fadd_src="${update_path}/${fadd_src}/${fadd_dst}"
+		fadd_src="${BASE_DIR}/${fadd_src}/${fadd_dst}"
 		fadd_dst="${INST_DIR}/${fadd_dst}"
-		do_add "${fadd_src}" "${fadd_dst}"
-		copy_check "${fadd_src}" "${fadd_dst}"
+		if [ "${workmode}" == "print" ]; then
+			echo "[newadd]  ${fadd_src} to ${fadd_dst}"
+		elif [ "${workmode}" == "check" ]; then
+			if [ -f "${fadd_src}" ]; then
+				echo "$(echo_green "[SUCC]") module=[addnew] action=[check] ${fadd_src} prepared!"
+				if [ ! -f "${fadd_dst}" ]; then
+					echo "$(echo_green "[SUCC]") module=[addnew] action=[check] dest empty waitting!"
+				else
+					echo "$(echo_red "[FAIL]") module=[addnew] action=[check] dest(${fadd_dst}) not empty!"
+				fi
+			else
+				echo "$(echo_red "[FAIL]") module=[addnew] action=[check] ${fadd_src} not prepared!"
+			fi
+		elif [ "${workmode}" == "backup" ]; then
+			break;
+		elif [ "${workmode}" == "go" ]; then
+			((total++))
+			do_add "${fadd_src}" "${fadd_dst}"
+			copy_check "${fadd_src}" "${fadd_dst}"
+		fi
 	done
 fi
 
@@ -279,10 +344,28 @@ if [ -n "${modifylst}" ]; then
 	do
 		fmodify_src=$(echo -e "${fmodify}" | /bin/awk -F "${SEPERATOR}" '{print $2}')
 		fmodify_dst=$(echo -e "${fmodify}" | /bin/awk -F "${SEPERATOR}" '{print $1}')
-		fmodify_src="${update_path}/${fmodify_src}/${fmodify_dst}"
+		fmodify_src="${BASE_DIR}/${fmodify_src}/${fmodify_dst}"
 		fmodify_dst="${INST_DIR}/${fmodify_dst}"
-		do_replace "${fmodify_src}" "${fmodify_dst}"
-		copy_check "${fmodify_src}" "${fmodify_dst}"
+		if [ "${workmode}" == "print" ]; then
+			echo "[modify]  ${fmodify_src} to ${fmodify_dst}"
+		elif [ "${workmode}" == "check" ]; then
+			if [ -f "${fmodify_src}" ]; then
+				echo "$(echo_green "[SUCC]") module=[modify] action=[check] src=${fmodify_src} prepared!"
+				if [ -f "${fmodify_dst}" ]; then
+					echo "$(echo_green "[SUCC]") module=[modify] action=[check] dest=${fmodify_dst} prepared!"
+				else
+					echo "$(echo_red "[FAIL]") module=[modify] action=[check] dest=${fmodify_dst} not prepared!"
+				fi
+			else
+				echo "$(echo_red "[FAIL]") module=[modify] action=[check] src=${fmodify_src} not prepared!"
+			fi	
+		elif [ "${workmode}" == "backup" ]; then
+			break;
+		elif [ "${workmode}" == "go" ]; then
+			((total++))
+			do_replace "${fmodify_src}" "${fmodify_dst}"
+			copy_check "${fmodify_src}" "${fmodify_dst}"
+		fi
 	done
 fi
 
