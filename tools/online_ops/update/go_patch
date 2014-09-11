@@ -231,8 +231,11 @@ workmode="$2"		# print, check, backup, go  (default=print)
 
 
 # 2. check args
-[ -z "${update_fcfg}" ] && update_fcfg="update.cfg"
-if [ -f "${update_fcfg}" ] && [ -s "${update_fcfg}" ]; then
+[ -z "$*" ] && show_help;
+[ -z "${update_fcfg}" ] && show_help
+if [ "$1" == "help" ] || [ "$1" == "-h" ] || [ "$1" == "?" ]; then
+	show_help
+elif [ -f "${update_fcfg}" ] && [ -s "${update_fcfg}" ]; then
 	:
 else
 	echo_red "$(echo_red "[${update_fcfg}] not prepared!")";echo;
