@@ -43,7 +43,7 @@ show_help() {
 cat << EOF
 Usage:		./${0##*/}  olddir   newdir   [cfg]   [prefix]
 Example:	./${0##*/}  /etc.1   /etc
-Example:	./${0##*/}  olddir   newdir   cfg     esop_web/files/
+Example:	./${0##*/}  esop_web_old/files/ esop_web_new/files/ cfg files
 EOF
 exit 0
 }
