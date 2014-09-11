@@ -185,20 +185,22 @@ remove_check() {
 do_backup() {
 	local src="$1"  backup_dst="$2"
 	local errstr=
-	errstr=$( /bin/mkdir -p "${backup_dst}"  2>&1 1>/dev/null )
+	local dirpath="${src%/*}"
+	local dstdir="${backup_dst}/${dirpath}"
+	errstr=$( /bin/mkdir -p "${dstdir}"  2>&1 1>/dev/null )
 	if [ "$?" == "0" ]; then
-		errstr=$( /bin/cp -afL "${src}" "${backup_dst}" 2>&1 1>/dev/null )
+		errstr=$( /bin/cp -afL "${src}" "${dstdir}" 2>&1 1>/dev/null )
 		if [ "$?" == "0" ]; then
-			log "[SUCC] backup [$src] to [${backup_dst}]"
+			log "[SUCC] backup [$src] to [${dstdir}]"
 			((succnum++))
 			return 0
 		else
-			log "[FAIL] backup [$src] to [${backup_dst}] (${errstr})"
+			log "[FAIL] backup [$src] to [${dstdir}] (${errstr})"
 			((failnum++))
 			return 1
 		fi
 	else
-		log "[FAIL] create backup directory [${backup_dst}] (${errstr})"
+		log "[FAIL] create backup directory [${dstdir}] (${errstr})"
 		((failnum++))
 		return 1
 	fi
