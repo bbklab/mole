@@ -332,14 +332,16 @@ if [ -n "${newaddlst}" ]; then
 			echo -e "[newadd] ${fadd_src} to ${fadd_dst}"
 		elif [ "${workmode}" == "check" ]; then
 			if [ -f "${fadd_src}" ]; then
-				echo "$(echo_green "[SUCC]") module=[addnew] action=[check] ${fadd_src} prepared!"
-				if [ ! -f "${fadd_dst}" ]; then
-					echo "$(echo_green "[SUCC]") module=[addnew] action=[check] dest empty waitting!"
-				else
+				echo "$(echo_green "[SUCC]") module=[addnew] action=[check] src=${fadd_src} prepared!"
+				if [ ! -d "${fadd_dst%/*}" ]; then
+					echo "$(echo_red "[FAIL]") module=[addnew] action=[check] dest-dir(${fadd_dst%/*}) not prepared! you want to add newdir?"
+				elif [ -f "${fadd_dst}" ]; then
 					echo "$(echo_red "[FAIL]") module=[addnew] action=[check] dest(${fadd_dst}) not empty!"
+				else
+					echo "$(echo_green "[SUCC]") module=[addnew] action=[check] dest empty waitting!"
 				fi
 			else
-				echo "$(echo_red "[FAIL]") module=[addnew] action=[check] ${fadd_src} not prepared!"
+				echo "$(echo_red "[FAIL]") module=[addnew] action=[check] src=${fadd_src} not prepared!"
 			fi
 		elif [ "${workmode}" == "backup" ]; then
 			break;
