@@ -48,3 +48,30 @@ msgstr "ESOP应用程序备份失败"
 
 msgid "Esop App Backup SUCCESS"
 msgstr "ESOP应用程序备份成功"
+
+
+### for handler: appbackup_cleanup_transfer
+
+msgid "util [/usr/bin/find] not prepared"
+msgstr "/usr/bin/find 未准备就绪"
+
+msgid "util [/bin/rm] not prepared"
+msgstr "/bin/rm 未准备就绪"
+
+msgid "reserve_time: [${reserve_time}] should be int"
+msgstr "过期时间参数 reserve_time [${reserve_time}] 应该是正整数"
+
+msgid "no files ${reserve_time} days overdued under [${backup_savedir}]"
+msgstr "备份目录${backup_savedir}下没有过期${reserve_time}天的文件"
+
+msgid "remove ${rfile} succeed!"
+msgstr "清理 ${rfile} 成功!"
+
+msgid "remove ${rfile} failed, ${errstr}"
+msgstr "清理 ${rfile} 失败! 详细信息: ${errstr}"
+
+msgid "Remove ${crit}/${total} ${reserve_time} Day OverDued Backup CRITICAL"
+msgstr "清理 ${crit}/${total} 个过期${reserve_time}天的备份失败!"
+
+msgid "Remove ${succ}/${total} ${reserve_time} Day OverDued Backup SUCCESS"
+msgstr "清理 ${succ}/${total} 个过期${reserve_time}天的备份成功!"
