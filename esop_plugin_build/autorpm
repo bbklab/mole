@@ -51,8 +51,8 @@ else
 	exit 1
 fi
 
-cp -a "${path}"/${source0}   "${path}"/SOURCES/${source0}
-cp -a "${specfile}"  "${path}"/SPECS/
+/bin/cp -afL "${path}"/${source0}   "${path}"/SOURCES/${source0}
+/bin/cp -afL "${specfile}"  "${path}"/SPECS/
 
 cat > ~/.rpmmacros <<EOF
 %_topdir ${path}/
