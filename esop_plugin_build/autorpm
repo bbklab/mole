@@ -34,6 +34,7 @@ if [ "$1" == "clean" ]; then
 	clean
 	exit 0
 fi
+clean
 
 specfile=$(get_fspec "${1}")
 if [ -n "${specfile}" ] && [ -f "${specfile}" ] && [ -s "${specfile}" ]; then
