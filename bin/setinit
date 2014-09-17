@@ -102,9 +102,9 @@ v5_config="/usr/local/eyou/mail/etc/eyou_mail.ini"
 v4_config="/var/eyou/etc/eyou_smtpd_config"
 gw_config="/var/emdg/etc/domain.conf"
 if [ -f "${v5_config}" ] && [ -s "${v5_config}" ]; then
-	base_domain=$(awk -F"=" '($1~/server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]' | sed -e 's/\x00//g;s/\x0D//g')
+	base_domain=$(awk -F"=" '($1~/^server_me\>/) {$1="";print;exit;}' "${v5_config}" 2>&- | tr -d '[" \t]' | sed -e 's/\x00//g;s/\x0D//g')
 elif [ -f "${v4_config}" ] && [ -s "${v4_config}" ]; then
-	base_domain=$(awk '($1~/o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
+	base_domain=$(awk '($1~/^o_value\>/) {$1="";print;exit;}' "${v4_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
 elif [ -f "${gw_config}" ] && [ -s "${gw_config}" ]; then
 	base_domain=$(awk '{print $1;exit}' "${gw_config}" 2>&- | tr -d '[ \t]' | sed -e 's/\x00//g;s/\x0D//g')
 fi  
