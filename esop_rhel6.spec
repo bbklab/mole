@@ -164,7 +164,7 @@ fi
 :
 
 %changelog
-* Mon Aug 18 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Wed Sep 17 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 正式版 1.1.0
 - 新增: 客户端通知(SMS/Email)的策略控制,可配置通知次数和时间范围
 - 新增: 客户端部分插件允许分别设定告警阈值和故障阈值
