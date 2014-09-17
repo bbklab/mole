@@ -381,8 +381,10 @@ restore_proxy_all_config
 errstr=$(/bin/cp /dev/null "${OLD_ESOP_VERFILE}" 2>&1 1>/dev/null)
 if [ $? -eq 0 ]; then
 	write_log -f "${UPGRADE_LOG}"  "[INFO] empty upgrade tag file ${OLD_ESOP_VERFILE}"
+	((upgrade_succ++))
 else
 	write_log -f "${UPGRADE_LOG}"  "[ERROR] empty upgrade tag file ${OLD_ESOP_VERFILE} [${errstr}]"
+	((upgrade_fail++))
 fi
 
 write_log -f "${UPGRADE_LOG}"  "[INFO] esop upgrade from 1.0.1 to 1.1.0 finished. "\
