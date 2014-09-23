@@ -943,6 +943,9 @@ config_pport() {
 	if [ "${IS_SUPPORTED_EMVERSION}" == "1" ]; then
 		for comp in `list_emcomp`
 		do
+			if [[ "${comp}" =~ "mysql" ]]; then
+				continue 	# skip mysql port checking, as mysql will block aborted address
+			fi
 			if is_emstarton "${comp}" ; then
 				if [ -z "${cfg_value}" ]; then
 					cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
