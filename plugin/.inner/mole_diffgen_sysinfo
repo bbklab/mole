@@ -59,14 +59,16 @@ unless (-f $mole && -x $mole) {
 }
 
 
+our $SaveFile = "/var/tmp/.$filename.tmp";
+
 #
 # global sub def start
 #
 sub get_osbitmode {
-  my $osbit = undef;
+  my $osbit = '32';
   my $getconf = "/usr/bin/getconf";
   if (-f $getconf && -x $getconf) {
-          open my $fh, "$getconf LONG_BIT 2>&1 |";
+          open my $fh, "$getconf LONG_BIT 2>&- |";
           if ($fh) {
                 while(<$fh>){
                         chomp; s/\A\s*//; s/\s*\Z//g; $osbit = $_;
@@ -94,6 +96,56 @@ sub get_runlevel {
   return $level;
 }
 
+sub load_oldinfo {
+  my $savefile = shift;
+  my $oldinfo  = undef;			# Note: return jsoned string
+  unless (defined $savefile && -f $savefile &&  -r $savefile) {
+	return undef;
+  } 
+  if (open my $fh, "<", $savefile) {
+	while(<$fh>){
+		$oldinfo = $_;		# read only one line and exit
+		last;
+	}
+	close $fh if ($fh);
+  } else {
+	return undef;
+  }
+  unless (defined $oldinfo && $oldinfo =~ s/\A0 //g) {	# $oldinfo must start by 0+space
+	return undef;
+  }
+  return $oldinfo;
+}
+
+sub write_newinfo {
+  my $savefile = shift;
+  my $newinfo  = shift; 		# Note: receive jsoned string
+  unless (defined $newinfo && $newinfo ne '') {
+	return undef;
+  }
+  if (open my $fh, ">", $savefile ) {
+	unless (print $fh "0 $newinfo\n") {	# write new info start by 0+space, Note: use print not printf to avoid $newinfo contain '%'
+		return undef;
+	}
+	close $fh if ($fh);
+  } else {
+	return undef;
+  }
+}
+
+sub genjson_diffinfo {
+  my (%oldinfo,%newinfo) = @_;		# Note: only receive raw (unjsoned) %hash struct
+  my %diffinfo = ();
+  my $diffjson = '{}';
+	### %oldinfo
+	### %newinfo
+  unless(%oldinfo && %newinfo) {
+	### not defined oldinfo or newinfo
+	return $diffjson;
+  } else {
+	### defined oldinfo and newinfo
+  }
+}
 #
 # global sub def end
 #
@@ -1596,6 +1648,21 @@ if ($data_config{'raid_info'}) {
 #  END to COLLECT SYSTEM INFORMATION 
 #
 
-$result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%result);
-print "{succ}:{str}:{$filename|$filename|$result}";
-exit $state_succ;
+if (my $OldInfo = &load_oldinfo($SaveFile)) {
+	if (my $OldInfo_Decode = JSON->new->allow_nonref->utf8(1)->ascii(1)->decode($OldInfo)) {
+		my %OldInfo = %{$OldInfo_Decode};
+		my $DiffInfo = &genjson_diffinfo(%OldInfo,%result);
+		### $DiffInfo
+	}
+}
+
+if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%result)) {
+	if (&write_newinfo($SaveFile, $result)) {
+	} else {
+		printf "{warn}:{str}:{save write new result failed.}";
+		exit $state_warn;
+	}
+} else {
+	printf "{warn}:{str}:{encode result as json failed.}";
+	exit $state_warn;
+}
