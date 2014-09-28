@@ -134,16 +134,164 @@ sub write_newinfo {
 }
 
 sub genjson_diffinfo {
-  my (%oldinfo,%newinfo) = @_;		# Note: only receive raw (unjsoned) %hash struct
+  my ($oldinfo,$newinfo) = @_;	# Note: only receive raw (unjsoned) %hash struct
+  my %oldinfo = %{$oldinfo} if (defined $oldinfo);
+  my %newinfo = %{$newinfo} if (defined $newinfo);
   my %diffinfo = ();
   my $diffjson = '{}';
-	### %oldinfo
-	### %newinfo
   unless(%oldinfo && %newinfo) {
-	### not defined oldinfo or newinfo
 	return $diffjson;
+  }
+
+  ### diff {arp}
+  #$diffinfo{'arp'} = \@{$newinfo{'arp'}};
+
+  ### diff {cpu_info}
+  #$diffinfo{'cpu_info'} = \%{$newinfo{'cpu_info'}};
+
+  ### diff {cpu_usage}
+  foreach my $i (sort keys %{$newinfo{'cpu_usage'}}) {
+	unless ($newinfo{'cpu_usage'}{$i} eq $oldinfo{'cpu_usage'}{$i}) {
+		$diffinfo{'cpu_usage'} = \%{$newinfo{'cpu_usage'}};
+		last;
+	}
+  }
+
+  ### diff {disk_space}
+
+  ### diff {dns}
+  if (@{$newinfo{'dns'}} ne @{$oldinfo{'dns'}}) {
+	$diffinfo{'dns'} = \@{$newinfo{'dns'}};
   } else {
-	### defined oldinfo and newinfo
+	if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$newinfo{'dns'}})) {
+		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
+	}
+  }
+  
+  ### diff {inet_name}
+
+  ### diff {input_dev}
+  if (@{$newinfo{'input_dev'}} ne @{$oldinfo{'input_dev'}}) {
+	$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
+  } else {
+	if (join("",sort @{$newinfo{'input_dev'}}) ne join("",sort @{$newinfo{'input_dev'}})) {
+		$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
+	}
+  }
+
+  ### diff {lastlogin}
+  ### diff {mem_info}
+  ### diff {mem_usage}
+  foreach my $i (sort keys %{$newinfo{'mem_usage'}}) {
+	unless ($newinfo{'mem_usage'}{$i} eq $oldinfo{'mem_usage'}{$i}) {
+		$diffinfo{'mem_usage'} = \%{$newinfo{'mem_usage'}};
+		last;
+	}
+  }
+
+  
+  ### diff {mount}
+  ### diff {netstat}
+  ### diff {online_user}
+  ### diff {os_info}
+  ### diff {process}
+  ### diff {product_info}
+  foreach my $i (sort keys %{$newinfo{'product_info'}}) {
+	unless ($newinfo{'product_info'}{$i} eq $oldinfo{'product_info'}{$i}) {
+		$diffinfo{'product_info'} = \%{$newinfo{'product_info'}};
+		last;
+	}
+  }
+
+  ### diff {raid_info}
+  ### diff {route}
+
+  ### diff {runlevel}
+  unless ($newinfo{'runlevel'}  eq $oldinfo{'runlevel'}) {
+	$diffinfo{'runlevel'} = \%{$newinfo{'runlevel'}};
+  }
+
+  ### diff {selinux}
+  foreach my $i (sort keys %{$newinfo{'selinux'}}) {
+	unless ($newinfo{'selinux'}{$i} eq $oldinfo{'selinux'}{$i}) {
+		$diffinfo{'selinux'} = \%{$newinfo{'selinux'}};
+		last;
+	}
+  }
+
+  ### diff {startups}
+  if (@{$newinfo{'startups'}} ne @{$oldinfo{'startups'}}) {
+	$diffinfo{'startups'} = \@{$newinfo{'startups'}};
+  } else {
+	if (join("",sort @{$newinfo{'startups'}}) ne join("",sort @{$newinfo{'startups'}})) {
+		$diffinfo{'startups'} = \@{$newinfo{'startups'}};
+	}
+  }
+
+  ### diff {sys_clock}
+  foreach my $i (sort keys %{$newinfo{'sys_clock'}}) {
+	unless ($newinfo{'sys_clock'}{$i} eq $oldinfo{'sys_clock'}{$i}) {
+		$diffinfo{'sys_clock'} = \%{$newinfo{'sys_clock'}};
+		last;
+	}
+  }
+
+  ### diff {sys_lang}
+  foreach my $i (sort keys %{$newinfo{'sys_lang'}}) {
+	unless ($newinfo{'sys_lang'}{$i} eq $oldinfo{'sys_lang'}{$i}) {
+		$diffinfo{'sys_lang'} = \%{$newinfo{'sys_lang'}};
+		last;
+	}
+  }
+
+  ### diff {sys_locks}
+  unless ($newinfo{'sys_locks'}  eq $oldinfo{'sys_locks'}) {
+	$diffinfo{'sys_locks'} = \%{$newinfo{'sys_locks'}};
+  }
+
+  ### diff {sys_mods}
+
+  ### diff {sysload}
+  foreach my $i (sort keys %{$newinfo{'sysload'}}) {
+	unless ($newinfo{'sysload'}{$i} eq $oldinfo{'sysload'}{$i}) {
+		$diffinfo{'sysload'} = \%{$newinfo{'sysload'}};
+		last;
+	}
+  }
+
+  ### diff {systime}
+  foreach my $i (sort keys %{$newinfo{'systime'}}) {
+	unless ($newinfo{'systime'}{$i} eq $oldinfo{'systime'}{$i}) {
+		$diffinfo{'systime'} = \%{$newinfo{'systime'}};
+		last;
+	}
+  }
+
+  ### diff {sysuser}
+  if (@{$newinfo{'sysuser'}} ne @{$oldinfo{'sysuser'}}) {
+	$diffinfo{'sysuser'} = \@{$newinfo{'sysuser'}};
+  } else {
+	my @newinfo_sysuser = @{$newinfo{'sysuser'}};	# item in array sort order same
+	my @oldinfo_sysuser = @{$oldinfo{'sysuser'}};	# item in array sort order same
+	for(my $i=0;$i<=$#newinfo_sysuser;$i++){
+		my %newinfo_sysuser = %{$newinfo_sysuser[$i]};
+		my %oldinfo_sysuser = %{$oldinfo_sysuser[$i]};
+		foreach my $x (sort keys %{$newinfo_sysuser[$i]}) {
+			unless ( $newinfo_sysuser{$x} eq $oldinfo_sysuser{$x} ) {
+				$diffinfo{'sysuser'} = \@{$newinfo{'sysuser'}};
+				goto SYSUSER_BREAK;
+			}
+		}
+	}
+	SYSUSER_BREAK: {
+	}
+  }
+
+  ### %diffinfo
+  if ($diffjson = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%diffinfo)) {
+  	return $diffjson;
+  } else {
+	return $diffjson;
   }
 }
 #
@@ -1651,12 +1799,12 @@ if ($data_config{'raid_info'}) {
 if (my $OldInfo = &load_oldinfo($SaveFile)) {
 	if (my $OldInfo_Decode = JSON->new->allow_nonref->utf8(1)->ascii(1)->decode($OldInfo)) {
 		my %OldInfo = %{$OldInfo_Decode};
-		my $DiffInfo = &genjson_diffinfo(%OldInfo,%result);
+		my $DiffInfo = &genjson_diffinfo(\%OldInfo,\%result);
 		### $DiffInfo
 	}
 }
 
-if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%result)) {
+if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result)) {
 	if (&write_newinfo($SaveFile, $result)) {
 	} else {
 		printf "{warn}:{str}:{save write new result failed.}";
