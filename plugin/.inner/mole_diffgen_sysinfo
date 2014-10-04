@@ -34,7 +34,7 @@ BEGIN {
 };
 
 use warnings;
-use strict;
+# use strict;
 use utf8;
 use JSON;
 use Smart::Comments;
@@ -144,10 +144,31 @@ sub genjson_diffinfo {
   }
 
   ### diff {arp}
-  #$diffinfo{'arp'} = \@{$newinfo{'arp'}};
+  if (@{$newinfo{'arp'}} ne @{$oldinfo{'arp'}}) {
+	$diffinfo{'arp'} = \@{$newinfo{'arp'}};
+  } else {
+        my @newinfo_arp = @{$newinfo{'arp'}};   # item in array sort order same
+        my @oldinfo_arp = @{$oldinfo{'arp'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_arp;$i++){
+                my %newinfo_arp = %{$newinfo_arp[$i]};
+                my %oldinfo_arp = %{$oldinfo_arp[$i]};
+                foreach my $x (sort keys %{$newinfo_arp[$i]}) {
+                        unless ( $newinfo_arp{$x} eq $oldinfo_arp{$x} ) {
+                                $diffinfo{'arp'} = \@{$newinfo{'arp'}};
+                                goto ARP_BREAK;
+                        }    
+                }    
+        }    
+        ARP_BREAK: {
+		;
+        }
+  }
 
   ### diff {cpu_info}
-  #$diffinfo{'cpu_info'} = \%{$newinfo{'cpu_info'}};
+  if ($newinfo{'cpu_info'}{'logical'} ne $oldinfo{'cpu_info'}{'logical'} ||
+      $newinfo{'cpu_info'}{'physical'} ne $oldinfo{'cpu_info'}{'physical'} ) {
+	$diffinfo{'cpu_info'} = \%{$newinfo{'cpu_info'}};
+  }
 
   ### diff {cpu_usage}
   foreach my $i (sort keys %{$newinfo{'cpu_usage'}}) {
@@ -158,29 +179,84 @@ sub genjson_diffinfo {
   }
 
   ### diff {disk_space}
+  if (@{$newinfo{'disk_space'}} ne @{$oldinfo{'disk_space'}}) {
+	$diffinfo{'disk_space'} = \@{$newinfo{'disk_space'}};
+  } else {
+        my @newinfo_diskspace = @{$newinfo{'disk_space'}};   # item in array sort order same
+        my @oldinfo_diskspace = @{$oldinfo{'disk_space'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_diskspace;$i++){
+                my %newinfo_diskspace = %{$newinfo_diskspace[$i]};
+                my %oldinfo_diskspace = %{$oldinfo_diskspace[$i]};
+                foreach my $x (sort keys %{$newinfo_diskspace[$i]}) {
+                        unless ( $newinfo_diskspace{$x} eq $oldinfo_diskspace{$x} ) {
+                                $diffinfo{'disk_space'} = \@{$newinfo{'disk_space'}};
+                                goto DISK_BREAK;
+                        }    
+                }    
+        }    
+        DISK_BREAK: {
+		;
+        }
+  }
 
   ### diff {dns}
   if (@{$newinfo{'dns'}} ne @{$oldinfo{'dns'}}) {
 	$diffinfo{'dns'} = \@{$newinfo{'dns'}};
   } else {
-	if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$newinfo{'dns'}})) {
+	if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$oldinfo{'dns'}})) {
 		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
 	}
   }
   
   ### diff {inet_name}
+  if (@{$newinfo{'inet_name'}} ne @{$oldinfo{'inet_name'}}) {
+	$diffinfo{'inet_name'} = \@{$newinfo{'inet_name'}};
+  } else {
+        my @newinfo_inetname = @{$newinfo{'inet_name'}};   # item in array sort order same
+        my @oldinfo_inetname = @{$oldinfo{'inet_name'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_inetname;$i++){
+                my %newinfo_inetname = %{$newinfo_inetname[$i]};
+                my %oldinfo_inetname = %{$oldinfo_inetname[$i]};
+                foreach my $x (sort keys %{$newinfo_inetname[$i]}) {
+                        unless ( $newinfo_inetname{$x} eq $oldinfo_inetname{$x} ) {
+                                $diffinfo{'inet_name'} = \@{$newinfo{'inet_name'}};
+                                goto INET_BREAK;
+                        }    
+                }    
+        }    
+        INET_BREAK: {
+		;
+        }
+  }
 
   ### diff {input_dev}
   if (@{$newinfo{'input_dev'}} ne @{$oldinfo{'input_dev'}}) {
 	$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
   } else {
-	if (join("",sort @{$newinfo{'input_dev'}}) ne join("",sort @{$newinfo{'input_dev'}})) {
+	if (join("",sort @{$newinfo{'input_dev'}}) ne join("",sort @{$oldinfo{'input_dev'}})) {
 		$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
 	}
   }
 
   ### diff {lastlogin}
+  if ($newinfo{'lastlogin'}{'number'} ne $oldinfo{'lastlogin'}{'number'}) {
+	$diffinfo{'lastlogin'} = \%{$newinfo{'lastlogin'}};
+  } else {
+	if (join("",sort @{$newinfo{'lastlogin'}{'result'}}) ne join("",sort @{$oldinfo{'lastlogin'}{'result'}})) {
+		$diffinfo{'lastlogin'} = \%{$newinfo{'lastlogin'}};
+	}
+  }
+
   ### diff {mem_info}
+  if ($newinfo{'mem_info'}{'memfreedevnum'} ne $oldinfo{'mem_info'}{'memfreedevnum'} ||
+	$newinfo{'mem_info'}{'meminstallednum'} ne $oldinfo{'mem_info'}{'meminstallednum'} ||
+	$newinfo{'mem_info'}{'memmaxcapacity'} ne $oldinfo{'mem_info'}{'memmaxcapacity'} ||
+	$newinfo{'mem_info'}{'memmaxdevnum'} ne $oldinfo{'mem_info'}{'memmaxdevnum'} ||
+	$newinfo{'mem_info'}{'os_mem_total'} ne $oldinfo{'mem_info'}{'os_mem_total'} ||
+	$newinfo{'mem_info'}{'os_swap_total'} ne $oldinfo{'mem_info'}{'os_swap_total'} ) {
+	$diffinfo{'mem_info'} = \%{$newinfo{'mem_info'}};
+  }
+
   ### diff {mem_usage}
   foreach my $i (sort keys %{$newinfo{'mem_usage'}}) {
 	unless ($newinfo{'mem_usage'}{$i} eq $oldinfo{'mem_usage'}{$i}) {
@@ -191,10 +267,65 @@ sub genjson_diffinfo {
 
   
   ### diff {mount}
+  if (@{$newinfo{'mount'}} ne @{$oldinfo{'mount'}}) {
+	$diffinfo{'mount'} = \@{$newinfo{'mount'}};
+  } else {
+        my @newinfo_mount = @{$newinfo{'mount'}};   # item in array sort order same
+        my @oldinfo_mount = @{$oldinfo{'mount'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_mount;$i++){
+                my %newinfo_mount = %{$newinfo_mount[$i]};
+                my %oldinfo_mount = %{$oldinfo_mount[$i]};
+                foreach my $x (sort keys %{$newinfo_mount[$i]}) {
+                        unless ( $newinfo_mount{$x} eq $oldinfo_mount{$x} ) {
+                                $diffinfo{'mount'} = \@{$newinfo{'mount'}};
+                                goto MOUNT_BREAK;
+                        }    
+                }    
+        }    
+        MOUNT_BREAK: {
+		;
+        }
+  }
+
   ### diff {netstat}
+
   ### diff {online_user}
+  if (@{$newinfo{'online_user'}} ne @{$oldinfo{'online_user'}}) {
+	$diffinfo{'online_user'} = \@{$newinfo{'online_user'}};
+  } else {
+        my @newinfo_onlineuser = @{$newinfo{'online_user'}};   # item in array sort order same
+        my @oldinfo_onlineuser = @{$oldinfo{'online_user'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_onlineuser;$i++){
+                my %newinfo_onlineuser = %{$newinfo_onlineuser[$i]};
+                my %oldinfo_onlineuser = %{$oldinfo_onlineuser[$i]};
+                foreach my $x (sort keys %{$newinfo_onlineuser[$i]}) {
+                        unless ( $newinfo_onlineuser{$x} eq $oldinfo_onlineuser{$x} ) {
+                                $diffinfo{'online_user'} = \@{$newinfo{'online_user'}};
+                                goto ONLINE_BREAK;
+                        }    
+                }    
+        }    
+        ONLINE_BREAK: {
+		;
+        }
+  }
+
   ### diff {os_info}
+  foreach my $i (sort keys %{$newinfo{'os_info'}}) {
+	unless ($newinfo{'os_info'}{$i} eq $oldinfo{'os_info'}{$i}) {
+		$diffinfo{'os_info'} = \%{$newinfo{'os_info'}};
+		last;
+	}
+  }
+
   ### diff {process}
+  if ($newinfo{'process'}{'blocked'} ne $oldinfo{'process'}{'blocked'} || 
+	$newinfo{'process'}{'ctxtnum'} ne $oldinfo{'process'}{'ctxtnum'} ||
+	$newinfo{'process'}{'forksnum'} ne $oldinfo{'process'}{'forksnum'} ||
+	$newinfo{'process'}{'totalnum'} ne $oldinfo{'process'}{'totalnum'} ) {
+  	$diffinfo{'process'} = \%{$newinfo{'process'}};
+  }
+
   ### diff {product_info}
   foreach my $i (sort keys %{$newinfo{'product_info'}}) {
 	unless ($newinfo{'product_info'}{$i} eq $oldinfo{'product_info'}{$i}) {
@@ -205,6 +336,25 @@ sub genjson_diffinfo {
 
   ### diff {raid_info}
   ### diff {route}
+  if (@{$newinfo{'route'}} ne @{$oldinfo{'route'}}) {
+	$diffinfo{'route'} = \@{$newinfo{'route'}};
+  } else {
+        my @newinfo_route = @{$newinfo{'route'}};   # item in array sort order same
+        my @oldinfo_route = @{$oldinfo{'route'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_route;$i++){
+                my %newinfo_route = %{$newinfo_route[$i]};
+                my %oldinfo_route = %{$oldinfo_route[$i]};
+                foreach my $x (sort keys %{$newinfo_route[$i]}) {
+                        unless ( $newinfo_route{$x} eq $oldinfo_route{$x} ) {
+                                $diffinfo{'route'} = \@{$newinfo{'route'}};
+                                goto ROUTE_BREAK;
+                        }    
+                }    
+        }    
+        ROUTE_BREAK: {
+		;
+        }
+  }
 
   ### diff {runlevel}
   unless ($newinfo{'runlevel'}  eq $oldinfo{'runlevel'}) {
@@ -223,7 +373,7 @@ sub genjson_diffinfo {
   if (@{$newinfo{'startups'}} ne @{$oldinfo{'startups'}}) {
 	$diffinfo{'startups'} = \@{$newinfo{'startups'}};
   } else {
-	if (join("",sort @{$newinfo{'startups'}}) ne join("",sort @{$newinfo{'startups'}})) {
+	if (join("",sort @{$newinfo{'startups'}}) ne join("",sort @{$oldinfo{'startups'}})) {
 		$diffinfo{'startups'} = \@{$newinfo{'startups'}};
 	}
   }
@@ -245,11 +395,18 @@ sub genjson_diffinfo {
   }
 
   ### diff {sys_locks}
-  unless ($newinfo{'sys_locks'}  eq $oldinfo{'sys_locks'}) {
+  unless ($newinfo{'sys_locks'} eq $oldinfo{'sys_locks'}) {
 	$diffinfo{'sys_locks'} = \%{$newinfo{'sys_locks'}};
   }
 
   ### diff {sys_mods}
+  if ( $oldinfo{'sys_mods'}{'number'} ne $newinfo{'sys_mods'}{'number'} ) {
+	$diffinfo{'sys_mods'} = \%{$newinfo{'sys_mods'}};
+  } else {
+	if (join("",sort @{$newinfo{'sys_mods'}{'list'}}) ne join("",sort @{$oldinfo{'sys_mods'}{'list'}})) {
+		$diffinfo{'sys_mods'} = \%{$newinfo{'sys_mods'}};
+	}
+  }
 
   ### diff {sysload}
   foreach my $i (sort keys %{$newinfo{'sysload'}}) {
@@ -284,6 +441,7 @@ sub genjson_diffinfo {
 		}
 	}
 	SYSUSER_BREAK: {
+		;
 	}
   }
 
@@ -677,7 +835,7 @@ if ($data_config{'sys_locks'}) {
   	}
   }
   ### $sys_locks
-  $result{'sys_locks'} = $sys_locks;
+  $result{'sys_locks'} = $sys_locks ? $sys_locks : 0 ;
 }
 
 
