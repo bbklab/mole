@@ -34,7 +34,7 @@ BEGIN {
 };
 
 use warnings;
-# use strict;
+use strict;
 use utf8;
 use JSON;
 use Smart::Comments;
