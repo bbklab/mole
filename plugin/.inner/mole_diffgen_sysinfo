@@ -37,7 +37,7 @@ use warnings;
 use strict;
 use utf8;
 use JSON;
-use Smart::Comments;
+# use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
 binmode(STDERR, ":encoding(utf8)");
@@ -288,6 +288,8 @@ sub genjson_diffinfo {
   }
 
   ### diff {netstat}
+  # always post new netstat
+  $diffinfo{'netstat'} = \%{$newinfo{'netstat'}};
 
   ### diff {online_user}
   if (@{$newinfo{'online_user'}} ne @{$oldinfo{'online_user'}}) {
@@ -335,6 +337,10 @@ sub genjson_diffinfo {
   }
 
   ### diff {raid_info}
+  # do not post raid_info changes
+  # $diffinfo{'raid_info'} = ();
+
+
   ### diff {route}
   if (@{$newinfo{'route'}} ne @{$oldinfo{'route'}}) {
 	$diffinfo{'route'} = \@{$newinfo{'route'}};
@@ -1954,21 +1960,40 @@ if ($data_config{'raid_info'}) {
 #  END to COLLECT SYSTEM INFORMATION 
 #
 
+our $DiffInfo = undef;
 if (my $OldInfo = &load_oldinfo($SaveFile)) {
+	### load_oldinfo_succeed
 	if (my $OldInfo_Decode = JSON->new->allow_nonref->utf8(1)->ascii(1)->decode($OldInfo)) {
+		### decode_oldinfo_succeed
 		my %OldInfo = %{$OldInfo_Decode};
-		my $DiffInfo = &genjson_diffinfo(\%OldInfo,\%result);
-		### $DiffInfo
+		$DiffInfo = &genjson_diffinfo(\%OldInfo,\%result);
+	} else {
+		### decode_oldinfo_failed
 	}
+} else {
+	### load_oldinfo_failed
+}
+unless ($DiffInfo) {
+	### use_new_result_as_diffinfo
+	# if not defined, maybe load_oldinfo failed, or decode oldinfo failed
+	# on these case, return encoded new %result as diffinfo.
+	$DiffInfo = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result);
+}
+### $DiffInfo
+if (defined $ARGV[0] && $ARGV[0] eq "diffprint") {
+	print $DiffInfo;
+	exit (0);
 }
 
 if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result)) {
 	if (&write_newinfo($SaveFile, $result)) {
+		print "{succ}:{str}:{save new result into file succeed.}";
+		exit $state_succ;
 	} else {
-		printf "{warn}:{str}:{save write new result failed.}";
+		print "{warn}:{str}:{save new result into file failed.}";
 		exit $state_warn;
 	}
 } else {
-	printf "{warn}:{str}:{encode result as json failed.}";
+	print "{warn}:{str}:{encode new result as json failed.}";
 	exit $state_warn;
 }
