@@ -142,7 +142,7 @@ if ($type eq 'post') {
 } elsif ($type eq 'config') {
   $logfrom = "$type AGENT.CONFIG";
 } elsif ($type eq 'heartbeat') {
-  unless (defined $jobid) {
+  unless (defined $jobid && $jobid ne '') {
 	&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
 	print "jobid required on type=heartbeat\n";
 	&help;
@@ -152,7 +152,7 @@ if ($type eq 'post') {
   	$logfrom = "$type AGENT.HEARTBEAT $jobid";
   }
 } elsif ($type eq 'sysinfo') {
-  unless (defined $jobid) {
+  unless (defined $jobid && $jobid ne '') {
 	&log("CRIT: $logfrom jobid required on type=sysinfo . exit");
 	print "jobid required on type=sysinfo\n";
 	&help;
@@ -1403,12 +1403,17 @@ sub genjson_sysinfo {
   	# set dtype
   	$result{'dtype'} = $1;
   	&log("INFO: $logfrom set dtype=[$1]");
+	unless ($1 eq 'full' || $1 eq 'diff') {
+		&log("CRIT: $logfrom data type must be full or diff, exit");
+		exit (1);
+	}
 
   	# set data
   	$result{'data'} = $2;
   	&log("DEBUG: $logfrom set data=[$2]") if $debug;
   } else {
-	&log("INFO: $logfrom sysinfo not matched, set dtype and data as empty default");
+	&log("CRIT: $logfrom sysinfo not matched, exit");
+	exit (1);
   }
 
   return %result;
