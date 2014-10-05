@@ -46,7 +46,7 @@ fi
 # check function here
 check() {
 
-  local pre_sysinfo_fsave="/var/tmp/.mole_diffgen_sysinfo.tmp"
+  local pre_sysinfo_fsave="/var/tmp/.mole.gendiff.tmp"
   local pre_times_fsave="/var/tmp/.mole_report_sysinfo.tmp"
 
   # read nower {diff-post} times
@@ -57,7 +57,7 @@ check() {
 		nower_times=0
 	fi
   else
-	nower_times=0
+	nower_times=${full_times}
   fi
 
   # check nower {diff-post} times and full_times to 
@@ -65,15 +65,14 @@ check() {
   # 2. set {sysinfo_type} as full or diff
   local sysinfo_type="unknown"
   if [ ${nower_times} -ge ${full_times} ]; then
-	:> "${pre_sysinfo_fsave}"
+	/bin/rm -f "${pre_sysinfo_fsave}"
 	sysinfo_type="full"
   else
 	sysinfo_type="diff"
   fi
 
   # generate sysinfo json content
-  local diff_sh="${INNER_DIR}/mole_diffgen_sysinfo"  diff_arg="diffprint"
-  local sysinfo=$( ${diff_sh} ${diff_arg} 2>&- )
+  local sysinfo=$( ${GENDIFF} 2>&- )
 
   # set random/unique jid
   local jobid=$( ${PLUTIL} unique_digest )
@@ -85,16 +84,22 @@ check() {
 	EXIT_STATUS="${STATE_OK}"
 	LEVEL="ok"
 	TYPE="str"
-	CONTENT=" post sysinfo succeed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} "
+	CONTENT=" post [${sysinfo_type}] sysinfo succeed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} ### on this time, nower times is ${nower_times} "
   else
 	EXIT_STATUS="${STATE_WARNING}"
 	LEVEL="warn"
 	TYPE="str"
-	CONTENT=" post sysinfo failed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} "
+	CONTENT=" post [$sysinfo_type] sysinfo failed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} ### on this time, nower times is ${nower_times} "
   fi
 
-  ((nower_times++))
-  echo $nower_times > "${pre_times_fsave}"
+  if [ "${sysinfo_type}" == "full" ]; then
+  	echo 0            > "${pre_times_fsave}"
+  elif [ "${sysinfo_type}" == "diff" ]; then
+  	((nower_times++))
+  	echo $nower_times > "${pre_times_fsave}"
+  fi
+
+
 }
 
 check
