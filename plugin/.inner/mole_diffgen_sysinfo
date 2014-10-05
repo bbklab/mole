@@ -1967,6 +1967,7 @@ if (my $OldInfo = &load_oldinfo($SaveFile)) {
 		### decode_oldinfo_succeed
 		my %OldInfo = %{$OldInfo_Decode};
 		$DiffInfo = &genjson_diffinfo(\%OldInfo,\%result);
+		$DiffInfo = "diff $DiffInfo";
 	} else {
 		### decode_oldinfo_failed
 	}
@@ -1978,6 +1979,7 @@ unless ($DiffInfo) {
 	# if not defined, maybe load_oldinfo failed, or decode oldinfo failed
 	# on these case, return encoded new %result as diffinfo.
 	$DiffInfo = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result);
+	$DiffInfo = "full $DiffInfo";
 }
 ### $DiffInfo
 if (defined $ARGV[0] && $ARGV[0] eq "diffprint") {
