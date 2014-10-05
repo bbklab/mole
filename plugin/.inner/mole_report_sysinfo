@@ -40,7 +40,7 @@ CONTENT=        ### { strings | /path/to/result.file }
 full_times=$(read_mole_config mole_report_sysinfo full_times)
 
 if ! is_int "${full_times}"; then
-	full_times=10
+	full_times=30
 fi
 
 # check function here
