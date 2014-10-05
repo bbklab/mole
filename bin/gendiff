@@ -59,7 +59,7 @@ unless (-f $mole && -x $mole) {
 }
 
 
-our $SaveFile = "/var/tmp/.$filename.tmp";
+our $SaveFile = "/var/tmp/.mole.$filename.tmp";
 
 #
 # global sub def start
@@ -1982,20 +1982,20 @@ unless ($DiffInfo) {
 	$DiffInfo = "full $DiffInfo";
 }
 ### $DiffInfo
-if (defined $ARGV[0] && $ARGV[0] eq "diffprint") {
-	print $DiffInfo;
-	exit (0);
-}
 
+
+
+### output and exit
+print $DiffInfo;
 if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result)) {
 	if (&write_newinfo($SaveFile, $result)) {
-		print "{succ}:{str}:{save new result into file succeed.}";
+		#printf "+OK save new result into file succeed\n";
 		exit $state_succ;
 	} else {
-		print "{warn}:{str}:{save new result into file failed.}";
+		#printf "-ERR save new result into file failed\n";
 		exit $state_warn;
 	}
 } else {
-	print "{warn}:{str}:{encode new result as json failed.}";
+	#printf "-ERR encode new result as json failed\n";
 	exit $state_warn;
 }
