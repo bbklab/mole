@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+#
+# Inner Plugin:  periodic post system information.
+#
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && {
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+        BASE_DIR=${BASE_DIR%/*}
+}
+if [ -f ${BASE_DIR}/bin/include ] && [ -s ${BASE_DIR}/bin/include ]; then
+        source ${BASE_DIR}/bin/include 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo "load include file failed with status $rc"
+                exit 1
+        }   
+else
+        echo "${BASE_DIR}/bin/include not exist or empty. exit" 
+        exit 1
+fi
+
+# Return Codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+STATE_NOOP=4
+
+# Set Default
+EXIT_STATUS=0
+LEVEL=          ### { ok | warn | crit | unknown }
+TYPE=           ### { str| file }
+CONTENT=        ### { strings | /path/to/result.file }
+
+
+# read config here
+full_times=$(read_mole_config mole_report_sysinfo full_times)
+
+if ! is_int "${full_times}"; then
+	full_times=10
+fi
+
+# check function here
+check() {
+
+  local pre_sysinfo_fsave="/var/tmp/.mole_diffgen_sysinfo.tmp"
+  local pre_times_fsave="/var/tmp/.mole_report_sysinfo.tmp"
+
+  # read nower {diff-post} times
+  local nower_times=0
+  if [ -f "${pre_times_fsave}" -a -s "${pre_times_fsave}" ]; then
+  	read nower_times < "${pre_times_fsave}"
+	if ! is_int "${nower_times}"; then
+		nower_times=0
+	fi
+  else
+	nower_times=0
+  fi
+
+  # check nower {diff-post} times and full_times to 
+  # 1. empty file {pre_sysinfo_fsave} or not
+  # 2. set {sysinfo_type} as full or diff
+  local sysinfo_type="unknown"
+  if [ ${nower_times} -ge ${full_times} ]; then
+	:> "${pre_sysinfo_fsave}"
+	sysinfo_type="full"
+  else
+	sysinfo_type="diff"
+  fi
+
+  # generate sysinfo json content
+  local diff_sh="${INNER_DIR}/mole_diffgen_sysinfo"  diff_arg="diffprint"
+  local sysinfo=$( ${diff_sh} ${diff_arg} 2>&- )
+
+  # set random/unique jid
+  local jobid=$( ${PLUTIL} unique_digest )
+
+  # post sysinfo data
+  ${POSTLOG_SH} -t sysinfo -j "${jobid}" -i "${sysinfo}" >/dev/null 2>&1
+  rc=$?
+  if [ "$rc" == "0" ]; then
+	EXIT_STATUS="${STATE_OK}"
+	LEVEL="ok"
+	TYPE="str"
+	CONTENT=" post sysinfo succeed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} "
+  else
+	EXIT_STATUS="${STATE_WARNING}"
+	LEVEL="warn"
+	TYPE="str"
+	CONTENT=" post sysinfo failed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} "
+  fi
+
+  ((nower_times++))
+  echo $nower_times > "${pre_times_fsave}"
+}
+
+check
+
+# output result and return exit status here.
+echo "{"${LEVEL}"}:{"${TYPE}"}:{"${CONTENT}"}"  | tr -d '\015\012'
+exit ${EXIT_STATUS}  
