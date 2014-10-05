@@ -61,7 +61,7 @@ unless (-f $mole && -x $mole) {
 # declar global vars
 our $filename = (split /\//, __FILE__)[-1];
 our %opts = ();
-our ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = ();
+our ($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$sysinfo,$debug) = ();
 our $logfrom;
 our (%json_data,$json_result) = ('','');
 
@@ -91,8 +91,8 @@ if ($hid && $hname) {
 }
 
 # read args from cli
-getopts('t:p:j:o:h:e:s:f:r:d',\%opts);
-($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$debug) = @opts{'t','p','j','o','h','e','s','f','r','d'};
+getopts('t:p:j:o:h:e:s:f:r:i:d',\%opts);
+($type,$plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat,$sysinfo,$debug) = @opts{'t','p','j','o','h','e','s','f','r','i','d'};
 
 # important to check utf8 flag on/off, or lead to json encode problems
 foreach my $chinese ($output,$houtput,$eml,$sms){
@@ -114,7 +114,8 @@ unless (defined $type && $type ne '') {
 if ($type ne 'post' 
 	&& $type ne 'plugin'
 	&& $type ne 'config'
-        && $type ne 'heartbeat') {
+        && $type ne 'heartbeat'
+	&& $type ne 'sysinfo'  ) {
   &log("CRIT: $logfrom type $type invalid. exit");
   print "type $type invalid.\n";
   &help;
@@ -136,7 +137,7 @@ if ($type eq 'post') {
         $houtput = 'Nothing to do';
         &log("INFO: $logfrom houtput empty, reset houtput=[$houtput]");
   }
-} elsif ($type eq 'plugin') {                                                                                                
+} elsif ($type eq 'plugin') {
   $logfrom = "$type AGENT.PLUGIN";
 } elsif ($type eq 'config') {
   $logfrom = "$type AGENT.CONFIG";
@@ -149,6 +150,22 @@ if ($type eq 'post') {
   } else {
 	# reset logfrom
   	$logfrom = "$type AGENT.HEARTBEAT $jobid";
+  }
+} elsif ($type eq 'sysinfo') {
+  unless (defined $jobid) {
+	&log("CRIT: $logfrom jobid required on type=sysinfo . exit");
+	print "jobid required on type=sysinfo\n";
+	&help;
+	exit 1;
+  } else {
+	# reset logfrom
+	$logfrom = "$type AGENT.SYSINFO $jobid";
+  }
+  unless (defined $sysinfo && $sysinfo ne '') {
+	&log("CRIT: $logfrom sysinfo required on type=sysinfo . exit");
+	print "sysinfo required on type=sysinfo\n";
+	&help;
+	exit 1;
   }
 }
 
@@ -211,7 +228,9 @@ if ($type eq 'post') {
   %json_data = &genjson_config;
 } elsif ($type eq 'heartbeat') {
   %json_data = &genjson_heartbeat($jobid);
-} 
+} elsif ($type eq 'sysinfo') {
+  %json_data = &genjson_sysinfo($jobid,$sysinfo);
+}
 
 $json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
 $json_result =~ s/[\r\n]//g;
@@ -328,9 +347,13 @@ unless (defined $sock) {
 sub help(){
 print <<HELP;
 
-Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -d
-type:    post,  plugin,  config,  heartbeat
-note:	 jobid required on type is post/plugin
+Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -i {sysinfo} -d
+
+type ~  post,  plugin,  config,  heartbeat, sysinfo
+
+note:	jobid/plugin/plugin_output required on type is post
+note:	jobid/sysinfo required on type is sysinfo
+note:	jobid required on type is heartbeat
 
 HELP
 }
@@ -1354,6 +1377,39 @@ sub genjson_heartbeat() {
 	}
   }
   $result{'data'} = \%raw_data;
+
+  return %result;
+}
+
+sub genjson_sysinfo {
+
+  my ($jobid,$sysinfo) = @_;
+
+  my %result = (
+        'type'                  => 'sysinfo',
+        'parter_id'             => $parter_id,
+        'hid'                   => $hid,
+        'hname'                 => $hname,
+	'dtype'			=> '',
+        'data'                  => '',
+  );
+
+  &log("INFO: $logfrom set type=[sysinfo]") if $debug;
+  &log("INFO: $logfrom set parter_id=[$parter_id]") if $debug;
+  &log("INFO: $logfrom set hid=[$hid]") if $debug;
+  &log("INFO: $logfrom set hname=[$hname]") if $debug;
+
+  if ($sysinfo =~ m/\A(.+?) (.*)\Z/m) {
+  	# set dtype
+  	$result{'dtype'} = $1;
+  	&log("INFO: $logfrom set dtype=[$1]");
+
+  	# set data
+  	$result{'data'} = $2;
+  	&log("DEBUG: $logfrom set data=[$2]") if $debug;
+  } else {
+	&log("INFO: $logfrom sysinfo not matched, set dtype and data as empty default");
+  }
 
   return %result;
 }
