@@ -74,6 +74,7 @@ TPL_MAIL="${TPL_DIR}/notify_mail.tpl"
 
 # PERL UTIL DEF
 PLUTIL="${BIN_DIR}/util.pl"
+GENDIFF="${BIN_DIR}/gendiff"
 
 # LOG DEF
 MOLE_LOG="${LOG_DIR}/mole.log"
