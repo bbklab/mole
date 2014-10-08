@@ -1,13 +1,13 @@
 Summary: 	agent of esop
 Name: 		esop
-Version: 	1.1.0
+Version: 	1.1.1
 Release: 	rhel5
 License: 	Commercial
 Group:  	Extension
 Vendor:		Beijing eYou Information Technology Co., Ltd.
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	esop-1.1.0-rhel5.tgz
+Source0: 	esop-1.1.1-rhel5.tgz
 Source1: 	esop.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
@@ -170,6 +170,9 @@ fi
 :
 
 %changelog
+* Wed Oct  8 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+- 测试发布 1.1.1
+- 新增: sysinfo协议数据, 合并来自于之前的插件:system_fixinfo和system_dyninfo
 * Wed Sep 17 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 正式版 1.1.0
 - 新增: 客户端通知(SMS/Email)的策略控制,可配置通知次数和时间范围
