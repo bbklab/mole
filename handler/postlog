@@ -1401,16 +1401,22 @@ sub genjson_sysinfo {
 
   if ($sysinfo =~ m/\A(.+?) (.*)\Z/m) {
   	# set dtype
-  	$result{'dtype'} = $1;
-  	&log("INFO: $logfrom set dtype=[$1]");
 	unless ($1 eq 'full' || $1 eq 'diff') {
-		&log("CRIT: $logfrom data type must be full or diff, exit");
+		&log("CRIT: $logfrom data type is [$1], must be full or diff, exit");
 		exit (1);
 	}
+  	$result{'dtype'} = $1;
+  	&log("INFO: $logfrom set dtype=[$1]");
 
   	# set data
-  	$result{'data'} = $2;
-  	&log("DEBUG: $logfrom set data=[$2]") if $debug;
+  	my $sysinfo_data; 
+	eval { $sysinfo_data = JSON->new->allow_nonref->utf8(1)->ascii(1)->decode($2); };
+	if ($@) {
+		&log("CRIT: $logfrom json decode sysinfo data failed, [$2], exit");
+		exit (1);
+	}
+	&log("INFO: $logfrom json decode sysinfo data succeed.");
+  	$result{'data'} = \%{$sysinfo_data};
   } else {
 	&log("CRIT: $logfrom sysinfo not matched, exit");
 	exit (1);
