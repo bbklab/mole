@@ -652,6 +652,7 @@ if ($data_config{'mem_usage'}) {
 				next;
 			}
 		}
+		close $fh if $fh;
 		if ($mem_usage{'mem_total'} && $mem_usage{'mem_free'}) {
 			$mem_usage{'mem_usage'} = sprintf("%0.2f",$mem_usage{'mem_total'}-$mem_usage{'mem_free'});
 		}
@@ -661,7 +662,6 @@ if ($data_config{'mem_usage'}) {
 		foreach my $key (keys %mem_usage) {
 			$mem_usage{$key} .= 'G';
 		}
-		close $fh if $fh;
   	}
   }
   ### %mem_usage
@@ -760,6 +760,7 @@ if ($data_config{'netstat'}) {
 				push @net_flow, \%single_flow;
 			}
 		}
+		close $fh if ($fh);
 		$netstat{'net_flow'} = \@net_flow;
  	}
   }
@@ -860,6 +861,7 @@ if ($data_config{'disk_space'}) {
 				push @disks, $dev;
 			}
 		}
+		close $fh0 if ($fh0);
 		while(my $dev = shift @disks) {
 			my %single_disk = (
 				'dev'		=> $dev,
@@ -890,7 +892,6 @@ if ($data_config{'disk_space'}) {
 			}
 			push @disk_space, \%single_disk;
 		}
-		close $fh0 if ($fh0);
   	}
   }
   ### @disk_space
@@ -1031,8 +1032,25 @@ if ($data_config{'product_info'}) {
                 	$mem_info{'memfreedevnum'} = $mem_info{'memmaxdevnum'} - $mem_info{'meminstallednum'};
         	}
 		$mem_info{'meminstalledsize'} = \@meminstalledsize;
-		$mem_info{'memtype'} = \%memtype;
-		$mem_info{'memspeed'} = \%memspeed;
+
+		my (@memtype,@memspeed);
+                for my $tmp_memtype (sort keys %memtype) {
+                        my %single_memtype = (
+                                'type'		=> $tmp_memtype,
+                                'number'        => $memtype{$tmp_memtype},
+                        );
+                        push @memtype, \%single_memtype; 
+                }
+		$mem_info{'memtype'} = \@memtype;
+
+                for my $tmp_memspeed (sort keys %memspeed) {
+                        my %single_memspeed = (
+                                'speed'		=> $tmp_memspeed,
+                                'number'        => $memspeed{$tmp_memspeed},
+                        );
+                        push @memspeed, \%single_memspeed; 
+                }
+		$mem_info{'memspeed'} = \@memspeed;
   	}
   }
   my $mem_file = '/proc/meminfo';
@@ -1049,7 +1067,7 @@ if ($data_config{'product_info'}) {
 				next;
 			}
   		}
-  		close $fh;
+  		close $fh if ($fh);
   	}
   }
   ### %product_info
@@ -1097,11 +1115,37 @@ if ($data_config{'cpu_info'}) {
 				next;
 			}
 	        }
+		close $fh if ($fh);
 		$cpu_info{'physical'} = scalar keys %cpu_phyid;
 		$cpu_info{'physical'} = 1 if $cpu_info{'physical'} == 0;
-		$cpu_info{'speed'} = \%cpu_speed;
-		$cpu_info{'vendor'} = \%cpu_vendor;
-		$cpu_info{'type'} = \%cpu_type;
+
+		my (@cpu_speed,@cpu_vendor,@cpu_type);
+		for my $tmp_speed (sort keys %cpu_speed) {
+			my %single_cpu_speed = (
+				'speed'		=> $tmp_speed,
+				'number'	=> $cpu_speed{$tmp_speed},
+			);
+			push @cpu_speed, \%single_cpu_speed; 
+		}
+		$cpu_info{'speed'} = \@cpu_speed;
+
+		for my $tmp_vendor (sort keys %cpu_vendor) {
+			my %single_cpu_vendor = (
+				'vendor'	=> $tmp_vendor,
+				'number'	=> $cpu_vendor{$tmp_vendor},
+			);
+			push @cpu_vendor, \%single_cpu_vendor;
+		}
+		$cpu_info{'vendor'} = \@cpu_vendor;
+
+		for my $tmp_type (sort keys %cpu_type) {
+			my %single_cpu_type = (
+				'type'		=> $tmp_type,
+				'number'	=> $cpu_type{$tmp_type},
+			);
+			push @cpu_type, \%single_cpu_type;
+		}
+		$cpu_info{'type'} = \@cpu_type;
   	}
   }
   ### %cpu_info
@@ -1124,6 +1168,7 @@ if ($data_config{'input_dev'}) {
 				push @input_dev, (split/=/)[1];
 			}
 		}
+		close $fh if ($fh);
 	  }
   }
   ### @input_dev
