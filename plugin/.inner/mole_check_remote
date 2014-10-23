@@ -23,7 +23,7 @@ else
 fi
 
 # Return Codes
-STATE_OK=0
+STATE_SUCC=0
 STATE_WARNING=1
 STATE_CRITICAL=2
 STATE_UNKNOWN=3
@@ -31,7 +31,7 @@ STATE_NOOP=4
 
 # Set Default
 EXIT_STATUS=0
-LEVEL=          ### { ok | warn | crit | unknown }
+LEVEL=          ### { succ | warn | crit | unknown }
 TYPE=           ### { str| file }
 CONTENT=        ### { strings | /path/to/result.file }
 
@@ -140,8 +140,8 @@ check() {
         TYPE="str";
         CONTENT="connectioin check unknown | ${unknnum}/${total} connection check unknown | ${result} ";
   else
-	EXIT_STATUS=${STATE_OK};
-	LEVEL="ok";
+	EXIT_STATUS=${STATE_SUCC};
+	LEVEL="succ";
 	TYPE="str";
 	CONTENT="connectioin check succeed | ${oknum}/${total} connection check succeed | ${result} ";
   fi

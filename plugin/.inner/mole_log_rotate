@@ -23,7 +23,7 @@ else
 fi
 
 # Return Codes
-STATE_OK=0
+STATE_SUCC=0
 STATE_WARNING=1
 STATE_CRITICAL=2
 STATE_UNKNOWN=3
@@ -31,7 +31,7 @@ STATE_NOOP=4
 
 # Set Default
 EXIT_STATUS=0
-LEVEL=          ### { ok | warn | crit | unknown }
+LEVEL=          ### { succ | warn | crit | unknown }
 TYPE=           ### { str| file }
 CONTENT=        ### { strings | /path/to/result.file }
 
@@ -209,13 +209,13 @@ check() {
   fi
   
   [ -z "${result}" ] && {
-  	EXIT_STATUS="${STATE_OK}"
-  	LEVEL="ok"
+  	EXIT_STATUS="${STATE_SUCC}"
+  	LEVEL="succ"
 	TYPE="str"
 	CONTENT="Nothing to do | No files to be processed"
   } || {
-	EXIT_STATUS="${STATE_OK}"
-	LEVEL="ok"
+	EXIT_STATUS="${STATE_SUCC}"
+	LEVEL="succ"
 	TYPE="str"
 	CONTENT="RollBack finished | ${rollnum} files rolled back | ${result}"
   }
