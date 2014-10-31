@@ -1,9 +1,13 @@
 package EsopLib;
 
-# use 5.010001;
 use strict;
 use warnings;
-# use Smart::Comments;
+use POSIX;
+use Crypt::CBC;
+use Crypt::OpenSSL::AES;
+use Gzip::Faster qw(gzip);
+use MIME::Base64 qw(encode_base64);
+use Smart::Comments;
 
 require Exporter;
 
@@ -20,6 +24,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
     read_mole_config
     read_plugin_config
     read_file_recvlst
+    encode_mole_data
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -28,6 +33,7 @@ our @EXPORT = qw(
     read_mole_config
     read_plugin_config
     read_file_recvlst
+    encode_mole_data
 );
 
 our $VERSION = '0.01';
@@ -73,9 +79,6 @@ sub read_ini {
 	}
 	if (m/\A\s*$key\s*=\s*(.+)\s*\Z/) {
 		if ($flag) {
-			### $&
-			### $`
-			### $'
 			my $value = $1;
 			$value =~ s/\A\s*//g;
 			$value =~ s/\s*\Z//g;
@@ -122,6 +125,91 @@ sub read_file_recvlst {
     } else {
 	return $result;
     }
+}
+
+sub encrypt {
+	my ($data, $key, $iv) = @_;
+	my $result = undef;
+	
+	unless (defined $data) {
+		return (undef, "encrypt failed: data not defined");
+	}
+
+	unless (defined $key) {
+		return (undef, "encrypt failed: key not defined");
+	}
+
+	unless (defined $iv) {
+		return (undef, "encrypt failed: iv not defined");
+	}
+	
+	my $cipher = Crypt::CBC->new(
+		{
+			'key'		=>  $key,
+			'cipher' 	=>  'Crypt::OpenSSL::AES',
+			'iv'		=>  $iv,
+			'literal_key' 	=>  1,
+			'header'	=>  'none',
+			'keysize'	=>  128 / 8
+			
+		}
+	);
+	unless ( $result = $cipher->encrypt($data) ) {
+		return (undef, "encrypt failed: aes-cbc encrypt failed");
+	}
+
+	return $result;
+}
+
+sub compress {
+	my $data  = shift;
+	my $result = undef;
+
+	unless (defined $data) {
+		return (undef, "compress failed: data not defined");
+	}
+
+	unless ($result = gzip($data)) {
+		return (undef, "compress failed: gzip error");
+	}
+
+	return $result;
+}
+
+sub encode_mole_data {
+	my ($data, $key, $iv, $minlen) = @_;
+	my $flag = 0;
+
+	unless (defined $data) {
+		return (undef, "encode failed: data not defined");
+	}
+
+	unless (defined $minlen && $minlen =~ m/\A\d+\Z/) {
+		return (undef, "encode failed: minlen not defined or not int");
+	}
+	
+	my ($zipdata, $ziperror);
+	if (length $data > $minlen) {
+		($zipdata, $ziperror) = &compress($data);
+		if ($zipdata) {
+			$flag = 1;
+		} else {
+			return (undef, $ziperror);
+		}
+	} else {
+		$zipdata = $data;
+	}
+
+	my ($encdata, $encerror) = &encrypt($zipdata, $key, $iv);
+	if ($encdata) {
+		unless ( $encdata = encode_base64($flag.$encdata,"") ) {
+			return (undef, "encode failed, base64 encode failed");
+		}
+	} else {
+		return (undef, $encerror);
+	}
+
+	return $encdata;
 }
 
 1;
