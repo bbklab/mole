@@ -238,8 +238,8 @@ $json_result =~ s/[\r\n]//g;
 our $post_length = 0;
 if ($json_result) {
   $post_length = length($json_result);
-  &log("INFO: $logfrom json result: [$json_result]") if $debug;
-  &log("INFO: $logfrom json length: [$post_length]");
+  &log("INFO: $logfrom json data result [$json_result]") if $debug;
+  &log("INFO: $logfrom json data length $post_length");
 } else {
   &log("CRIT: $logfrom json result empty, exit");
   exit 1;
@@ -255,46 +255,66 @@ our %post_server = (
   'post_port_type'	=> '',
   'post_timeout'	=> '',
   'post_max_length'	=> '',
+  'encrypt_prikey'	=> '',
+  'gzip_minlen'		=> '',
 );
 foreach my $key (keys %post_server) {
   $post_server{$key} = read_mole_config('postlog',$key);
 }
 
-unless (exists $post_server{'post_server'} && $post_server{'post_server'} ne '') {
+# check post_server
+unless (defined $post_server{'post_server'} && $post_server{'post_server'} ne '') {
   &log("CRIT: $logfrom post server address not defined. exit");
   exit 1;
 }
 
-unless (exists $post_server{'post_max_length'} && $post_server{'post_max_length'} ne '') {
+# check post_max_length
+unless (defined $post_server{'post_max_length'} && $post_server{'post_max_length'} ne '') {
   $post_server{'post_max_length'} = 50000;
 } elsif ($post_server{'post_max_length'} =~ /\D/) {
   $post_server{'post_max_length'} = 50000;
 }
-
 unless ($post_length <= $post_server{'post_max_length'}) {
   &log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
   exit 1;
 }
 
-unless (exists $post_server{'post_server_port'} && $post_server{'post_server_port'} ne '') {
+# check post_server_port
+unless (defined $post_server{'post_server_port'} && $post_server{'post_server_port'} ne '') {
   $post_server{'post_server_port'} = 8548;
 } elsif ($post_server{'post_server_port'} =~ /\D/) {
   $post_server{'post_server_port'} = 8548;
 }
 
-unless (exists $post_server{'post_port_type'} && $post_server{'post_port_type'} ne '') {
+# check post_port_type
+unless (defined $post_server{'post_port_type'} && $post_server{'post_port_type'} ne '') {
   $post_server{'post_port_type'} = 'tcp';
 } elsif ($post_server{'post_port_type'} ne 'tcp' && $post_server{'post_port_type'} ne 'udp') {
   $post_server{'post_port_type'} = 'tcp';
 }
 
-unless (exists $post_server{'post_timeout'} && $post_server{'post_timeout'} ne '') {
+# check post_timeout
+unless (defined $post_server{'post_timeout'} && $post_server{'post_timeout'} ne '') {
   $post_server{'post_timeout'} = 10;
 } elsif ($post_server{'post_timeout'} =~ /\D/) {
   $post_server{'post_timeout'} = 10;
 }
 
-# post data
+# check encrypt_prikey
+unless (defined $post_server{'encrypt_prikey'} && $post_server{'encrypt_prikey'} ne '') {
+  $post_server{'encrypt_prikey'} = '1234567812345678';
+} elsif (length $post_server{'encrypt_prikey'} ne '16') {
+  $post_server{'encrypt_prikey'} = '1234567812345678';
+}
+
+# check gzip_minlen
+unless (defined $post_server{'gzip_minlen'} && $post_server{'gzip_minlen'} ne '') {
+  $post_server{'gzip_minlen'} = 100;
+} elsif ($post_server{'gzip_minlen'} =~ /\D/) {
+  $post_server{'gzip_minlen'} = 100;
+}
+
+# connect post host
 my $sock=IO::Socket::INET->new(
   'PeerAddr' =>     $post_server{'post_server'},
   'PeerPort' =>     $post_server{'post_server_port'},
@@ -306,37 +326,42 @@ unless (defined $sock) {
   if ($@) {
 	( $response = $@ ) =~ s/[\r\n]//g;
   }
-  &log("CRIT: $logfrom connect $post_server{'post_server'}, $post_server{'post_port_type'}:$post_server{'post_server_port'} error, response: [$response] exit");
+  &log("CRIT: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} error: [$response]");
   exit 2;
-} else {
-  &log("INFO: $logfrom connect $post_server{'post_server'}, $post_server{'post_port_type'}:$post_server{'post_server_port'} succeed!");
-
-  my $sock_response = 0;
-  if (print $sock "$json_result\r\n") {
-	&log("INFO: $logfrom send data to socket succeed.");
-  	$sock_response = <$sock>;
-	$sock->close() if $sock;
-  	unless ($sock_response) {
-		$sock_response = '';
-  	} else {
-		chomp $sock_response;
-		$sock_response =~ s/[\r\n ]//g;
-  	}
-  	&log("INFO: $logfrom socket return response: [$sock_response]");
-  	&log("INFO: $logfrom socket maybe denied my request.") if ($sock_response eq '');
-  } else {
-	&log("CRIT: $logfrom send data to socket failed.");
-  }
-  &log("INFO: $logfrom script postlog finished.");
-  &log("");
-  &log("");
-
-  if ($sock_response =~ /\A\d+\Z/) {
-  	exit $sock_response;
-  } else {
-	exit 9;
-  }
 }
+
+&log("INFO: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} succeed");
+
+# encode data
+my ($encode_data, $encode_error) = &encode_mole_data(
+	$json_result, $post_server{'encrypt_prikey'}, chr(0) x 16, $post_server{'gzip_minlen'});
+unless ($encode_data) {
+	&log("CRIT: $logfrom encode data error: [$encode_error]");
+	exit 2;
+}
+&log("INFO: $logfrom encode data succeed, length " . length $encode_data);
+
+# post data
+my $sock_response = 0;
+if (print $sock "$encode_data\r\n") {
+  &log("INFO: $logfrom send data to socket succeed.");
+  $sock_response = <$sock>;
+  $sock->close() if $sock;
+  $sock_response = '' unless ($sock_response);
+  $sock_response =~ s/[\r\n ]//g;
+  &log("INFO: $logfrom socket return response: [$sock_response]");
+  &log("INFO: $logfrom socket maybe denied my request.") if ($sock_response eq '');
+} else {
+  &log("CRIT: $logfrom send data to socket failed.");
+}
+&log("INFO: $logfrom script postlog finished.");
+&log("");
+&log("");
+
+unless ($sock_response =~ /\A\d+\Z/) {
+  exit 9;
+} 
+exit $sock_response;
 
 
 

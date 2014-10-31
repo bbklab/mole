@@ -7,7 +7,7 @@ use Crypt::CBC;
 use Crypt::OpenSSL::AES;
 use Gzip::Faster qw(gzip);
 use MIME::Base64 qw(encode_base64);
-use Smart::Comments;
+# use Smart::Comments;
 
 require Exporter;
 
@@ -151,9 +151,8 @@ sub encrypt {
 			'literal_key' 	=>  1,
 			'header'	=>  'none',
 			'keysize'	=>  128 / 8
-			
 		}
-	);
+	) or return (undef, "encrypt failed: $!");
 	unless ( $result = $cipher->encrypt($data) ) {
 		return (undef, "encrypt failed: aes-cbc encrypt failed");
 	}
@@ -188,6 +187,11 @@ sub encode_mole_data {
 		return (undef, "encode failed: minlen not defined or not int");
 	}
 	
+	### get_args: @_
+
+	# my $len;
+	# $len = length $data;
+	### init_len: $len
 	my ($zipdata, $ziperror);
 	if (length $data > $minlen) {
 		($zipdata, $ziperror) = &compress($data);
@@ -199,9 +203,13 @@ sub encode_mole_data {
 	} else {
 		$zipdata = $data;
 	}
+	# $len = length $zipdata;
+	### after_zip_len: $len
 
 	my ($encdata, $encerror) = &encrypt($zipdata, $key, $iv);
 	if ($encdata) {
+		# $len = length $encdata;
+		### after_enc_len: $len
 		unless ( $encdata = encode_base64($flag.$encdata,"") ) {
 			return (undef, "encode failed, base64 encode failed");
 		}
@@ -209,6 +217,8 @@ sub encode_mole_data {
 		return (undef, $encerror);
 	}
 
+	# $len = length $encdata;
+	### at_last: $len
 	return $encdata;
 }
 
