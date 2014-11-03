@@ -37,6 +37,7 @@ use warnings;
 use strict;
 use utf8;
 use JSON;
+use EsopLib;
 # use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
@@ -636,31 +637,28 @@ if ($data_config{'mem_usage'}) {
   	if (open my $fh, "<", $mem_file) {
 		while(<$fh>){
 			if (m/\A\s*MemTotal:\s+(\d+)\s*KB/i) {
-				$mem_usage{'mem_total'} = sprintf("%0.2f",$1/1024/1024);
+				$mem_usage{'mem_total'} = $1;
 				next;
 			}
 			if (m/\A\s*SwapTotal:\s+(\d+)\s*KB/i) {
-				$mem_usage{'swp_total'} = sprintf("%0.2f",$1/1024/1024);
+				$mem_usage{'swp_total'} = $1;
 				next;
 			}
 			if (m/\A\s*MemFree:\s+(\d+)\s*KB/i) {
-				$mem_usage{'mem_free'} = sprintf("%0.2f",$1/1024/1024);
+				$mem_usage{'mem_free'} = $1;
 				next;
 			}
 			if (m/\A\s*SwapFree:\s+(\d+)\s*KB/i) {
-				$mem_usage{'swp_free'} = sprintf("%0.2f",$1/1024/1024);
+				$mem_usage{'swp_free'} = $1;
 				next;
 			}
 		}
 		close $fh if $fh;
 		if ($mem_usage{'mem_total'} && $mem_usage{'mem_free'}) {
-			$mem_usage{'mem_usage'} = sprintf("%0.2f",$mem_usage{'mem_total'}-$mem_usage{'mem_free'});
+			$mem_usage{'mem_usage'} = $mem_usage{'mem_total'}-$mem_usage{'mem_free'};
 		}
 		if ($mem_usage{'swp_total'} && $mem_usage{'swp_free'}) {
-			$mem_usage{'swp_usage'} = sprintf("%0.2f",$mem_usage{'swp_total'}-$mem_usage{'swp_free'});
-		}
-		foreach my $key (keys %mem_usage) {
-			$mem_usage{$key} .= 'G';
+			$mem_usage{'swp_usage'} = $mem_usage{'swp_total'}-$mem_usage{'swp_free'};
 		}
   	}
   }
@@ -874,7 +872,7 @@ if ($data_config{'disk_space'}) {
 				'iused'		=> '',
 				'ifree'		=> '',
 			);
-			open my $fh, "$df -lPTm $dev 2>&- | ";
+			open my $fh, "$df -lPTk $dev 2>&- | ";
 			if ($fh) {
 				while(<$fh>){
 					if (m/\A\Q$dev\E\s+/i) {
@@ -1001,7 +999,7 @@ if ($data_config{'product_info'}) {
 				next;
 			}
 			if (m/\A\s*Maximum\s+Capacity:/i) {
-				$mem_info{'memmaxcapacity'} = (split /:\s+/)[1];
+				$mem_info{'memmaxcapacity'} = &c2kb( (split /:\s+/)[1] );
 				next;
 			}
 			if (m/\A\s*Memory Device/i) {
@@ -1011,10 +1009,8 @@ if ($data_config{'product_info'}) {
 			}
 			if (m/\A\s*Size:/i) {
 				(my $size = (split /:/)[1]) =~ s/\A\s*//g;
-				if ($size =~ /\d+ MB/i) {
-					$mem_info{'meminstallednum'}++;
-					push @meminstalledsize, $size;
-				}
+				$mem_info{'meminstallednum'}++;
+				push @meminstalledsize, &c2kb($size);
 				next;
 			}
 			if (m/\A\s*Type:/i && $memdev_start == 1) {
@@ -1059,11 +1055,11 @@ if ($data_config{'product_info'}) {
   		while(<$fh>){
 			chomp; s/(\A\s+|\s+\Z)//g;
 			if (m/\AMemTotal:/i) {
-				$mem_info{'os_mem_total'} = int((split /\s+/)[1]/1024).' MB';
+				$mem_info{'os_mem_total'} = (split /\s+/)[1];
 				next;
 			}
 			if (m/\ASwapTotal:/i) {
-				$mem_info{'os_swap_total'} = int((split /\s+/)[1]/1024).' MB';
+				$mem_info{'os_swap_total'} = (split /\s+/)[1];
 				next;
 			}
   		}
@@ -1546,10 +1542,13 @@ if ($data_config{'inet_name'}) {
 			if ($fh) {
 				while(<$fh>){
 					chomp; s/(\A\s+|\s+\Z)//g;
-					$inet_info{'speed'} = (split/:\s+/)[1] if m/\A\s*Speed:/;
 					$inet_info{'duplex'} = (split/:\s+/)[1] if m/\A\s*Duplex:/;
 					$inet_info{'is_autoneg'} = (split/:\s+/)[1] if m/\A\s*Auto-negotiation:/;
 					$inet_info{'is_linked'} = (split/:\s+/)[1] if m/\A\s*Link detected:/;
+					$inet_info{'speed'} = (split/:\s+/)[1] if m/\A\s*Speed:/;
+					if ( $inet_info{'speed'} =~ m/\A(\d+)\s*Gb\/s\Z/i ) {
+						$inet_info{'speed'} = $1 * 1024 . 'Mb/s';
+					}
 				}
 			}
 			open my $fh1, "$ethtool -i $inet_name 2>&1 | ";
@@ -1805,7 +1804,7 @@ if ($data_config{'raid_info'}) {
 										next;
 									}	
 									if(/\A\s*Size\s*:\s*(.+)\s*\Z/i){
-										$vd_single{'size'} = $1;
+										$vd_single{'size'} = &c2kb($1);
 										next;
 									}	
 									if(/\A\s*State\s*:\s*(.+)\s*\Z/i){
@@ -1813,7 +1812,7 @@ if ($data_config{'raid_info'}) {
 										next;
 									}	
 									if(/\A\s*Strip Size\s*:\s*(.+)\s*\Z/i){
-										$vd_single{'stripe_size'} = $1;
+										$vd_single{'stripe_size'} = &c2kb($1);
 										next;
 									}	
 									if(/\A\s*Number Of Drives\s*:\s*(\d+)\s*\Z/i){
@@ -1910,11 +1909,11 @@ if ($data_config{'raid_info'}) {
 									next;
 								}	
 	                                                        if(/\A\s*Raw Size\s*:\s*([\d.]+\s+(\w)+)\s*/i){
-	                                                                $pd_single{'raw_size'} = $1;
+	                                                                $pd_single{'raw_size'} = &c2kb($1);
 	                                                                next;
 	                                                        }
 	                                                        if(/\A\s*Coerced Size\s*:\s*([\d.]+\s+(\w)+)\s*/i){
-	                                                                $pd_single{'coerced_size'} = $1;
+	                                                                $pd_single{'coerced_size'} = &c2kb($1);
 	                                                                next;
 	                                                        }
 								if(/\A\s*Media Type\s*:\s*(.+)\s*\Z/i){
@@ -1972,7 +1971,7 @@ if ($data_config{'raid_info'}) {
 					next;
 				}
 				if(/\A\s*Strip Size\s*:\s*(.+)\s*\Z/i){
-					$raid_single{'Default_Strip_Size'} = $1;
+					$raid_single{'Default_Strip_Size'} = &c2kb($1);
 					next;
 				}
 				if(/\A\s*Write Policy\s*:\s*(.+)\s*\Z/i){

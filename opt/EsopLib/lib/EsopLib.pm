@@ -25,6 +25,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
     read_plugin_config
     read_file_recvlst
     encode_mole_data
+    c2kb
 ) ] );
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -34,6 +35,7 @@ our @EXPORT = qw(
     read_plugin_config
     read_file_recvlst
     encode_mole_data
+    c2kb
 );
 
 our $VERSION = '0.01';
