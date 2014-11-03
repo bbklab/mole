@@ -231,7 +231,7 @@ sub c2kb {
 		return undef;
 	}
 	
-	unless ($size =~ m/\A\s*(\d+)\s*(K|KB|M|MB|G|GB|T|TB|P|PB|E|EB|Z|ZB|Y|YB)\Z/i) {
+	unless ($size =~ m/\A\s*(\d.+)\s*(K|KB|M|MB|G|GB|T|TB|P|PB|E|EB|Z|ZB|Y|YB)\Z/i) {
 		return $size;
 	}
 	

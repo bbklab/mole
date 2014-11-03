@@ -1747,7 +1747,7 @@ if ($data_config{'raid_info'}) {
 					next;
 				}
 				if(/\A\s*Memory Size\s*:\s*(.+)\s*\Z/i){
-					$raid_single{'RAID_Memory'} = $1;
+					$raid_single{'RAID_Memory'} = &c2kb($1);
 					next;
 				}
 				if(/\A\s*Temperature sensor for controller\s*:\s*Present\s*\Z/i){
