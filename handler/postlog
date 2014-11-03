@@ -314,54 +314,106 @@ unless (defined $post_server{'gzip_minlen'} && $post_server{'gzip_minlen'} ne ''
   $post_server{'gzip_minlen'} = 100;
 }
 
-# connect post host
-my $sock=IO::Socket::INET->new(
-  'PeerAddr' =>     $post_server{'post_server'},
-  'PeerPort' =>     $post_server{'post_server_port'},
-  'Proto'    =>     $post_server{'post_port_type'},
-  'Timeout' =>      $post_server{'post_timeout'}, 
-);
-unless (defined $sock) {
-  my $response = '';
-  if ($@) {
-	( $response = $@ ) =~ s/[\r\n]//g;
-  }
-  &log("CRIT: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} error: [$response]");
-  exit 2;
-}
-
-&log("INFO: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} succeed");
-
 # encode data
 my ($encode_data, $encode_error) = &encode_mole_data(
 	$json_result, $post_server{'encrypt_prikey'}, chr(0) x 16, $post_server{'gzip_minlen'});
 unless ($encode_data) {
-	&log("CRIT: $logfrom encode data error: [$encode_error]");
+	&log ("CRIT: $logfrom encode data error: [$encode_error]");
 	exit 2;
 }
-&log("INFO: $logfrom encode data succeed, length " . length $encode_data);
+&log ("INFO: $logfrom encode data succeed, length " . length $encode_data);
 
-# post data
-my $sock_response = 0;
-if (print $sock "$encode_data\r\n") {
-  &log("INFO: $logfrom send data to socket succeed.");
-  $sock_response = <$sock>;
-  $sock->close() if $sock;
-  $sock_response = '' unless ($sock_response);
-  $sock_response =~ s/[\r\n ]//g;
-  &log("INFO: $logfrom socket return response: [$sock_response]");
-  &log("INFO: $logfrom socket maybe denied my request.") if ($sock_response eq '');
+# connect post host
+my $post_timeout = $post_server{'post_timeout'};
+my $sock;
+eval {
+	# install ALRM handler
+	local $SIG{'ALRM'} = sub { die 'Post Timed Out'; };
+	alarm ($post_timeout);
+
+	# connect
+	$sock=IO::Socket::INET->new(
+  		'PeerAddr' =>     $post_server{'post_server'},
+  		'PeerPort' =>     $post_server{'post_server_port'},
+  		'Proto'    =>     $post_server{'post_port_type'},
+	);
+	
+	unless (defined $sock) {
+		my $response = '';
+		( $response = $@ ) =~ s/[\r\n]//g if ($@);
+  		&log ("CRIT: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} error: [$response]");
+  		exit 2;
+	}
+	&log ("INFO: $logfrom connect $post_server{'post_port_type'}://$post_server{'post_server'}:$post_server{'post_server_port'} succeed");
+
+	# *IMPORTANT*  turn on autoflush
+	$sock->autoflush(1);
+
+	# read welcome banner
+	my $sock_response = <$sock>;
+	unless (defined $sock_response) {
+		&log ("CRIT: $logfrom connect to socket didn't return welcome banner.");
+		die 'Banner Empty';
+	}
+	chomp $sock_response;
+	$sock_response =~ s/[\r\n]//g;
+	unless ($sock_response =~ /\A\+OK/i) {
+		&log ("CRIT: $logfrom read proxy welcome banner [$sock_response]");
+		die 'Banner Error';
+	}
+	&log ("INFO: $logfrom read proxy welcome banner [$sock_response]");
+	
+	# send HEAD
+	unless (print $sock "HEAD t=$type,s=$hid,j=$jobid\r\n") {
+		&log ("CRIT: $logfrom send HEAD to socket failed.");
+		die 'HEAD Send Failed';
+	}
+	$sock_response = <$sock>;
+	unless (defined $sock_response) {
+		&log ("CRIT: $logfrom send HEAD to socket return nothing.");
+		die 'HEAD Return Nothing';
+	}
+	chomp $sock_response;
+	$sock_response =~ s/[\r\n]//g;
+	unless ($sock_response =~ /\A\+OK/i) {
+		&log ("CRIT: $logfrom send HEAD to socket return [$sock_response]");
+		die 'HEAD Return Error';
+	}
+	&log ("INFO: $logfrom send HEAD to socket return [$sock_response]");
+
+	# send DATA
+	unless (print $sock "$encode_data\r\n") {
+		&log ("CRIT: $logfrom send DATA to socket failed.");
+		die 'DATA Send Failed';
+	}
+	$sock_response = <$sock>;
+	unless (defined $sock_response) {
+		&log ("CRIT: $logfrom send DATA to socket return nothing.");
+		die 'DATA Return Nothing';
+	}
+	chomp $sock_response;
+	$sock_response =~ s/[\r\n]//g;
+	unless ($sock_response =~ /\A\+OK/i) {
+		&log ("CRIT: $logfrom send DATA to socket return [$sock_response]");
+		die 'DATA Return Error';
+	}
+	&log ("INFO: $logfrom send DATA to socket return [$sock_response]");
+
+	alarm(0);
+};
+alarm(0);
+if ($@) {
+	if ($@ =~ m/Post Timed Out/) {
+		&log ("CRIT: $logfrom script postlog timeout.\n\n");
+		exit (10);
+	} else {
+		&log ("CRIT: $logfrom script postlog finish with error: [$@]\n\n");
+		exit (9);
+	}
 } else {
-  &log("CRIT: $logfrom send data to socket failed.");
+	&log ("INFO: $logfrom script postlog finished.\n\n");
+	exit (0);
 }
-&log("INFO: $logfrom script postlog finished.");
-&log("");
-&log("");
-
-unless ($sock_response =~ /\A\d+\Z/) {
-  exit 9;
-} 
-exit $sock_response;
 
 
 
