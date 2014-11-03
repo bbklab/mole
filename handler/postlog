@@ -68,26 +68,26 @@ our (%json_data,$json_result) = ('','');
 our $postlog = "$basedir/log/postlog.log";
 open my $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
 if($fh){
-  while(<$fh>){
-	chomp; $postlog = $_;
-	last;
-  }
+	while(<$fh>){
+		chomp; $postlog = $_;
+		last;
+  	}
 }
 
 our $statfile = "$basedir/tmp/.posthost.status";
 open $fh, "$mole printdef POSTHOST_STATUS 2>&- | ";
 if($fh){
-  while(<$fh>){
-	chomp; $statfile = $_;
-	last;
-  }
+  	while(<$fh>){
+		chomp; $statfile = $_;
+		last;
+  	}
 }
 
 our $parter_id = read_mole_config('global','parter_id');
 our $hid = read_mole_config('global','id');
 our $hname = read_mole_config('global','name');
 if ($hid && $hname) {
-    $hname = $hid . '__' . $hname;
+	$hname = $hid . '__' . $hname;
 }
 
 # read args from cli
@@ -96,9 +96,9 @@ getopts('t:p:j:o:h:e:s:f:r:i:d',\%opts);
 
 # important to check utf8 flag on/off, or lead to json encode problems
 foreach my $chinese ($output,$houtput,$eml,$sms){
-  unless (Encode::is_utf8($chinese)){
-    	Encode::_utf8_on($chinese);
-  }
+	unless (Encode::is_utf8($chinese)){
+    		Encode::_utf8_on($chinese);
+  	}
 }
 
 # set initial logfrom first
@@ -106,67 +106,71 @@ $logfrom = 'POSTLOG.INITFROM';
 
 # check arg [type] first
 unless (defined $type && $type ne '') {
-  &log("CRIT: $logfrom type required. exit");
-  print "type required.\n";
-  &help;
-  exit 1;
+	&log("CRIT: $logfrom type required. exit");
+  	print "type required.\n";
+  	&help;
+  	exit 1;
 }
-if ($type ne 'post' 
-	&& $type ne 'plugin'
-	&& $type ne 'config'
-        && $type ne 'heartbeat'
-	&& $type ne 'sysinfo'  ) {
-  &log("CRIT: $logfrom type $type invalid. exit");
-  print "type $type invalid.\n";
-  &help;
-  exit 1;
+if ($type ne 'post' && $type ne 'plugin' && $type ne 'config' && $type ne 'heartbeat' && $type ne 'sysinfo') {
+  	&log("CRIT: $logfrom type $type invalid. exit");
+  	print "type $type invalid.\n";
+  	&help;
+  	exit 1;
 }
-# reset [logfrom] [houtput]
+
+# reset [logfrom]
 if ($type eq 'post') {
-  unless (defined $plugin && defined $jobid && defined $output){
-        &log("CRIT: $logfrom plugin or jobid or plugin_output required on type=post. exit");
-        print "plugin or jobid or plugin_output required on type=post\n";
-        &help;
-        exit 1;
-  } else {
+  	unless (defined $plugin && defined $jobid && defined $output){
+        	&log("CRIT: $logfrom plugin or jobid or plugin_output required on type=post. exit");
+        	print "plugin or jobid or plugin_output required on type=post\n";
+        	&help;
+        	exit 1;
+  	}
+
+  	unless (defined $houtput && $houtput ne ''){ 
+        	$houtput = 'Nothing to do';
+        	&log("INFO: $logfrom houtput empty, reset houtput=[$houtput]");
+  	}
+
 	# reset logfrom
         $logfrom = "$type $plugin $jobid";
-  }
-  if (!defined $houtput || $houtput eq ''){ 
-	# reset houtput
-        $houtput = 'Nothing to do';
-        &log("INFO: $logfrom houtput empty, reset houtput=[$houtput]");
-  }
+
 } elsif ($type eq 'plugin') {
-  $logfrom = "$type AGENT.PLUGIN";
+	# reset logfrom
+  	$logfrom = "$type AGENT.PLUGIN";
+
 } elsif ($type eq 'config') {
-  $logfrom = "$type AGENT.CONFIG";
+	# reset logfrom
+  	$logfrom = "$type AGENT.CONFIG";
+
 } elsif ($type eq 'heartbeat') {
-  unless (defined $jobid && $jobid ne '') {
-	&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
-	print "jobid required on type=heartbeat\n";
-	&help;
-	exit 1;
-  } else {
+  	unless (defined $jobid && $jobid ne '') {
+		&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
+		print "jobid required on type=heartbeat\n";
+		&help;
+		exit 1;
+  	}
+
 	# reset logfrom
   	$logfrom = "$type AGENT.HEARTBEAT $jobid";
-  }
+
 } elsif ($type eq 'sysinfo') {
-  unless (defined $jobid && $jobid ne '') {
-	&log("CRIT: $logfrom jobid required on type=sysinfo . exit");
-	print "jobid required on type=sysinfo\n";
-	&help;
-	exit 1;
-  } else {
+  	unless (defined $jobid && $jobid ne '') {
+		&log("CRIT: $logfrom jobid required on type=sysinfo . exit");
+		print "jobid required on type=sysinfo\n";
+		&help;
+		exit 1;
+  	}
+
+  	unless (defined $sysinfo && $sysinfo ne '') {
+		&log("CRIT: $logfrom sysinfo required on type=sysinfo . exit");
+		print "sysinfo required on type=sysinfo\n";
+		&help;
+		exit 1;
+  	}
+
 	# reset logfrom
 	$logfrom = "$type AGENT.SYSINFO $jobid";
-  }
-  unless (defined $sysinfo && $sysinfo ne '') {
-	&log("CRIT: $logfrom sysinfo required on type=sysinfo . exit");
-	print "sysinfo required on type=sysinfo\n";
-	&help;
-	exit 1;
-  }
 }
 
 # log start
@@ -188,130 +192,131 @@ if (!$hname || $hname eq '') {
 
 # set debug flag
 if(!defined $debug || $debug eq ''){
-  $debug = (read_mole_config('postlog','post_debug') eq 'yes') ? 1 : 0;
-  &log("INFO: $logfrom set debug=[$debug] from config file.");
+	$debug = (read_mole_config('postlog','post_debug') eq 'yes') ? 1 : 0;
+  	&log("INFO: $logfrom set debug=[$debug] from config file.");
 } else {
-  &log("INFO: $logfrom set debug=[$debug] from cli argument.");
+  	&log("INFO: $logfrom set debug=[$debug] from CLI argument.");
 }
 
 
 # check post host status
 if (-f $statfile && -s $statfile){
-  if(open FH, "<", $statfile) {
-	while(<FH>){
-		my @array_status = split /\s+/;
-		if (@array_status) {
-  			my $conn_status = shift @array_status;
-  			my $conn_details = "@array_status";
-  			if ($conn_status ne '0') {
-				&log("CRIT: $logfrom post host seems down, $conn_details, exit");
-  				exit 2;
-  			} else {
-				&log("INFO: $logfrom post host seems online, continue.");
-  			}
+  	if(open FH, "<", $statfile) {
+		while(<FH>){
+			my @array_status = split /\s+/;
+			if (@array_status) {
+  				my $conn_status = shift @array_status;
+  				my $conn_details = "@array_status";
+  				if ($conn_status ne '0') {
+					&log("CRIT: $logfrom post host seems down, $conn_details, exit");
+  					exit 2;
+  				} else {
+					&log("INFO: $logfrom post host seems online, continue.");
+  				}
+			}
+			last;
 		}
-		last;
+		close FH;
+  	} else {
+		&log("INFO: $logfrom post host status file open failed, ignore and continue.");
 	}
-	close FH;
-  }
 } else {
-  &log("INFO: $logfrom post host status file not exist or empty, continue.");
+  	&log("INFO: $logfrom post host status file not exist or empty, continue.");
 }
 
 
 # generate json data by {action_type}: [post|plugin|config|heartbeat]
 if ($type eq 'post') {
-  %json_data = &genjson_post($plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat);
+	%json_data = &genjson_post($plugin,$jobid,$output,$houtput,$eml,$sms,$snapfile,$repeat);
 } elsif ($type eq 'plugin') {
-  %json_data = &genjson_plugin;
+  	%json_data = &genjson_plugin;
 } elsif ($type eq 'config') {
-  %json_data = &genjson_config;
+  	%json_data = &genjson_config;
 } elsif ($type eq 'heartbeat') {
-  %json_data = &genjson_heartbeat($jobid);
+  	%json_data = &genjson_heartbeat($jobid);
 } elsif ($type eq 'sysinfo') {
-  %json_data = &genjson_sysinfo($jobid,$sysinfo);
+  	%json_data = &genjson_sysinfo($jobid,$sysinfo);
 }
 
 $json_result = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%json_data);
 $json_result =~ s/[\r\n]//g;
 
 our $post_length = 0;
-if ($json_result) {
-  $post_length = length($json_result);
-  &log("INFO: $logfrom json data result [$json_result]") if $debug;
-  &log("INFO: $logfrom json data length $post_length");
-} else {
-  &log("CRIT: $logfrom json result empty, exit");
-  exit 1;
+unless ($json_result) {
+  	&log("CRIT: $logfrom json result empty, exit");
+  	exit 1;
 }
+$post_length = length($json_result);
+&log("INFO: $logfrom json data result [$json_result]") if $debug;
+&log("INFO: $logfrom json data length $post_length");
 ### %json_data
 ### $json_result
 
 
 # set post address
 our %post_server = (
-  'post_server'		=> '',
-  'post_server_port'	=> '',
-  'post_port_type'	=> '',
-  'post_timeout'	=> '',
-  'post_max_length'	=> '',
-  'encrypt_prikey'	=> '',
-  'gzip_minlen'		=> '',
+  	'post_server'		=> '',
+  	'post_server_port'	=> '',
+  	'post_port_type'	=> '',
+	'post_timeout'		=> '',
+  	'post_max_length'	=> '',
+  	'encrypt_prikey'	=> '',
+  	'gzip_minlen'		=> '',
 );
 foreach my $key (keys %post_server) {
-  $post_server{$key} = read_mole_config('postlog',$key);
+	$post_server{$key} = read_mole_config('postlog',$key);
 }
 
 # check post_server
 unless (defined $post_server{'post_server'} && $post_server{'post_server'} ne '') {
-  &log("CRIT: $logfrom post server address not defined. exit");
-  exit 1;
+	&log("CRIT: $logfrom post server address not defined. exit");
+  	exit 1;
 }
 
 # check post_max_length
 unless (defined $post_server{'post_max_length'} && $post_server{'post_max_length'} ne '') {
-  $post_server{'post_max_length'} = 50000;
+  	$post_server{'post_max_length'} = 50000;
 } elsif ($post_server{'post_max_length'} =~ /\D/) {
-  $post_server{'post_max_length'} = 50000;
+  	$post_server{'post_max_length'} = 50000;
 }
 unless ($post_length <= $post_server{'post_max_length'}) {
-  &log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
-  exit 1;
+  	&log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
+  	exit 1;
 }
 
 # check post_server_port
 unless (defined $post_server{'post_server_port'} && $post_server{'post_server_port'} ne '') {
-  $post_server{'post_server_port'} = 8548;
+  	$post_server{'post_server_port'} = 8548;
 } elsif ($post_server{'post_server_port'} =~ /\D/) {
-  $post_server{'post_server_port'} = 8548;
+  	$post_server{'post_server_port'} = 8548;
 }
 
 # check post_port_type
 unless (defined $post_server{'post_port_type'} && $post_server{'post_port_type'} ne '') {
-  $post_server{'post_port_type'} = 'tcp';
+  	$post_server{'post_port_type'} = 'tcp';
 } elsif ($post_server{'post_port_type'} ne 'tcp' && $post_server{'post_port_type'} ne 'udp') {
-  $post_server{'post_port_type'} = 'tcp';
+  	$post_server{'post_port_type'} = 'tcp';
 }
 
 # check post_timeout
 unless (defined $post_server{'post_timeout'} && $post_server{'post_timeout'} ne '') {
-  $post_server{'post_timeout'} = 10;
+  	$post_server{'post_timeout'} = 10;
 } elsif ($post_server{'post_timeout'} =~ /\D/) {
-  $post_server{'post_timeout'} = 10;
+  	$post_server{'post_timeout'} = 10;
 }
 
 # check encrypt_prikey
 unless (defined $post_server{'encrypt_prikey'} && $post_server{'encrypt_prikey'} ne '') {
-  $post_server{'encrypt_prikey'} = '1234567812345678';
+  	$post_server{'encrypt_prikey'} = '1234567812345678';
 } elsif (length $post_server{'encrypt_prikey'} ne '16') {
-  $post_server{'encrypt_prikey'} = '1234567812345678';
+  	$post_server{'encrypt_prikey'} = '1234567812345678';
 }
 
 # check gzip_minlen
 unless (defined $post_server{'gzip_minlen'} && $post_server{'gzip_minlen'} ne '') {
-  $post_server{'gzip_minlen'} = 100;
+  	$post_server{'gzip_minlen'} = 100;
 } elsif ($post_server{'gzip_minlen'} =~ /\D/) {
-  $post_server{'gzip_minlen'} = 100;
+  	$post_server{'gzip_minlen'} = 100;
 }
 
 # encode data
