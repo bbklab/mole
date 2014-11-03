@@ -162,6 +162,39 @@ sub encrypt {
 	return $result;
 }
 
+sub decrypt {
+	my ($data, $key, $iv) = @_;
+	my $result = undef;
+	
+	unless (defined $data) {
+		return (undef, "decrypt failed: data not defined");
+	}
+
+	unless (defined $key) {
+		return (undef, "decrypt failed: key not defined");
+	}
+
+	unless (defined $iv) {
+		return (undef, "decrypt failed: iv not defined");
+	}
+	
+	my $cipher = Crypt::CBC->new(
+		{
+			'key'		=>  $key,
+			'cipher' 	=>  'Crypt::OpenSSL::AES',
+			'iv'		=>  $iv,
+			'literal_key' 	=>  1,
+			'header'	=>  'none',
+			'keysize'	=>  128 / 8
+		}
+	) or return (undef, "decrypt failed: $!");
+	unless ( $result = $cipher->decrypt($data) ) {
+		return (undef, "decryptfailed: aes-cbc decrypt failed");
+	}
+
+	return $result;
+}
+
 sub compress {
 	my $data  = shift;
 	my $result = undef;
@@ -194,7 +227,7 @@ sub uncompress {
 
 sub encode_mole_data {
 	my ($data, $key, $iv, $minlen) = @_;
-	my $flag = 0;
+	my $flag = '0';
 
 	unless (defined $data) {
 		return (undef, "encode failed: data not defined");
@@ -206,14 +239,16 @@ sub encode_mole_data {
 	
 	### get_args: @_
 
-	# my $len;
+	# my ($len, $a);
 	# $len = length $data;
+	# $a = encode_base64($data,"");
 	### init_len: $len
+	### $a
 	my ($zipdata, $ziperror);
 	if (length $data > $minlen) {
 		($zipdata, $ziperror) = &compress($data);
 		if ($zipdata) {
-			$flag = 1;
+			$flag = '1';
 		} else {
 			return (undef, $ziperror);
 		}
@@ -221,12 +256,18 @@ sub encode_mole_data {
 		$zipdata = $data;
 	}
 	# $len = length $zipdata;
+	# $a = encode_base64($zipdata,"");
 	### after_zip_len: $len
+	### $a
 
 	my ($encdata, $encerror) = &encrypt($zipdata, $key, $iv);
 	if ($encdata) {
 		# $len = length $encdata;
+		# $a = encode_base64($encdata,"");
 		### after_enc_len: $len
+		### $a
+		
+		### $flag
 		unless ( $encdata = encode_base64($flag.$encdata,"") ) {
 			return (undef, "encode failed, base64 encode failed");
 		}
@@ -236,6 +277,7 @@ sub encode_mole_data {
 
 	# $len = length $encdata;
 	### at_last: $len
+	### $encdata
 	return $encdata;
 }
 
