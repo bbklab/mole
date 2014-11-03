@@ -222,5 +222,38 @@ sub encode_mole_data {
 	return $encdata;
 }
 
+sub c2kb {
+	my $size = shift;
+	
+	unless (defined $size) {
+		return undef;
+	}
+	
+	unless ($size =~ m/\A\s*(\d+)\s*(K|KB|M|MB|G|GB|T|TB|P|PB|E|EB|Z|ZB|Y|YB)\Z/i) {
+		return $size;
+	}
+	
+	my ($number, $unit) = ($1, $2); 
+	if ($unit =~ /\AK/i) {
+		return $number;
+	} elsif ($unit =~ /\AM/i) {
+		return $number * 1024;
+	} elsif ($unit =~ /\AG/i) {
+		return $number * 1024 * 1024;
+	} elsif ($unit =~ /\AT/i) {
+		return $number * 1024 * 1024 * 1024;
+	} elsif ($unit =~ /\AP/i ) {
+		return $number * 1024 * 1024 * 1024 * 1024;
+	} elsif ($unit =~ /\AE/i ) {
+		return $number * 1024 * 1024 * 1024 * 1024 * 1024;
+	} elsif ($unit =~ /\AZ/i ) {
+		return $number * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+	} elsif ($unit =~ /\AY/i ) {
+		return $number * 1024 * 1024 * 1024 * 1024 * 1024 * 1024 * 1024;
+	} else {
+		return $size;
+	}
+}
+
 1;
 __END__
