@@ -5,7 +5,7 @@ use warnings;
 use POSIX;
 use Crypt::CBC;
 use Crypt::OpenSSL::AES;
-use Gzip::Faster qw(gzip);
+use Gzip::Faster qw(gzip gunzip);
 use MIME::Base64 qw(encode_base64);
 # use Smart::Comments;
 
@@ -172,6 +172,21 @@ sub compress {
 
 	unless ($result = gzip($data)) {
 		return (undef, "compress failed: gzip error");
+	}
+
+	return $result;
+}
+
+sub uncompress {
+	my $data  = shift;
+	my $result = undef;
+
+	unless (defined $data) {
+		return (undef, "uncompress failed: data not defined");
+	}
+
+	unless ($result = gunzip($data)) {
+		return (undef, "uncompress failed: gunzip error");
 	}
 
 	return $result;
