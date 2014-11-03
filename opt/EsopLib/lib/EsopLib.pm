@@ -227,7 +227,7 @@ sub uncompress {
 
 sub encode_mole_data {
 	my ($data, $key, $iv, $minlen) = @_;
-	my $flag = '0';
+	my $flag = 0;
 
 	unless (defined $data) {
 		return (undef, "encode failed: data not defined");
@@ -238,17 +238,18 @@ sub encode_mole_data {
 	}
 	
 	### get_args: @_
-
 	# my ($len, $a);
 	# $len = length $data;
 	# $a = encode_base64($data,"");
 	### init_len: $len
 	### $a
+
 	my ($zipdata, $ziperror);
+	my $iszip = undef;
 	if (length $data > $minlen) {
 		($zipdata, $ziperror) = &compress($data);
 		if ($zipdata) {
-			$flag = '1';
+			$iszip = 1;
 		} else {
 			return (undef, $ziperror);
 		}
@@ -260,19 +261,21 @@ sub encode_mole_data {
 	### after_zip_len: $len
 	### $a
 
+	$flag = $flag | ($iszip) ? 1 : 0;
+
 	my ($encdata, $encerror) = &encrypt($zipdata, $key, $iv);
-	if ($encdata) {
-		# $len = length $encdata;
-		# $a = encode_base64($encdata,"");
-		### after_enc_len: $len
-		### $a
-		
-		### $flag
-		unless ( $encdata = encode_base64($flag.$encdata,"") ) {
-			return (undef, "encode failed, base64 encode failed");
-		}
-	} else {
+	unless ($encdata) {
 		return (undef, $encerror);
+	}
+	# $len = length $encdata;
+	# $a = encode_base64($encdata,"");
+	### after_enc_len: $len
+	### $a
+
+	$flag = $flag | 2;
+		
+	unless ( $encdata = encode_base64($flag.$encdata,"") ) {
+		return (undef, "encode failed, base64 encode failed");
 	}
 
 	# $len = length $encdata;
