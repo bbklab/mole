@@ -37,20 +37,23 @@ CONTENT=        ### { strings | /path/to/result.file }
 
 # check function here
 check() {
-  ${POSTLOG_SH} -t plugin >/dev/null 2>&1
+  local jobid_plugin=$( ${PLUTIL} unique_digest )      ### set random/unique jid
+  local jobid_config=$( ${PLUTIL} unique_digest )      ### set random/unique jid
+
+  ${POSTLOG_SH} -t plugin -j "${jobid_plugin}" >/dev/null 2>&1
   rc1=$?
-  ${POSTLOG_SH} -t config >/dev/null 2>&1
+  ${POSTLOG_SH} -t config -j "${jobid_config}" >/dev/null 2>&1
   rc2=$?
   if [ "${rc1}" == "0" ] && [ "${rc2}" == "0" ]; then
   	EXIT_STATUS="${STATE_SUCC}"
   	LEVEL="succ"
   	TYPE="str"
-  	CONTENT="post config data succeed | post {plugin/config} configuration json return 0";
+  	CONTENT="post config data succeed | post {plugin/config} configuration json succeed | plugin jobid: ${jobid_plugin} ### config jobid: ${jobid_config}";
   else
 	EXIT_STATUS="${STATE_WARNING}"
         LEVEL="warn"
         TYPE="str"
-        CONTENT="post config data failed | post {plugin/config} configuration json return ${rc1},${rc2} | details in ${POSTLOG_LOG##*/}"
+        CONTENT="post config data failed | post {plugin/config} configuration json failed (${rc1},${rc2}) | plugin jobid: ${jobid_plugin} ### config jobid: ${jobid_config}"
   fi
 }
 
