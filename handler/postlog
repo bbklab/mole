@@ -111,18 +111,20 @@ unless (defined $type && $type ne '') {
   	&help;
   	exit 1;
 }
-if ($type ne 'post' && $type ne 'plugin' && $type ne 'config' && $type ne 'heartbeat' && $type ne 'sysinfo') {
-  	&log("CRIT: $logfrom type $type invalid. exit");
-  	print "type $type invalid.\n";
-  	&help;
-  	exit 1;
+
+# check arg [jobid] secondly
+unless (defined $jobid && $jobid ne '') {
+	&log("CRIT: $logfrom jobid required. exit");
+	print "jobid required\n";
+	&help;
+	exit 1;
 }
 
 # reset [logfrom]
 if ($type eq 'post') {
-  	unless (defined $plugin && defined $jobid && defined $output){
-        	&log("CRIT: $logfrom plugin or jobid or plugin_output required on type=post. exit");
-        	print "plugin or jobid or plugin_output required on type=post\n";
+  	unless (defined $plugin && defined $output){
+        	&log("CRIT: $logfrom plugin and plugin_output required on type=post. exit");
+        	print "plugin and plugin_output required on type=post\n";
         	&help;
         	exit 1;
   	}
@@ -135,33 +137,7 @@ if ($type eq 'post') {
 	# reset logfrom
         $logfrom = "$type $plugin $jobid";
 
-} elsif ($type eq 'plugin') {
-	# reset logfrom
-  	$logfrom = "$type AGENT.PLUGIN";
-
-} elsif ($type eq 'config') {
-	# reset logfrom
-  	$logfrom = "$type AGENT.CONFIG";
-
-} elsif ($type eq 'heartbeat') {
-  	unless (defined $jobid && $jobid ne '') {
-		&log("CRIT: $logfrom jobid required on type=heartbeat. exit");
-		print "jobid required on type=heartbeat\n";
-		&help;
-		exit 1;
-  	}
-
-	# reset logfrom
-  	$logfrom = "$type AGENT.HEARTBEAT $jobid";
-
 } elsif ($type eq 'sysinfo') {
-  	unless (defined $jobid && $jobid ne '') {
-		&log("CRIT: $logfrom jobid required on type=sysinfo . exit");
-		print "jobid required on type=sysinfo\n";
-		&help;
-		exit 1;
-  	}
-
   	unless (defined $sysinfo && $sysinfo ne '') {
 		&log("CRIT: $logfrom sysinfo required on type=sysinfo . exit");
 		print "sysinfo required on type=sysinfo\n";
@@ -171,6 +147,24 @@ if ($type eq 'post') {
 
 	# reset logfrom
 	$logfrom = "$type AGENT.SYSINFO $jobid";
+
+} elsif ($type eq 'plugin') {
+	# reset logfrom
+  	$logfrom = "$type AGENT.PLUGIN $jobid";
+
+} elsif ($type eq 'config') {
+	# reset logfrom
+  	$logfrom = "$type AGENT.CONFIG $jobid";
+
+} elsif ($type eq 'heartbeat') {
+	# reset logfrom
+  	$logfrom = "$type AGENT.HEARTBEAT $jobid";
+
+} else {
+	&log("CRIT: $logfrom type $type invalid. exit");
+  	print "type $type invalid.\n";
+  	&help;
+  	exit 1;
 }
 
 # log start
@@ -429,13 +423,9 @@ if ($@) {
 sub help(){
 print <<HELP;
 
-Usage: $filename -t {type} -p {plugin} -j {jobid} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -i {sysinfo} -d
+Usage: $filename -t {type} -j {jobid} -p {plugin} -o {plugin_output} -h {handler_output} -e {eml} -s {sms} -f {snapfile} -r {repeat} -i {sysinfo} -d
 
 type ~  post,  plugin,  config,  heartbeat, sysinfo
-
-note:	jobid/plugin/plugin_output required on type is post
-note:	jobid/sysinfo required on type is sysinfo
-note:	jobid required on type is heartbeat
 
 HELP
 }
@@ -1500,7 +1490,7 @@ sub genjson_sysinfo {
 	&log("INFO: $logfrom json decode sysinfo data succeed.");
   	$result{'data'} = \%{$sysinfo_data};
   } else {
-	&log("CRIT: $logfrom sysinfo not matched, exit");
+	&log("CRIT: $logfrom sysinfo format not matched, exit");
 	exit (1);
   }
 
