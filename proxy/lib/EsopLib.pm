@@ -3,7 +3,7 @@ package EsopLib;
 use strict;
 use warnings;
 use POSIX;
-use Smart::Comments;
+# use Smart::Comments;
 
 require Exporter;
 

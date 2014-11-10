@@ -12,8 +12,8 @@ use File::Spec::Functions qw(rel2abs);
 use File::Basename qw(dirname);
 use IO::Socket;
 use IO::Socket::INET;
-use IO::Pipe;
-use Smart::Comments;
+# use IO::Pipe;
+# use Smart::Comments;
 
 # Define Constant
 use constant PATH_BASE => dirname(dirname(rel2abs(__FILE__)));
