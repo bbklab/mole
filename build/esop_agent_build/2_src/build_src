@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Create directory {app,etc,implements,log,mole,run} under /usr/local/esop/agent/
+# Create directory {proxy,mole} under /usr/local/esop/agent/
 #
 
 export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
@@ -33,14 +33,16 @@ PL_MODS=(
   	"libintl-perl-1.23.tar.gz"  		"libintl-perl-1.23"
   	"Time-HiRes-1.9726.tar.gz"		"Time-HiRes-1.9726"
 	"Net-SNMP-v6.0.1.tar.gz"		"Net-SNMP-v6.0.1"
+	"Crypt-OpenSSL-AES-0.02.tar.gz"		"Crypt-OpenSSL-AES-0.02"
+	"Crypt-CBC-2.33.tar.gz"			"Crypt-CBC-2.33"
 )
 
-# MOLE Def	< our dev codes >
-MOLE=(
-	"mole-1.0-beta1.tgz"			"mole-1.0"
+# ESOP Def	< our dev codes >
+ESOP=(
+	# first
+	"esop-1.0.tgz"				"esop-1.0"
+	# second
 	"mole-plugin-0.1-beta1.tgz"		"mole-plugin-0.1"
-	# "proxy-1.0.1.tgz"			"proxy-1.0.1"
-	"proxy-1.1.0.tgz"			"proxy-1.1.0"
 )
 
 # Func Def
@@ -76,7 +78,7 @@ build_plmod(){
   check_rc "install $filename"
 }
 
-build_mole(){
+build_esop(){
   local filename="${1}"  dirname="${2}"
 
   ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
@@ -114,27 +116,9 @@ build_mole(){
 		}
 	done
   else
-  	cp -a $PATH_EXTRACT/$dirname/* $PATH_MOLE
+  	cp -a $PATH_EXTRACT/$dirname/* $PATH_ESOP
   	check_rc "install $filename"
   fi
-}
-
-build_proxy(){
-  local filename="${1}"  dirname="${2}"
-
-  ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
-  check_rc "check path $filename"
-
-  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
-
-  cp -a $PATH_EXTRACT/$dirname/* $PATH_ESOP
-  check_rc "install $filename"
-
-  cd $PATH_ESOP/app/sbin/
-  check_rc "change into $PATH_ESOP/app/sbin/"
-
-  ln -sv ../../mole/sbin/esop . >> $LOGFILE 2>&1
-  check_rc "create link for esop ctl script"
 }
 
 build_sysstat() {
@@ -206,17 +190,15 @@ build_sysstat
 
 # build perl modules, mole, proxy
 i=0 file= dir=
-for pm in ${PL_MODS[*]} ${MOLE[*]}
+for pm in ${PL_MODS[*]} ${ESOP[*]}
 do
 	((i++))
 	if [ $(($i%2)) == 1 ]; then
 		file=${pm}
 	else
 		dir=${pm}
-		if (echo -e "${file}" | grep -E "^mole-") >/dev/null 2>&1; then
-			build_mole ${file} ${dir}
-		elif (echo -e "${file}" | grep -E "^proxy-") >/dev/null 2>&1; then
-			build_proxy ${file} ${dir}
+		if (echo -e "${file}" | grep -E "^[esop|mole]-") >/dev/null 2>&1; then
+			build_esop ${file} ${dir}
 		else
 			build_plmod ${file} ${dir}
 		fi

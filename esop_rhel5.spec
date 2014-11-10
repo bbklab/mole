@@ -61,10 +61,6 @@ cp -a    %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
 
 %files
 %defattr(-, root, root)
-%attr(-, eyou, eyou) /usr/local/%{name}/agent/run/
-%attr(-, eyou, eyou) /usr/local/%{name}/agent/log/
-%attr(-, eyou, eyou) /usr/local/%{name}/agent/etc/
-%attr(-, eyou, eyou) /usr/local/%{name}/agent/app/inc/dynamic/
 %attr(0755, root, root) %{_initrddir}/%{name}
 /usr/local/%{name}
 
