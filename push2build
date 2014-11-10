@@ -1,6 +1,9 @@
 #!/bin/bash
 
 basedir="$(cd $(dirname $0);pwd)"
+moledir="${basedir}/mole"
+proxydir="${basedir}/proxy"
+builddir="${basedir}/build"
 
 
 # Func Def
@@ -25,29 +28,32 @@ destdir="/data/esop_codes"
 spec5file="${basedir}/esop_rhel5.spec"
 spec6file="${basedir}/esop_rhel6.spec"
 initfile="${basedir}/esop.init"
-name="mole"
+name="esop"
 version="1.0"
-source0="mole-1.0-beta1.tgz"
+source0="esop-1.0.tgz"
 
 # publish agent tarball codes
 mkdir -p $basedir/${name}-${version}
 check_rc "create directory $basedir/$name-$version"
 
-cp -a "${basedir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,upgrade,share,tmp} $basedir/${name}-${version}/
-check_rc "copy bin sbin conf docs handler log opt plugin share tmp"
+cp -a "${proxydir}" $basedir/${name}-${version}/
+check_rc "copy proxy dir"
+
+cp -a "${moledir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,upgrade,share,tmp} $basedir/${name}-${version}/
+check_rc "copy mole dir"
 
 cd $basedir
 check_rc "chaning into $basedir"
 
 tar -czf "${source0}" ${name}-${version}
-check_rc "make tarball on $name-$version: $source0"
+check_rc "make tarball on $name-$version as $source0"
 
 rm -rf $basedir/${name}-${version}
 check_rc "remove $basedir/$name-$version"
 
 filename="$basedir/${source0}"
 ls "${filename}" >/dev/null 2>&1
-check_rc "check path: ${filename}"
+check_rc "check tarball ${filename}"
 
 /bin/cp -f "${filename}" "${destdir}/"
 check_rc "copy to ${destdir}/${filename##*/}"
@@ -57,20 +63,20 @@ check_rc "remove local $filename"
 
 # publish agent spec file
 /bin/cp -f "${spec5file}" "${destdir}/"
-check_rc "copy to ${destdir}/${spec5file##*/}"
+check_rc "copy r5 spec file to ${destdir}/${spec5file##*/}"
 /bin/cp -f "${spec6file}" "${destdir}/"
-check_rc "copy to ${destdir}/${spec6file##*/}"
+check_rc "copy r6 spec file to ${destdir}/${spec6file##*/}"
 
 # publish agent init file
 /bin/cp -f "${initfile}" "${destdir}/"
-check_rc "copy to ${destdir}/${initfile##*/}"
+check_rc "copy init file to ${destdir}/${initfile##*/}"
 
 # publish esop_agent_build
 agent_build_dir="esop_agent_build"
 /bin/rm -rf "${destdir}"/rpm_workdir/${agent_build_dir}
 check_rc "remove nfs remote: ${destdir}/rpm_workdir/${agent_build_dir}"
 
-/bin/cp -a "${basedir}/${agent_build_dir}" ${destdir}/rpm_workdir/
+/bin/cp -a "${builddir}/${agent_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/${agent_build_dir}"
 
 # publish esop_plugin_build
@@ -78,7 +84,7 @@ plugin_build_dir="esop_plugin_build"
 /bin/rm -rf "${destdir}"/rpm_workdir/${plugin_build_dir}
 check_rc "remove nfs remote: ${destdir}/rpm_workdir/${plugin_build_dir}"
 
-/bin/cp -a "${basedir}/${plugin_build_dir}" ${destdir}/rpm_workdir/
+/bin/cp -a "${builddir}/${plugin_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/${plugin_build_dir}"
 
 # publish esop_server_build
@@ -86,5 +92,5 @@ server_build_dir="esop_server_build"
 /bin/rm -rf $destdir/rpm_workdir/$server_build_dir
 check_rc "remove nfs remote: ${destdir}/rpm_workdir/$server_build_dir"
 
-/bin/cp -a $basedir/$server_build_dir ${destdir}/rpm_workdir/
+/bin/cp -a "${builddir}/${server_build_dir}" ${destdir}/rpm_workdir/
 check_rc "copy to ${destdir}/rpm_workdir/$server_build_dir"
