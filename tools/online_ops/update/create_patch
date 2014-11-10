@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+
+export PATH="$PATH:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin"
+
+# BASE DIR DEF
+BASE_DIR=$( cd $(dirname $0) && pwd)
+
+# FILE DEF
+OLD_FTMP="/var/tmp/.olddir.md5db"
+NEW_FTMP="/var/tmp/.newdir.md5db"
+RESULT_CFG="/var/tmp/update.cfg"
+
+# PATCH DEF
+SH_GOPATCH="${BASE_DIR}/go_patch"
+PATCH_DTGZ="patch_$(date +%Y%m%d-%H%M%S)"
+PATCH_FTGZ="${PATCH_DTGZ}.tgz"
+
+# SEP DEF
+SEPERATOR="~~~"
+
+# REQUIRED_UTILS DEF
+REQUIRED_UTILS=(
+        "/bin/awk"
+        "/bin/sed"
+	"/bin/mkdir"
+	"/bin/tar"
+	"/bin/gzip"
+	"/bin/cp"
+        "/usr/bin/md5sum"
+	"/bin/sort"
+	"/usr/bin/find"
+	"/usr/bin/uniq"
+	"/usr/bin/tee"
+	"/usr/bin/column"
+)
+
+
+### Function Def
+
+# Print Help
+# 
+show_help() {
+cat << EOF
+Usage:		./${0##*/}  olddir   newdir   [cfg]   [prefix]
+Example:	./${0##*/}  /etc.1   /etc
+Example:	./${0##*/}  esop_web_old/files/ esop_web_new/files/ cfg files
+EOF
+exit 0
+}
+
+# Terminal color
+#
+echo_green() {
+  local content=$*
+  echo -e "\033[1;32m${content}\033[0m\c "
+}
+echo_yellow() {
+  local content=$*
+  echo -e "\033[1;33m${content}\033[0m\c "
+}
+echo_red() {
+  local content=$*
+  echo -e "\033[1;31m${content}\033[0m\c "
+}
+
+# Util Check 
+#
+util_check() {
+  local lacklst=
+  for util in ${REQUIRED_UTILS[*]}; do
+	if [ ! -f "${util}" ] || [ ! -x "${util}" ]; then
+		lacklst="${lacklst} ${util}"
+	fi
+  done
+  [ -n "${lacklst}" ] && echo -en "${lacklst}"
+}
+
+# Build MD5 List for Directory
+#
+build_md5db() {
+  local dirname="$1" md5dbfile="$2"
+  if [ -z "${dirname}" ] || [ ! -d "${dirname}" ]; then
+	echo_red "pls check your input [${dirname}]";echo
+	exit 1
+  fi
+
+  if cd "${dirname}" >/dev/null 2>&1; then
+  	if /usr/bin/find . -follow -type f -exec /usr/bin/md5sum {} \; > "${md5dbfile}" 2>/dev/null; then
+		if cd "${BASE_DIR}" >/dev/null 2>&1; then
+			return 0
+		else
+			echo_red "failed to return back [${BASE_DIR}]";echo
+			exit 1
+		fi
+	else
+		echo_red "failed to build [${dirname}] md5sum list";echo
+		exit 1
+	fi
+  else
+	echo_red "failed to change into [${dirname}]";echo
+	exit 1
+  fi
+}
+
+#  Different Files List
+#
+diff_files() {
+  local oldlst="${1}"  newlst="${2}"   wanted="${3}"
+  local tmplst=        result=
+  tmplst=$( echo -e "${oldlst}\n${newlst}" | /bin/sort | /usr/bin/uniq -u )  ### \n is important
+  if [ "${wanted}" == "old" ]; then
+  	result=$( echo -e "${oldlst}\n${tmplst}" | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ *\.#'${OLDDIR}'#' )
+  elif [ "${wanted}" == "new" ]; then
+	result=$( echo -e "${newlst}\n${tmplst}" | /bin/sort | /usr/bin/uniq -d | sed -e 's#^ *\.#'${NEWDIR}'#' )
+  fi
+  echo -e "${result}"
+}
+
+### Main Body Begin
+
+# 0. check utils
+util_lack=$( util_check )
+if [ -n "${util_lack}" ]; then
+        echo_red "lack utils: [${util_lack}]";echo
+        exit 1
+fi
+
+# 1. remove last /
+OLDDIR=$(echo "$1"|sed -e 's#/$##')
+NEWDIR=$(echo "$2"|sed -e 's#/$##')
+workmode="$3"
+prefix="$4"
+MODE=0
+
+# 2. check input args 
+if [ -z "${OLDDIR}" ] || [ -z "${NEWDIR}" ]; then
+	show_help
+elif [ ! -d "${OLDDIR}" ]; then
+	echo_red "[${OLDDIR}] isn't an exist directory.";echo
+	exit 1
+elif [ ! -d "${NEWDIR}" ]; then
+	echo_red "[${NEWDIR}] isn't an exist directory.";echo
+	exit 1
+fi
+
+if [ "${workmode}" == "cfg" ]; then
+	if [ -z "${prefix}" ]; then
+		echo_red "prefix required on work mode=cfg";echo
+		exit 1
+	else
+		MODE=1
+	fi
+else
+	if [ -n "${workmode}" ]; then
+		echo_red "workmode must be [cfg]";echo
+		exit 1
+	fi
+fi
+
+# 3. get file list
+old_files=
+new_files=
+if build_md5db "${OLDDIR}" "${OLD_FTMP}"; then
+	if build_md5db "${NEWDIR}" "${NEW_FTMP}"; then
+		old_files=$( /bin/awk '{$1="";print;}' "${OLD_FTMP}" 2>&- )
+		new_files=$( /bin/awk '{$1="";print;}' "${NEW_FTMP}" 2>&- )
+		if [ -z "${old_files}" ]; then
+			echo_red "[${OLDDIR}] empty, no need to diff";echo;
+			exit 1
+		elif [ -z "${new_files}" ]; then
+			echo_red "[${NEWDIR}] empty, no need to diff";echo;
+			exit 1
+		fi
+		echo "$(echo_green "[OK]") build md5lst."
+	else
+		echo_red "build md5sum list for [${NEWDIR}] failed!";echo
+		exit 1
+	fi
+else
+	echo_red "build md5sum list for [${OLDDIR}] failed!";echo
+	exit 1
+fi
+
+# 4. check add/delete
+del_files=$( diff_files "${old_files}" "${new_files}" "old" )
+add_files=$( diff_files "${old_files}" "${new_files}" "new" )
+del_nums=$( echo -e "${del_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+add_nums=$( echo -e "${add_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+echo "$(echo_green "[OK]") check +/- files."
+
+# 5. check modify 
+mod_files=$( while read  -a line
+	     do 
+		/bin/awk -v s="${OLDDIR}" -v d="${NEWDIR}" '\
+			( $1!="'"${line[0]}"'" && $2=="'"${line[1]}"'" ) \
+			{gsub(/ *\.\//,"/",$2); printf "%s%s %s%s\n",s,$2,d,$2; exit;}' \
+			"${NEW_FTMP}" ; 
+	     done < "${OLD_FTMP}"
+           )
+mod_nums=$( echo -e "${mod_files}" | sed -e '/^[ \t]*$/d' | awk -v RS="\n" 'END{print NR}' )
+echo "$(echo_green "[OK]") check <> files."
+
+# 6. output result
+
+# on MODE==0
+if [ "${MODE}" == "0" ]; then
+	echo -e "\n\n"
+	echo -e "$(echo_green "[${OLDDIR}] only files: (${del_nums})")"
+	echo -e "${del_files}"
+	echo -e "\n"
+	echo -e "$(echo_green "[${NEWDIR}] only files: (${add_nums})")"
+	echo -e "${add_files}"
+	echo -e "\n"
+	echo -e "$(echo_green "different files: (${mod_nums})")"
+	echo -e "${mod_files}" | /usr/bin/column -t
+	echo -e "\n"
+	echo -e "$(echo_green "backup files: ($((${mod_nums}+${del_nums})))")"
+	echo -e "${mod_files}\n${del_files}"
+	echo -e "\n\n"
+	echo_green "+ ${add_nums}";echo;
+	echo_green "- ${del_nums}";echo;
+	echo_green "M ${mod_nums}";echo;
+	echo_green "B $((${del_nums}+${mod_nums}))";echo;
+	exit 0
+fi
+
+# on MODE==1
+
+
+# return back to {BASE_DIR} first!
+if cd "${BASE_DIR}" >/dev/null 2>&1; then
+	:
+else
+	echo_red "failed to return back [${BASE_DIR}]";echo
+	exit 1
+fi
+
+# create {RESULT_CFG}
+{
+echo -e "\n\n[remove]"
+echo -e "${del_files}\n" | while read file
+do
+	[ -z "${file}" ] && continue 1
+	file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+	echo -e "${file}"
+done
+
+echo -e "\n\n[addnew]"
+echo -e "${add_files}\n" | while read file
+do
+	[ -z "${file}" ] && continue 1
+	file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+	echo -e "${file}${SEPERATOR}${prefix}"
+done
+
+echo -e "\n\n[modify]"
+echo -e "${mod_files}\n" | while read file
+do
+	[ -z "${file}" ] && continue 1
+	file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+	echo -e "${file}${SEPERATOR}${prefix}"
+done
+
+echo -e "\n\n[backup]"
+echo -e "${del_files}\n${mod_files}\n" | while read file
+do
+	[  -z "${file}" ] && continue 1
+	file=$(echo -e "${file}" | awk -F "${OLDDIR}|${NEWDIR}" '{gsub(/^\//,"",$2);gsub(" ","",$2);print $2;exit;}')
+	echo -e "${file}"
+done
+} | /usr/bin/tee "${RESULT_CFG}"
+
+
+# create patch file
+echo;echo;
+if [ -f "${SH_GOPATCH}" ] && [ -x "${SH_GOPATCH}" ] && [ -f "${RESULT_CFG}" ] && [ -s "${RESULT_CFG}" ]; then
+	if /bin/mkdir -p "${PATCH_DTGZ}" 2>&1; then
+		if /bin/cp -arf "${NEWDIR}" "${PATCH_DTGZ}"; then
+			if /bin/cp -arf "${RESULT_CFG}" "${SH_GOPATCH}" "${PATCH_DTGZ}"; then
+				if /bin/tar --remove-files -czf "${PATCH_FTGZ}" "${PATCH_DTGZ}"; then
+					echo "+OK: ${PATCH_FTGZ}"
+				else
+					echo "-ERR: make tgz"
+				fi
+			else
+				echo "-ERR: inst cfg/sh"
+			fi
+		else
+			echo "-ERR: inst newdir"
+		fi
+	else
+		echo "-ERR: make patchdir"
+	fi
+else
+	echo "-ERR: miss cfg/sh"
+fi

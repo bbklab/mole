@@ -1,0 +1,77 @@
+# Copyright (C) 2013 MOLE LANGUAGE FILE FOR GETTEXT
+# FIRST AUTHOR <zhangguangzheng@eyou.net>,<zhang.elinks@gmail.com> 2013.
+# This file is distributed under the same license as the mole package.
+#
+msgid ""
+msgstr ""
+"Report-Msgid-Bugs-To: zhangguangzheng@eyou.net\n"
+"Last-Translator: Guangzheng Zhang <zhang.elinks@gmail.com>\n"
+"Language-Team: MOLE-LANGUAGE <zhang.elinks@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: CHINA\n"
+
+msgid "\t%+#D"
+msgstr "\t%+#D"
+
+msgid "\n"
+msgstr "\n"
+
+msgid "targets missing: ${missing_lst}."
+msgstr "不存在的备份目标: ${missing_lst}"
+
+msgid "no targets to be backed up."
+msgstr "未指定存在的备份目标."
+
+msgid "backup_savedir: not defined."
+msgstr "配置参数 backup_savedir 未定义."
+
+msgid "directory: [${backup_savedir}] not exist or accessable"
+msgstr "备份目录: ${backup_savedir} 未准备就绪"
+
+msgid "util [/bin/tar] not prepared"
+msgstr "/bin/tar 未准备就绪"
+
+msgid "util [/bin/gzip] not prepared"
+msgstr "/bin/gzip 未准备就绪"
+
+msgid "backup file path: ${backup_filename}"
+msgstr "备份文件路径: ${backup_filename}"
+
+msgid "backup file size: ${size}K "
+msgstr "备份文件大小: ${size}K"
+
+msgid "Esop App Backup CRITICAL"
+msgstr "ESOP应用程序备份失败"
+
+msgid "Esop App Backup SUCCESS"
+msgstr "ESOP应用程序备份成功"
+
+
+### for handler: appbackup_cleanup_transfer
+
+msgid "util [/usr/bin/find] not prepared"
+msgstr "/usr/bin/find 未准备就绪"
+
+msgid "util [/bin/rm] not prepared"
+msgstr "/bin/rm 未准备就绪"
+
+msgid "reserve_time: [${reserve_time}] should be int"
+msgstr "过期时间参数 reserve_time [${reserve_time}] 应该是正整数"
+
+msgid "no files ${reserve_time} days overdued under [${backup_savedir}]"
+msgstr "备份目录${backup_savedir}下没有过期${reserve_time}天的文件"
+
+msgid "remove ${rfile} succeed!"
+msgstr "清理 ${rfile} 成功!"
+
+msgid "remove ${rfile} failed, ${errstr}"
+msgstr "清理 ${rfile} 失败! 详细信息: ${errstr}"
+
+msgid "Remove ${crit}/${total} ${reserve_time} Day OverDued Backup CRITICAL"
+msgstr "清理 ${crit}/${total} 个过期${reserve_time}天的备份失败!"
+
+msgid "Remove ${succ}/${total} ${reserve_time} Day OverDued Backup SUCCESS"
+msgstr "清理 ${succ}/${total} 个过期${reserve_time}天的备份成功!"

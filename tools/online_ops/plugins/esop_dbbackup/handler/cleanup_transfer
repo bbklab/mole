@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+
+# BASE_DIR DEF
+[ -z ${BASE_DIR} ] && { 
+        path=$( cd $(dirname $0) && pwd)
+        BASE_DIR=${path%/*}
+}
+
+# === LOAD GETTEXT.SH FILE
+if [ -f "/usr/bin/gettext.sh"  -a -s "/usr/bin/gettext.sh" ]; then
+        source "/usr/bin/gettext.sh" 2>&1
+        rc=$?
+        [ "$rc" != "0" ] && {
+                echo -en "{unkn}:{str}:{load [/usr/bin/gettext.sh] failed with status $rc}"
+                exit 3
+        }   
+else
+        echo -en "{unkn}:{str}:{[/usr/bin/gettext.sh] not exists or empty, maybe gettext not installed. exit}"
+        exit 3
+fi
+
+# === LOAD INCLUDE FILE
+if [ -f "${BASE_DIR}/bin/include" -a -s "${BASE_DIR}/bin/include" ]; then
+        source ${BASE_DIR}/bin/include 2>&- 
+else    
+        echo -en "{unkn}:{str}:{include file not exists or empty}"
+        exit 3
+fi
+
+# === SET TEXTDOMAINDIR TEXTDOMAIN
+if [ -d "${LOCALE_DIR}" -a -r "${LOCALE_DIR}" ]; then
+        export TEXTDOMAINDIR="${LOCALE_DIR}"
+        export TEXTDOMAIN="esop_dbbackup"
+else    
+        echo -en "{unkn}:{str}:{locale directory [${LOCALE_DIR}] not exist or accessable, exit}"
+        exit 3
+fi
+
+
+# === SET GLOBAL LOCALE
+glocale=$(get_locale esop_dbbackup)
+if [ -z "${glocale}" ]; then
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+elif [ "${glocale}" == "zh_CN" -o "${glocale}" == "zh_CN.UTF-8" -o "${glocale}" == "zh" ]; then
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+elif [ "${glocale}" == "en_US" -o "${glocale}" == "en_US.UTF-8" -o "${glocale}" == "en" ]; then
+        export LANG="en_US.UTF-8"  LC_ALL="en_US.UTF-8"
+else
+        export LANG="zh_CN.UTF-8"  LC_ALL="zh_CN.UTF-8"
+fi
+
+
+show_help(){
+cat <<EOF
+Arguments:   {d|data|h|help}  {}
+
+Usage:  
+
+Output:
+
+EOF
+exit 0;
+}
+
+MODE=0
+[ "$1" == "data" -o "$1" == "d" ] && MODE=1
+[ "$1" == "help" -o "$1" == "h" ] && show_help;
+
+# Return Codes
+STATE_SUCC=0
+STATE_WARN=1
+STATE_CRIT=2
+STATE_UNKN=3
+STATE_NOOP=4
+STATE_NOTIFY=5
+
+# Set Default
+CONTENT=      
+
+# Read plugin config value here
+backup_savedir=$(read_mole_config esop_dbbackup backup_savedir)
+reserve_time=$(read_mole_config esop_dbbackup reserve_time)
+
+# if null or invalid set default.
+
+# check function here
+check() {
+
+  if [ -f "/usr/bin/find" ] && [ -x "/usr/bin/find" ]; then
+	:
+  else
+	CONTENT="$(eval_gettext "util [/usr/bin/find] not prepared")"
+	return
+  fi
+
+  if [ -f "/bin/rm" ] && [ -x "/bin/rm" ]; then
+	:
+  else
+	CONTENT="$(eval_gettext "util [/bin/rm] not prepared")"
+	return
+  fi
+
+  if ! is_int "${reserve_time}"; then
+	CONTENT="$(eval_gettext "reserve_time: [\${reserve_time}] should be int")"
+	return
+  fi
+
+  local remove_lst=
+  if [ -d "${backup_savedir}" ] && [ -w "${backup_savedir}" ]; then
+	remove_lst=$( /usr/bin/find "${backup_savedir}" -mindepth 1 -maxdepth 1 -type d -ctime +"${reserve_time}" 2>&- )
+  else
+	CONTENT="$(eval_gettext "directory: [\${backup_savedir}] not exist or accessable")"
+	return
+  fi
+
+  if [ -z "${remove_lst}" ]; then
+	CONTENT="$(eval_gettext "no files \${reserve_time} days overdued under [\${backup_savedir}]")"
+	return
+  fi
+
+  local total=0 succ=0 crit=0
+  local result= errstr=
+  for rfile in `echo "${remove_lst}"`
+  do
+	((total++))
+	errstr=$( /bin/rm -rf "${rfile}" 2>&1 1>/dev/null)
+  	if [ $? -eq 0 ]; then
+		((succ++))
+		result="${result} ### $(eval_gettext "remove \${rfile} succeed!")"
+  	else
+		((crit++))
+		result="${result} ### $(html_red "$(eval_gettext "remove \${rfile} failed, \${errstr}")")"
+  	fi
+  done
+
+  if [ $crit -gt 0 ]; then
+	CONTENT="$(eval_gettext "Remove \${crit}/\${total} \${reserve_time} Day OverDued Backup CRITICAL") ### ### ${result}"
+  else
+	CONTENT="$(eval_gettext "Remove \${succ}/\${total} \${reserve_time} Day OverDued Backup SUCCESS") ### ### ${result}"
+  fi
+}
+
+check
+
+# output result here
+echo "${CONTENT}"  | tr -d '\015\012'

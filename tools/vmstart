@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin:/home/zgz/bin"
+
+vmrun -T ws start "/data/vmware-disks/CentOS-5.1 32bit/CentOS-5.1 32bit.vmx" nogui
+vmrun -T ws start "/data/vmware-disks/CentOS-5.1 64-bit/CentOS-5.1 64-bit.vmx" nogui
+vmrun -T ws start "/data/vmware-disks/CentOS-6.1 32bit/CentOS-6.1 32bit.vmx" nogui
+vmrun -T ws start "/data/vmware-disks/CentOS-6.1 64-bit/CentOS-6.1 64-bit.vmx" nogui
+vmrun list
