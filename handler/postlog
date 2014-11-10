@@ -363,7 +363,7 @@ eval {
 	&log ("INFO: $logfrom read proxy welcome banner [$sock_response]");
 	
 	# send HEAD
-	unless (print $sock "HEAD t=$type,s=$hid,j=$jobid\r\n") {
+	unless (print $sock "HEAD $type,$hid,$jobid\r\n") {
 		&log ("CRIT: $logfrom send HEAD to socket failed.");
 		die 'HEAD Send Failed';
 	}
