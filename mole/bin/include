@@ -116,7 +116,8 @@ POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
 
 # ESOP SAVEOLD DIR DEF
 ESOP_PATH="/usr/local/esop/agent"
-PROXY_CONF_PATH="${ESOP_PATH}/etc"
+PROXY_PATH="${ESOP_PATH}/proxy"
+PROXY_CONF_PATH="${PROXY_PATH}/conf"
 MOLE_CONF_PATH="${CONF_DIR}"
 ESOP_SAVEOLD_DIR="/var/tmp/esop_rpmpreun_saveold"
 

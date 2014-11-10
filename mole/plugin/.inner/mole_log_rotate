@@ -152,11 +152,10 @@ check() {
   done
 
   if [ "${take_over_proxylog}" == "yes" ]; then
-	local PROXY_LOGDIR="/usr/local/esop/agent/log"
-	local PROXY_LOGBACKDIR="/usr/local/esop/agent/log/backup"
+	local PROXY_LOGDIR="/usr/local/esop/agent/proxy/log"
+	local PROXY_LOGBACKDIR="/usr/local/esop/agent/proxy/log/backup"
   	local array_proxylog=( 
-		"${PROXY_LOGDIR}/default.log"
-		"${PROXY_LOGDIR}/phptd.log"
+		"${PROXY_LOGDIR}/proxy.log"
   	)
 
 	if mkdir -p "${PROXY_LOGBACKDIR}" >/dev/null 2>&1; then

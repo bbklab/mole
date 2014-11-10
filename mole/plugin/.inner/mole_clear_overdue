@@ -134,7 +134,7 @@ check() {
 
   # P. search proxyfiles
   if [ "${take_over_proxylog}" == "yes" ]; then
-        local PROXY_LOGBACKDIR="/usr/local/esop/agent/log/backup"
+        local PROXY_LOGBACKDIR="/usr/local/esop/agent/proxy/log/backup"
 	# / after directory is important, so no need to use find option -follow
 	proxyfiles=$( /usr/bin/find -P ${PROXY_LOGBACKDIR}/ -type f -ctime +${logfile_reserve_time} -print 2>&- )
 	[ -z "${proxyfiles}" ] && {
