@@ -35,6 +35,7 @@ PL_MODS=(
 	"Net-SNMP-v6.0.1.tar.gz"		"Net-SNMP-v6.0.1"
 	"Crypt-OpenSSL-AES-0.02.tar.gz"		"Crypt-OpenSSL-AES-0.02"
 	"Crypt-CBC-2.33.tar.gz"			"Crypt-CBC-2.33"
+	"Gzip-Faster-0.10.tar.gz"		"Gzip-Faster-0.10"
 )
 
 # ESOP Def	< our dev codes >
@@ -59,7 +60,7 @@ build_plmod(){
   local filename="${1}"  dirname="${2}"
 
   ls $PATH_TARBALL_PLOPT/$filename  >> $LOGFILE 2>&1
-  check_rc "check path $filename"
+  check_rc "check perl module path $filename"
   
   $CMD_UNTAR_GZ $PATH_TARBALL_PLOPT/$filename -C $PATH_EXTRACT
   cd $PATH_EXTRACT/$dirname
@@ -82,7 +83,7 @@ build_esop(){
   local filename="${1}"  dirname="${2}"
 
   ls $PATH_TARBALL/$filename  >> $LOGFILE 2>&1  
-  check_rc "check path $filename"
+  check_rc "check esop code path $filename"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
 
@@ -190,21 +191,29 @@ build_sysstat
 
 # build perl modules, mole, proxy
 i=0 file= dir=
-for pm in ${PL_MODS[*]} ${ESOP[*]}
+for pm in ${PL_MODS[*]}
 do
 	((i++))
 	if [ $(($i%2)) == 1 ]; then
 		file=${pm}
 	else
 		dir=${pm}
-		if (echo -e "${file}" | grep -E "^[esop|mole]-") >/dev/null 2>&1; then
-			build_esop ${file} ${dir}
-		else
-			build_plmod ${file} ${dir}
-		fi
+		build_plmod ${file} ${dir}
 	fi
-
 done
+
+i=0 file= dir=
+for ef in ${ESOP[*]}
+do
+	((i++))
+	if [ $(($i%2)) == 1 ]; then
+		file=${ef}
+	else
+		dir=${ef}
+		build_esop ${file} ${dir}
+	fi
+done
+
 
 
 if [ -d "${PATH_EXTRACT}" ]; then
