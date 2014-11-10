@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#
+# output of this script is file:  /data/esop_codes/esop-1.0.tgz
+#
+
 basedir="$(cd $(dirname $0);pwd)"
 moledir="${basedir}/mole"
 proxydir="${basedir}/proxy"
@@ -39,7 +43,7 @@ check_rc "create directory $basedir/$name-$version"
 cp -a "${proxydir}" $basedir/${name}-${version}/
 check_rc "copy proxy dir"
 
-cp -a "${moledir}"/{bin,sbin,conf,docs,handler,log,opt,plugin,upgrade,share,tmp} $basedir/${name}-${version}/
+cp -a "${moledir}" $basedir/${name}-${version}/
 check_rc "copy mole dir"
 
 cd $basedir
