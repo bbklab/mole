@@ -1,0 +1,721 @@
+#!/usr/bin/perl
+
+BEGIN {
+	$| = 1;
+}
+
+use strict;
+use warnings;
+use POSIX;
+use Smart::Comments;
+use File::Spec::Functions qw(rel2abs);
+use File::Basename qw(dirname);
+use IO::Socket;
+use IO::Socket::INET;
+use IO::Pipe;
+use Smart::Comments;
+
+# Define Constant
+use constant PATH_BASE => dirname(dirname(rel2abs(__FILE__)));
+use constant PATH_CONF => PATH_BASE . '/conf';
+use constant PATH_LIB  => PATH_BASE . '/lib';
+use constant PATH_LOG  => PATH_BASE . '/log';
+use constant PATH_SBIN => PATH_BASE . '/sbin';
+use constant PATH_TMP  => PATH_BASE . '/tmp';
+use constant PATH_RUN  => PATH_BASE . '/run';
+use constant PATH_TEST => PATH_BASE . '/t';
+use constant CONFIG_FILENAME => 'proxy.ini';
+use constant FILE_CONF => PATH_CONF . '/' . CONFIG_FILENAME;
+use constant LOG_FILENAME => 'proxy.log';
+use constant FILE_LOG  => PATH_LOG  . '/' . LOG_FILENAME;
+use constant PID_FILENAME => 'proxy.pid';
+use constant FILE_PID  => PATH_RUN  . '/' . PID_FILENAME;
+use constant SOCK_FILENAME => 'queue.sock';
+use constant FILE_SOCK => PATH_TMP . '/' . SOCK_FILENAME;
+
+# Use our module 
+use lib PATH_LIB;
+use EsopLib;
+
+# Define Global Vars
+our %Config = &load_configs;		# proxy config
+our %Accept_Children = (); 		# current accept children, only used in parent process
+our %Sender_Children = ();		# current sender children, only used in parent process
+our %Queue_Children = ();		# current queue children, only used in parent process
+our $debug = $Config{'debug'};
+
+# Create IO-PIPE between accept child and sender child
+# my $IO_Pipe = new IO::Pipe;
+
+# init IO_Pipe reader for sender child
+# $IO_Pipe->reader();
+
+
+# Establish server socket, bind and listen.
+our $listen_socket = IO::Socket::INET->new(
+	LocalHost	=> $Config{'listen_addr'},
+	LocalPort	=> $Config{'listen_port'},
+	Proto		=> 'tcp',
+	Type		=> SOCK_STREAM,
+	Listen		=> SOMAXCONN,
+	Resuse		=> 1,
+	# If you set Timeout, a child process did nothing for {Timeout} seconds will also consume {maxrequest_perchild},
+	# this means child process will automatic exit on {Timeout} * {maxrequest_perchild} seconds when it accept nothing.
+	# Timeout		=> 30,
+);
+unless (defined $listen_socket) {
+	&log (FILE_LOG, "CRIT proxy create socket error: $@");
+	exit (1);
+}
+&log (FILE_LOG, "INFO proxy listening on $Config{'listen_addr'}:$Config{'listen_port'}, ready for connection ...");
+
+
+# Install Signal Handler: Child Reaper
+$SIG{'CHLD'} = sub {
+  # a non-blocking(WNOHANG) wait for all(-1) pending zombie processes.
+  while((my $pid = waitpid(-1, WNOHANG)) >0) {
+	if (exists $Accept_Children{$pid}) {
+		my $runtime = time - $Accept_Children{$pid}{'starton'};
+		&log (FILE_LOG,
+		"INFO proxy reape accept child $pid, has been running for $runtime seconds");
+		delete $Accept_Children{$pid};
+
+	} elsif (exists $Sender_Children{$pid}) {
+		my $runtime = time - $Sender_Children{$pid}{'starton'};
+		&log (FILE_LOG,
+		"INFO proxy reape sender child $pid, has been running for $runtime seconds");
+		delete $Sender_Children{$pid};
+
+	} elsif (exists $Queue_Children{$pid}) {
+		my $runtime = time - $Queue_Children{$pid}{'starton'};
+		&log (FILE_LOG,
+		"INFO proxy reape queue child $pid, has been running for $runtime seconds");
+		delete $Queue_Children{$pid};
+	
+	} else {
+		&log (FILE_LOG,
+		"NOTE proxy reape unknown child $pid, should be either accept or sender child");
+	}
+  }
+};
+
+# Install Signal Handler: Exit Clean
+$SIG{'TERM'} = $SIG{'INT'} = sub {
+	&log (FILE_LOG, "NOTE proxy caught signal TERM/INT, exiting..."); 
+	local ($SIG{'CHLD'}) = 'IGNORE';
+	kill 'TERM', keys %Accept_Children;
+	kill 'TERM', keys %Sender_Children;
+	kill 'TERM', keys %Queue_Children;
+	unlink FILE_SOCK if -S FILE_SOCK;
+	unlink FILE_PID if -s FILE_PID;
+	&log (FILE_LOG, "NOTE proxy finished."); 
+	exit (0);
+};
+
+
+# Run as a Daemon
+my $child = fork(); 
+unless (defined $child) {
+	&log (FILE_LOG, "CRIT proxy fork failed, $!");
+	exit (1);
+}
+
+# father exit
+if ($child) {
+	exit (0);
+}
+     
+# close STDIN/STDOUT/STDERR
+for my $handle (*STDIN, *STDOUT, *STDERR) {
+	unless ( open ($handle, "+<", "/dev/null") ) {
+		&log (FILE_LOG, "CRIT proxy reopen $handle to /dev/null error: $!");
+		die "$!\n";
+	}
+}
+ 
+# child become leader
+POSIX::setsid() ||  die "$!\n";
+
+# chaning into /
+chdir '/' || die "$!\n";
+
+# set umask
+umask(022) || die "$!\n";
+
+# set ENV
+$ENV{'PATH'} = '/sbin:/bin:/usr/sbin:/usr/bin';
+ 
+# save daemon pid
+unless ( open (FPID,">",FILE_PID) ) {
+	&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
+	die "$!\n";
+}
+unless (print FPID $$) {
+	&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
+	die "$!\n";
+}
+close FPID;
+&log (FILE_LOG, "INFO proxy daemon $$ running ...");
+
+# On Startup Initial
+# Fork Off Our Queue -> Sender -> Accept Children
+# start only one queue child
+&make_new_queue_child;
+die "$@\n" if ($@);
+
+# start only one sender child
+&make_new_sender_child;
+die "$@\n" if ($@);
+
+# start serveral accept children
+for (1 .. $Config{'start_child'}) {
+	&make_new_accept_child;
+}
+die "$@\n" if ($@);
+
+# Main Daemon LOOP
+while (1) {
+
+	# maintain children population
+	if (scalar keys %Queue_Children eq 0) {
+		&make_new_queue_child;
+	}
+	if (scalar keys %Sender_Children eq 0)  {
+		&make_new_sender_child;
+	}
+	for (my $i = scalar keys %Accept_Children; $i < $Config{'start_child'}; $i++) {
+		&make_new_accept_child;
+	}
+
+	# wait for a signal (i.e., child's death SIGCHLD will wake up it)
+	sleep;
+}
+
+
+
+
+#
+# Sub Definations
+#
+
+sub make_new_accept_child {
+	# block signal for fork
+	my $sigset = POSIX::SigSet->new(SIGHUP,SIGINT,SIGTERM,SIGCHLD);
+	POSIX::sigprocmask(SIG_BLOCK, $sigset);
+
+	# fork off a child, parent return none-zero, child return zero
+	my $pid = fork;
+
+	# Trouble
+	if (not defined $pid ){
+		&log (FILE_LOG, "CRIT accept child fork failed: $!");
+		return undef;
+
+	# Parent
+	} elsif ($pid) {
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		# records the child's birth and return.
+		&log (FILE_LOG, "INFO accept child $pid starting");
+		$Accept_Children{$pid}{'starton'} = time; 
+
+	# Child
+	} else {
+		# this is child process, pls do *NOT* return from this subroutine.
+		# must do exit instead of return. If it does, the child will return become a parent, 
+		# and spawn off its own children. Your system will fill up with processes util death.
+
+		my $child_pid = $$;
+
+		# init IO_Pipe writer for accept child
+		# $IO_Pipe->writer();
+		# *IMPORTANT* set pipe as autoflush, otherwise must run $pipe->close() to flush
+		# $IO_Pipe->autoflush(1);
+
+		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
+		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		# on init child process, tell parent I'am idle 
+		# print $IO_Pipe "$child_pid idle\r\n";		# *IMPORTANT*  must end with \r\n, or reader won't get data
+
+		# child accept client connections
+		for ( my $i = 1; $i <= $Config{'maxrequest_perchild'}; $i++ ) {
+			my ($sockdata,$client) = $listen_socket->accept();
+
+			# tell parent I'am busy
+			# print $IO_Pipe "$child_pid busy\r\n";		# *IMPORTANT*  must end with \r\n, or reader won't get data
+
+			# autoflush is must for server after accept()
+			$sockdata->autoflush(1);
+
+			# check src address allow or not ?
+			my ($client_port,$client_ip) = sockaddr_in ($client);
+			my $client_ipaddr            = inet_ntoa   ($client_ip);
+			my $client_detail            = $client_ipaddr . ':' . $client_port;
+			unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
+				$i--;		# IMPORTANT:  do *NOT* add {maxrequest_perchild}
+				$sockdata->shutdown(2);
+				&log (FILE_LOG,
+				"NOTE accept child $child_pid-($i) deny connection from client $client_detail");
+				goto CONNEND;
+			}
+
+			eval {
+				# install ALRM handler
+				local $SIG{'ALRM'} = sub { die 'Accept Timed Out'; };
+				alarm ($Config{'accept_timeout'});
+
+				# welcome banner
+				$sockdata->send( "+OK ready\r\n" );
+
+				# client accepted.
+				&log (FILE_LOG,
+				"INFO accept child $child_pid-($i) accept connection from client $client_detail");
+
+				# init flag of header for log record
+				my $logflag_header = undef;
+
+				# read mole data from socket.
+				while (<$sockdata>) {
+
+					# remove \r\n
+					chomp; s/[\r\n]//g;
+
+					# check data length
+					my $length = length;
+					if ($length > $Config{'maxlen_accept'}) {
+						$sockdata->send( "-ERR message too long\r\n" );
+						&log (FILE_LOG,
+						"CRIT accept child $child_pid-($i) receive message length [$length] exceed, client $client_detail");
+						die 'message too long';
+					}
+					&log (FILE_LOG,
+					"DEBUG accept child $child_pid-($i) receive message [$_], length [$length], client $client_detail") if $debug;
+
+					# first-line: receive header
+					if (m/\AHEAD\s+(\w+,\S+,\S+)\Z/i) {
+						$logflag_header = $1;
+						$logflag_header =~ s/\s+//;
+						&log (FILE_LOG,
+						"INFO accept child $child_pid-($i) receive header [$logflag_header], client $client_detail");
+						$sockdata->send( "+OK recorded\r\n" );
+						next; 	# next to keep connection and wait for next line
+					} else {
+						unless ($logflag_header) {
+							$sockdata->send( "-ERR HEAD message first\r\n" );
+							&log (FILE_LOG,
+							"CRIT accept child $child_pid-($i) client forgot HEAD message, client $client_detail");
+							die 'head message first';
+						}
+					}
+
+					# second-line: mole data
+					&log (FILE_LOG,
+					"INFO accept child $child_pid-($i) receive moledata(length=$length), header [$logflag_header]");
+
+					# connect queue socket
+					my $unix_socket = IO::Socket::UNIX->new(
+						Type		=> SOCK_STREAM,
+						Peer		=> FILE_SOCK,
+					);
+					unless ($unix_socket) {
+						$sockdata->send( "-ERR connect inner unixsocket fail\r\n" );
+						&log(FILE_LOG,
+						"CRIT accept child $child_pid-($i) connect unix domain socket error [$!]. header [$logflag_header]");
+						die 'connect inner unixsocket failed';
+					}
+					&log (FILE_LOG,
+					"DEBUG accept child $child_pid-($i) connect unix domain socket succeed. header [$logflag_header]") if $debug;
+
+					# PUSH data to queue socket
+					unless (print $unix_socket "PUSH $logflag_header $_\r\n") {
+						$sockdata->send( "-ERR write queue fail\r\n" );
+						&log (FILE_LOG,
+						"CRIT accept child $child_pid-($i) write message into queue failed. header [$logflag_header]");
+						die 'write queue failed';
+					}
+					$sockdata->send( "+OK accepted\r\n" );
+					&log (FILE_LOG,
+					"INFO accept child $child_pid-($i) write message into queue succeed. header [$logflag_header]");
+
+					# close queue socket
+					$unix_socket->close();
+					
+					# end, only read two line
+					last;
+				}
+
+				alarm(0);
+			};
+			alarm(0);
+
+			if ($@) {
+				if ($@ =~ m/Accept Timed Out/) {
+					&log (FILE_LOG,
+					"CRIT accept child $child_pid-($i) timeout on talking with mole, client $client_detail");
+				} else {
+					&log (FILE_LOG,
+					"CRIT accept child $child_pid-($i) got error on talking with mole [$@], client $client_detail");
+				}
+			}
+
+			# END CONNECTION
+			CONNEND: {
+
+				# on normal, server close socket first
+				$sockdata->shutdown(2);
+
+				# tell parent I'am idle
+				# print $IO_Pipe "$child_pid idle\r\n";	# *IMPORTANT*  must end with \r\n, or reader won't get data
+
+				# start to accept next request
+				next;
+			}
+		}
+
+		# tidy up gracefully and finish
+		# $IO_Pipe->close();
+
+		# this exit is VERY important, otherwise the child will become
+		# a parent producer of more and more children, forking util death.
+		&log (FILE_LOG,
+		"INFO accept child $child_pid finish its job, will exit");
+		exit (0);
+	}
+}
+
+sub make_new_sender_child {
+	# block signal for fork
+	my $sigset = POSIX::SigSet->new(SIGHUP,SIGINT,SIGTERM,SIGCHLD);
+	POSIX::sigprocmask(SIG_BLOCK, $sigset);
+
+	# fork off a child, parent return none-zero, child return zero
+	my $pid = fork;
+
+	# Trouble
+	if (not defined $pid ){
+		&log (FILE_LOG, "CRIT sender child fork failed: $!");
+		return undef;
+
+	# Parent
+	} elsif ($pid) {
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		# records the child's birth and return.
+		&log (FILE_LOG, "INFO sender child $pid starting");
+		$Sender_Children{$pid}{'starton'} = time; 
+		return 1;
+
+	# Child
+	} else {
+		# this is child process, pls do *NOT* return from this subroutine.
+		# must do exit instead of return. If it does, the child will return become a parent, 
+		# and spawn off its own children. Your system will fill up with processes util death.
+
+		my $child_pid = $$;
+
+		my ($logflag_header, $data, $data_length);
+
+		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
+		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		while (1) {
+
+			# connect queue socket and SHIFT data from queue
+			my $unix_socket = IO::Socket::UNIX->new(
+				Type		=> SOCK_STREAM,
+				Peer		=> FILE_SOCK,
+			);
+			unless ($unix_socket) {
+				&log(FILE_LOG,
+				"CRIT sender child $child_pid connect unix domain socket error [$!].");
+				next;
+			}
+			&log (FILE_LOG,
+			"DEBUG sender child $child_pid connect unix domain socket succeed.") if $debug;
+
+			# send SHIFT request
+			unless (print $unix_socket "SHIFT\r\n") {
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid request SHIFT message from queue failed.");
+				next;
+			}
+
+			# read response
+			$_ = <$unix_socket>;
+
+			# close socket
+			$unix_socket->close() if ($unix_socket);
+
+			# remove \r\n
+			if (defined) {
+				chomp; s/[\r\n]//g;
+			}
+
+			# sleep for a while if empty queue
+			unless (defined && length >0) {
+				sleep (1);
+				next;
+			}
+			&log (FILE_LOG,
+			"DEBUG sender child $child_pid SHIFT message from queue succeed.") if $debug;
+
+			&log (FILE_LOG,
+			"DEBUG sender child $child_pid SHIFT message [$_]") if $debug;
+
+			# split data
+			if (m/\A(\S+?) (.+)\Z/) {
+				($logflag_header, $data) = ($1, $2);
+				$data_length = length $data;
+				&log (FILE_LOG,
+				"INFO sender child $child_pid read message (length=$data_length) from queue. header [$logflag_header]");
+			} else {
+				&log (FILE_LOG,
+				"NOTE sender child $child_pid read misform message from queue, SKIP");
+				next;		# skip misform data
+			}
+
+			# connect dest host
+			my $post_connect;
+
+			eval {
+				# install ALRM handler
+				local $SIG{'ALRM'} = sub { die 'Send Timed Out'; };
+				alarm($Config{'sender_timeout'});
+			
+				# connect dest
+				my $dest_detail = "$Config{'dest_addr'}:$Config{'dest_port'}";
+				$post_connect = IO::Socket::INET->new(
+					PeerAddr		=>  $Config{'dest_addr'},
+					PeerPort		=>  $Config{'dest_port'},
+					Proto			=>  'tcp',
+				);
+				unless (defined $post_connect) {
+					&log (FILE_LOG,
+					"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$logflag_header]");
+					die 'connect dest failed';
+				}
+				&log (FILE_LOG,
+				"DEBUG sender child $child_pid connect $dest_detail succeed. header [$logflag_header] ") if $debug;
+
+				# post data
+				if (print $post_connect "$data\r\n") {;
+					&log (FILE_LOG,
+					"DEBUG sender child $child_pid send message to dest host succeed. header [$logflag_header]") if $debug;
+				} else {
+					&log (FILE_LOG,
+					"CRIT sender child $child_pid send message to dest host failed. header [$logflag_header]");
+					die 'send data failed';
+				}
+
+				my $response = <$post_connect>;
+				&log (FILE_LOG,
+				"INFO sender child $child_pid got response from dest host: [$response]. header [$logflag_header]");
+
+				$post_connect->shutdown(2) if ($post_connect);
+
+				alarm(0);
+			};
+			alarm(0);
+
+			if ($@) {
+				if ($@ =~ m/Send Timed Out/) {
+					&log (FILE_LOG,
+					"CRIT sender child $child_pid send data timeout. header [$logflag_header]");
+				} else {
+					&log (FILE_LOG,
+					"CRIT sender child $child_pid send data error [$@]. header [$logflag_header]");
+				}
+			}
+		}
+
+		# this exit is VERY important, otherwise the child will become
+		# a parent producer of more and more children, forking util death.
+		&log (FILE_LOG,
+		"INFO sender child $child_pid finish its job, will exit");
+		exit (0);
+	}
+}
+
+sub make_new_queue_child {
+	# block signal for fork
+	my $sigset = POSIX::SigSet->new(SIGHUP,SIGINT,SIGTERM,SIGCHLD);
+	POSIX::sigprocmask(SIG_BLOCK, $sigset);
+
+	# fork off a child, parent return none-zero, child return zero
+	my $pid = fork;
+
+	# Trouble
+	if (not defined $pid ){
+		&log (FILE_LOG, "CRIT queue child fork failed: $!");
+		return undef;
+
+	# Parent
+	} elsif ($pid) {
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		# records the child's birth and return.
+		&log (FILE_LOG, "INFO queue child $pid starting");
+		$Queue_Children{$pid}{'starton'} = time; 
+		return 1;
+
+	# Child
+	} else {
+		# this is child process, pls do *NOT* return from this subroutine.
+		# must do exit instead of return. If it does, the child will return become a parent, 
+		# and spawn off its own children. Your system will fill up with processes util death.
+
+		my $child_pid = $$;
+
+		# initial data queue
+		my @queue_data = ();
+
+		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
+		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+
+		# unblock signal
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+		# set umask for rw-------
+		umask (0117);
+
+		# create unix domain socket	
+		unlink FILE_SOCK if -S FILE_SOCK;
+		my $unix_socket = IO::Socket::UNIX->new(
+			Local		=> FILE_SOCK,
+			Listen          => SOMAXCONN,
+			Type		=> SOCK_STREAM,
+		);
+		unless (defined $unix_socket) {
+			&log (FILE_LOG, "CRIT queue child $child_pid create unix domain socket error: [$!]");
+			exit (1);
+		}
+		&log (FILE_LOG, "INFO queue child $child_pid create unix domain socket succeed");
+
+		while (1) {
+		 	my $sockdata = $unix_socket->accept();
+			&log (FILE_LOG,
+			"DEBUG queue child $child_pid accept request") if $debug;
+			
+			# read request
+			$_ = <$sockdata>;
+
+			# remove \r\n
+			if (defined) {
+				chomp; s/[\r\n]//g;
+			}
+
+                        # skip if empty request
+			unless (defined && length >0) {
+				&log (FILE_LOG,
+				"CRIT queue child $child_pid skip empty request.") if $debug;
+                        	goto CONNEND;
+                        }   
+                        &log (FILE_LOG,
+                        "DEBUG queue child $child_pid accept request $_") if $debug;
+
+			# process PUSH
+			if (m/\APUSH (.+)\Z/) {
+				my $queue_number = scalar @queue_data;
+				if ($queue_number > $Config{'queue_maxlen'}) {
+					&log (FILE_LOG,
+					"NOTE queue child $child_pid queue number $queue_number reached uplimit, auto SHIFT");
+					shift @queue_data;
+				} 
+				unless (push @queue_data, $1) {
+					&log (FILE_LOG,
+					"CRIT queue child $child_pid push data into queue failed.");
+					goto CONNEND;
+				}
+				&log (FILE_LOG,
+				"DEBUG queue child $child_pid push data into queue succeed.") if $debug;
+
+			# process SHIFT
+			} elsif (m/\ASHIFT\Z/) {
+				unless (scalar @queue_data > 0) {
+					&log (FILE_LOG,
+					"DEBUG queue child $child_pid has empty queue, return nothing") if $debug;
+					goto CONNEND;
+				}
+				unless (print $sockdata (shift @queue_data) . "\r\n") {
+					&log (FILE_LOG,
+					"CRIT queue child $child_pid return first data in queue failed");
+					goto CONNEND;
+				}
+				&log (FILE_LOG,
+				"DEBUG queue child $child_pid return first data in queue succeed") if $debug;
+
+			# ignore other
+			} else {
+				goto CONNEND;
+			}
+
+			CONNEND: {
+				# close socket
+				$sockdata->shutdown(2) if ($sockdata);
+
+				# start to accept next request
+				next;
+			}
+		}
+
+		# tidy up gracefully and finish
+		$unix_socket->close() if ($unix_socket);
+		unlink FILE_SOCK if -S FILE_SOCK;
+
+		# this exit is VERY important, otherwise the child will become
+		# a parent producer of more and more children, forking util death.
+		&log (FILE_LOG,
+		"INFO queue child $child_pid finish its job, will exit");
+		exit (0);
+	}
+}
+
+
+sub load_configs {
+	my %Config = (
+		'user'				=>	['global','user','eyou'],
+		'group'				=>	['global','group','eyou'],
+		'debug'				=> 	['global','debug',0],
+		'listen_addr'			=> 	['accept','listen_addr','0.0.0.0'],
+		'listen_port'			=> 	['accept','listen_port',8548],
+		'src_allow'			=>	['accept','src_allow','127.0.0.1'],
+		'maxlen_accept'			=>	['accept','maxlen_accept',131072],
+		'start_child'			=>	['accept','start_child',5],
+		'maxrequest_perchild'		=>	['accept','maxrequest_perchild',2000],
+		'accept_timeout'		=>	['accept','accept_timeout',10],
+		'dest_addr'			=>	['sender','dest_addr','mole.eyousop.com'],
+		'dest_port'			=>	['sender','dest_port',8538],
+		'sender_timeout'		=>	['sender','sender_timeout',30],
+		'queue_maxlen'                  =>      ['queue','queue_maxlen',1000],
+	);
+
+	# load proxy ini configs
+	foreach my $config (keys %Config) {
+		my ($section,$key,$default) = @{$Config{$config}};
+		my ($value, $error) = &read_ini($section,$key,FILE_CONF);
+		if (defined $value) {
+			$Config{$config} = $value;
+			&log (FILE_LOG, "INFO load config $config = $value");
+		} else {
+			&log (FILE_LOG, "NOTE load config $config error: $error, load default ($default)");
+			$Config{$config} = $default;
+		}
+	}
+
+	# use anoymous array ref
+	$Config{'src_allow'} = [ split(/\s*,\s*/, $Config{'src_allow'}) ];
+
+	return %Config;
+}
+
+__END__

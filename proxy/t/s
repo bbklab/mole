@@ -1,0 +1,75 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+use IO::Socket;
+use Digest::MD5;
+
+my $addr = shift || '127.0.0.1';
+my $port = shift || 23;
+my $time = shift || 1000;
+my $size = shift || 1024;
+
+my ($succ, $fail, $total) = (0,0,0);
+for my $i (1 .. $time) {
+	my $sock = IO::Socket::INET->new(
+		'PeerHost'	=> $addr,
+		'PeerPort'	=> $port,
+		'Proto'		=> 'tcp',
+		'Type'		=> SOCK_STREAM,
+	) or die $@;
+	$total ++;
+
+	my $response = <$sock>;
+	unless (defined $response) {
+		$fail ++;
+		print "proxy didn't return welcome banner\n";
+		last;
+	}
+	chomp $response; $response =~ s/[\r\n]//g;
+	unless ($response eq "+OK ready") {
+		$fail ++;
+		print "welcome banner return: $response\n";
+		last;
+	}
+
+	my ($type,$sid,$jid) = ('sysinfo','e4b4324510c44cb5397fc2a089e2251e', &random);
+	print $sock "HEAD $type,$sid,$jid\r\n";
+	$response = <$sock>;
+	unless (defined $response) {
+		$fail ++;
+		print "HEAD return: nothing\n";
+		last;
+	}
+	chomp $response; $response =~ s/[\r\n]//g;
+	unless ($response eq "+OK recorded") {
+		$fail ++;
+		print "HEAD return: $response\n";
+		last;
+	}
+
+	my $data = 'a' x $size;
+	print $sock "$data\r\n";
+	$response = <$sock>;
+	unless (defined $response) {
+		$fail ++;
+		print "DATA return: nothing\n";
+		last;
+	}
+	chomp $response; $response =~ s/[\r\n]//g;
+
+	if ($response eq '+OK accepted') {
+		$succ ++;
+	} else {
+		$fail ++;
+		print "DATA return: $response\n";
+		last;
+	}
+	close $sock;
+}
+print "total:$total, succ:$succ, fail:$fail\n";
+
+sub random {
+        my @chars = (0..9,'a'..'z','A'..'Z','#','(',')','=','-','+','_','@');
+        my $rand = join "", map{ $chars[int rand @chars] } 0..16;
+        return Digest::MD5::md5_hex($rand);
+}
