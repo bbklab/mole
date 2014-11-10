@@ -1918,6 +1918,11 @@ conv_time2sec(){
   local after=$(date -d "+${timelong}" +%s 2>&-)
   if is_int "${after}"; then
 	result=$(echo "${after} - ${now}" | bc 2>&-)
+	if ! is_int "${result}"; then
+		write_log -f "${MOLE_LOG}" "E0000000 conv_time2sec error:"\
+			"input invalid: ${timelong}";
+		result="invalid"
+	fi
   else
 	write_log -f "${MOLE_LOG}" "E0000000 conv_time2sec error:"\
 		"input invalid: ${timelong}";
