@@ -365,7 +365,7 @@ sub genjson_diffinfo {
 
   ### diff {runlevel}
   unless ($newinfo{'runlevel'}  eq $oldinfo{'runlevel'}) {
-	$diffinfo{'runlevel'} = \%{$newinfo{'runlevel'}};
+	$diffinfo{'runlevel'} = $newinfo{'runlevel'};
   }
 
   ### diff {selinux}
@@ -403,7 +403,7 @@ sub genjson_diffinfo {
 
   ### diff {sys_locks}
   unless ($newinfo{'sys_locks'} eq $oldinfo{'sys_locks'}) {
-	$diffinfo{'sys_locks'} = \%{$newinfo{'sys_locks'}};
+	$diffinfo{'sys_locks'} = $newinfo{'sys_locks'};
   }
 
   ### diff {sys_mods}
