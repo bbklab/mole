@@ -357,6 +357,7 @@ sub make_new_accept_child {
 					&log (FILE_LOG,
 					"CRIT accept child $child_pid-($i) timeout on talking with mole, client $client_detail");
 				} else {
+					$@ =~ s/[\r\n]//g;
 					&log (FILE_LOG,
 					"CRIT accept child $child_pid-($i) got error on talking with mole [$@], client $client_detail");
 				}
@@ -530,6 +531,7 @@ sub make_new_sender_child {
 					&log (FILE_LOG,
 					"CRIT sender child $child_pid send data timeout. header [$logflag_header]");
 				} else {
+					$@ =~ s/[\r\n]//g;
 					&log (FILE_LOG,
 					"CRIT sender child $child_pid send data error [$@]. header [$logflag_header]");
 				}

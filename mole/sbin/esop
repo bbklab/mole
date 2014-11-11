@@ -2,30 +2,28 @@
 
 # Global Def
 PATH_ESOP="/usr/local/esop/agent"
-PATH_APP="$PATH_ESOP/app"
-PATH_BIN="$PATH_APP/bin"
-PATH_SBIN="$PATH_APP/sbin"
-PATH_RUN="$PATH_ESOP/run"
-PATH_OPT="$PATH_ESOP/opt"
-PATH_OPT_SBIN="$PATH_OPT/sbin"
-PATH_LOG="$PATH_ESOP/log"
-PATH_INITLOG="$PATH_LOG/init.out"
 
 PATH_MOLE="${PATH_ESOP}/mole"
 PATH_MOLE_SBIN="${PATH_MOLE}/sbin"
 PATH_MOLE_RUN="${PATH_MOLE}/tmp/run"
+PATH_MOLE_LOG="${PATH_MOLE}/log"
+PATH_INITLOG="${PATH_MOLE_LOG}/init.out"
 
-PIDF_PHPTD="$PATH_RUN/esop_phptd.pid"
-PIDF_MOLE="$PATH_MOLE_RUN/esop_mole.pid"
+PATH_PROXY="${PATH_ESOP}/proxy"
+PATH_PROXY_SBIN="${PATH_PROXY}/sbin"
+PATH_PROXY_RUN="${PATH_PROXY}/run"
+
+PIDF_PROXY="${PATH_PROXY_RUN}/proxy.pid"
+PIDF_MOLE="${PATH_MOLE_RUN}/mole.pid"
 
 ARRAY_COMPONENT=(
     # proc_name(fake check)     	# display_name		# pid_file
-    "phptd" 				"proxy"			"${PIDF_PHPTD}"
+    "proxy" 				"proxy"			"${PIDF_PROXY}"
     "mole"  				"mole"			"${PIDF_MOLE}"
 )
 
-EXEC_USER="eyou"
-CMD_SUDO_EYOU="sudo -u $EXEC_USER"
+# EXEC_USER="eyou"
+# CMD_SUDO_EYOU="sudo -u $EXEC_USER"
 
 LINE="---------------------"
 
@@ -175,20 +173,14 @@ is_running(){
   fi
 }
 
-start_phptd(){
+start_proxy(){
   echo -en "Starting proxy ... " | tee -a $PATH_INITLOG
-  if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
+  if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 	echo -en "$(echo_yellow "SKIP")"
   else
-	$CMD_SUDO_EYOU $PATH_SBIN/em_dynamic_config all >>$PATH_INITLOG 2>&1
-	if [ "$?" != "0" ]; then
-		echo -en "$(echo_red "Re-Generate dynamic config FAIL")"
-		echo -en "\n"
-		return 1
-	fi
-  	$CMD_SUDO_EYOU $PATH_BIN/etm_phptd -p $PIDF_PHPTD >>$PATH_INITLOG 2>&1
+  	${PATH_PROXY_SBIN}/proxy >>$PATH_INITLOG 2>&1
 	wait; sleep 1
-	if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
+	if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_green "OK")"
 	else
 		echo -en "$(echo_red "FAIL")"
@@ -197,14 +189,14 @@ start_phptd(){
   echo -en "\n" | tee -a $PATH_INITLOG
 }
 
-stop_phptd(){
+stop_proxy(){
   echo -en "Stoping proxy ... " | tee -a $PATH_INITLOG
-  if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
-  	local pid=$(get_pid ${PIDF_PHPTD})
+  if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
+  	local pid=$(get_pid ${PIDF_PROXY})
   	[ ! -z "${pid}" ] && kill ${pid} >>$PATH_INITLOG 2>&1
-  	[ -f ${PIDF_PHPTD} ] && rm -f ${PIDF_PHPTD} >> $PATH_INITLOG 2>&1
+  	[ -f ${PIDF_PROXY} ] && rm -f ${PIDF_PROXY} >> $PATH_INITLOG 2>&1
 	wait; sleep 1
-	if is_running "${PIDF_PHPTD}" "phptd" >>$PATH_INITLOG 2>&1; then
+	if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_red "FAIL")"
 	else
 		echo -en "$(echo_green "OK")"
@@ -333,12 +325,12 @@ fi
 
 
 # 1. check sudo user exist or not ?
-if (id "${EXEC_USER}") >>$PATH_INITLOG 2>&1; then
-  :
-else
-  echo_red "user ${EXEC_USER} not exists!";echo
-  exit 1
-fi
+#if (id "${EXEC_USER}") >>$PATH_INITLOG 2>&1; then
+#  :
+#else
+#  echo_red "user ${EXEC_USER} not exists!";echo
+#  exit 1
+#fi
 
 
 # 2. process args
@@ -397,9 +389,8 @@ case "$#" in
                 exit 1
         }
 	
-	[ "${arg2}" == "1" ] && arg2="phptd"
+	[ "${arg2}" == "1" ] && arg2="proxy"
 	[ "${arg2}" == "2" ] && arg2="mole"
-	[ "${arg2}" == "proxy" ] && arg2="phptd"
 
 	if ! is_comp "${arg2}" >>$PATH_INITLOG 2>&1; then
 		echo "$(echo_yellow "${arg2}") not component"

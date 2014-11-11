@@ -102,7 +102,7 @@ INCLUDE_FILE="${BIN_DIR}/include"
 MOLE_FILE="${SBIN_DIR}/mole"
 
 # PID DEF
-PID_FILE="${RUN_DIR}/esop_mole.pid"
+PID_FILE="${RUN_DIR}/mole.pid"
 
 # TMP FILE DEF
 TMP_LASTRUN="${TMP_DIR}/.lastrun.dat"
