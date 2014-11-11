@@ -98,6 +98,14 @@ sub log {
 	}
 }
 
+sub split_head {
+	if (m/\A(\w+?),(\S+?),(\S+?)\Z/) {
+		return ($1,$2,$3);
+	} else {
+		return ('NULL','NULL','NULL');
+	}
+}
+
 sub is_sub {
         my ($item, @array) = (shift, @_); 
         for (@array) {
