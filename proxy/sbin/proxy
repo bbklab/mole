@@ -684,8 +684,6 @@ sub make_new_queue_child {
 
 sub load_configs {
 	my %Config = (
-		'user'				=>	['global','user','eyou'],
-		'group'				=>	['global','group','eyou'],
 		'debug'				=> 	['global','debug',0],
 		'listen_addr'			=> 	['accept','listen_addr','0.0.0.0'],
 		'listen_port'			=> 	['accept','listen_port',8548],
