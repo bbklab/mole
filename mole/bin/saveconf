@@ -36,13 +36,17 @@ if [ -d "${ESOP_SAVEOLD_DIR}" ]; then
 	/bin/mv "${ESOP_SAVEOLD_DIR}" "${dstdir}" 2>&-
 fi
 
-if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}/opt" >/dev/null 2>&1; then
-	# do NOT check this action succ or fail
-	/bin/cp -arf ${OPT_DIR}/{process.lst,receviers.lst,sms.lst} "${ESOP_SAVEOLD_DIR}/opt" >/dev/null 2>&1
-	if /bin/cp -arf  "${PROXY_CONF_PATH}" "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}" >/dev/null 2>&1; then
-		if echo "$(date +%s)" "$(date +%F_%T)" > "${ESOP_SAVEOLD_DIR}/.rpmun.time" 2>/dev/null; then
-			echo "+OK"
-			exit 0
+if /bin/mkdir -p "${ESOP_SAVEOLD_DIR}"/{proxy,mole/opt} >/dev/null 2>&1; then
+	/bin/cp -arf ${OPT_DIR}/{process.lst,receviers.lst,sms.lst} "${ESOP_SAVEOLD_DIR}/mole/opt" >/dev/null 2>&1
+	if /bin/cp -arf  "${MOLE_CONF_PATH}" "${ESOP_SAVEOLD_DIR}/mole" >/dev/null 2>&1; then
+		if /bin/cp -arf  "${PROXY_CONF_PATH}" "${ESOP_SAVEOLD_DIR}/proxy" >/dev/null 2>&1; then
+			if echo "$(date +%s)" "$(date +%F_%T)" > "${ESOP_SAVEOLD_DIR}/.saveconf.time" 2>/dev/null; then
+				echo "+OK"
+				exit 0
+			else
+				echo "-ERR"
+				exit 4
+			fi
 		else
 			echo "-ERR"
 			exit 3
