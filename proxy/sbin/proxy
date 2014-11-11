@@ -630,7 +630,14 @@ sub make_new_queue_child {
 				if ($queue_number > $Config{'queue_maxlen'}) {
 					&log (FILE_LOG,
 					"NOTE queue child $child_pid queue number $queue_number reached uplimit, auto SHIFT");
-					shift @queue_data;
+					my $oldest = shift @queue_data;
+					if ($oldest =~ m/\A(\S+?) (.+)\Z/) {
+						&log (FILE_LOG,
+						"NOTE queue child $child_pid remove oldest data, header [$1]");
+					} else {
+						&log (FILE_LOG,
+						"NOTE queue child $child_pid remove oldest data, header unknown");
+					}
 				} 
 				unless (push @queue_data, $1) {
 					&log (FILE_LOG,
