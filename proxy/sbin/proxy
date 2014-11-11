@@ -437,6 +437,7 @@ sub make_new_sender_child {
 			unless ($unix_socket) {
 				&log(FILE_LOG,
 				"CRIT sender child $child_pid connect unix domain socket error [$!].");
+				sleep (1);	# prevent from nonstop connecting
 				next;
 			}
 			&log (FILE_LOG,
@@ -446,6 +447,7 @@ sub make_new_sender_child {
 			unless (print $unix_socket "SHIFT\r\n") {
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid request SHIFT message from queue failed.");
+				sleep (1); 	# prevent from nonstop connecting
 				next;
 			}
 
