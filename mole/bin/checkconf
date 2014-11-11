@@ -131,16 +131,16 @@ ARRAY_CONFIG_RULES=(
 	"default=>frequency"		"time"
 	"default=>exec_tmout"		"time"
 	"default=>maxerr_times"		"int:1:999"
-	"default=>take_snapshot"	"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
-	"default=>mail_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
-	"default=>sms_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
-	"default=>post_notify"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>take_snapshot"	"cbset:[crit|warn|unkn|succ|notify|recovery|tmout|all|none|default]"
+	"default=>mail_notify"		"cbset:[crit|warn|unkn|succ|notify|recovery|tmout|all|none|default]"
+	"default=>sms_notify"		"cbset:[crit|warn|unkn|succ|notify|recovery|tmout|all|none|default]"
+	"default=>post_notify"		"cbset:[crit|warn|unkn|succ|notify|recovery|tmout|all|none|default]"
 	"default=>mail_policy"		"policy:0-24 3"
 	"default=>sms_policy"		"policy:0-24 3"
 	#"default=>mail_receviers"	"file or emls:root_bbk@126.com"
 	#"default=>sms_receviers"	"file or int:10000000000:99999999999"
 	"default=>attsnap_mail"		"set:[yes|no]"
-	"default=>auto_handle"		"cbset:[crit|warn|unkn|succ|notify|tmout|all|none|default]"
+	"default=>auto_handle"		"cbset:[crit|warn|unkn|succ|notify|recovery|tmout|all|none|default]"
 	"default=>auto_handler"		"file:handler"
 	"default=>locale"		"set:[zh|en|zh_CN|en_US|zh_CN.UTF-8|en_US.UTF-8]"
 	"default=>debug"		"set:[yes|no]"
@@ -346,7 +346,7 @@ check_type_set(){
 }
 
 # check type {cbset}
-# Example:	check_type_cbset "cbset:[crit|warn|unkn|succ|tmout|all|none|default]" "none default fuck name"; echo $?
+# Example:	check_type_cbset "cbset:[crit|warn|unkn|succ|tmout|notify|recovery|all|none|default]" "none default fuck name"; echo $?
 # 
 check_type_cbset(){
   local rule="$1"; shift 1; local input="$*"
