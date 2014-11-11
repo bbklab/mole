@@ -324,7 +324,7 @@ sub make_new_accept_child {
 					unless ($unix_socket) {
 						$sockdata->send( "-ERR connect inner unixsocket fail\r\n" );
 						&log(FILE_LOG,
-						"CRIT accept child $child_pid-($i) connect unix domain socket error [$!]. header [$logflag_header]");
+						"CRIT accept child $child_pid-($i) connect unix domain socket error [$@]. header [$logflag_header]");
 						die 'connect inner unixsocket failed';
 					}
 					&log (FILE_LOG,
@@ -437,7 +437,7 @@ sub make_new_sender_child {
 			unless ($unix_socket) {
 				&log(FILE_LOG,
 				"CRIT sender child $child_pid connect unix domain socket error [$!].");
-				sleep (1);	# prevent from nonstop connecting
+				sleep (1);	# prevent from nonstop connecting (for example, delete FILE_SOCK)
 				next;
 			}
 			&log (FILE_LOG,
@@ -447,7 +447,7 @@ sub make_new_sender_child {
 			unless (print $unix_socket "SHIFT\r\n") {
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid request SHIFT message from queue failed.");
-				sleep (1); 	# prevent from nonstop connecting
+				sleep (1); 	# prevent from nonstop connecting (for example, delete FILE_SOCK)
 				next;
 			}
 
