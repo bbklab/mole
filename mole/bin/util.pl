@@ -119,7 +119,7 @@ sub parted_output {
 	exit(1) if (!$part || $part =~ /\D/);
 	exit(1) if ($part > 6 || $part < 1);
 	exit(1) if (!$content);
-	$content =~ m/{\s*(\w+)\s*}\s*:\s*{\s*(\w+)\s*}\s*:\s*{\s*(([^\|]+)(\|([^\|]+))?(\|([^\|]+))?)\s*}/i;
+	$content =~ m/{\s*(\w+)\s*}\s*:\s*{\s*(\w+)\s*}\s*:\s*{\s*(([^\|]+)(\|([^\|]+))?(\|(.+))?)\s*}/i;
 	# print "1: $1\n2: $2\n3: $3\n4: $4\n5: $5\n6: $6\n7: $7\n8: $8\n\n";   # for debug
 	my $result = '';
 	if($1 && $part eq '1') { $result = $1; };
