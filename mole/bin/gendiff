@@ -976,7 +976,7 @@ if ($data_config{'product_info'}) {
 		'baseboardserialnumber' => 'baseboard-serial-number',
   	);
   	foreach my $key (keys %product_info) {
-    		open my $fh, "$dmidecode -s $product_info{$key} 2>&1 |";
+    		open my $fh, "$dmidecode -s $product_info{$key} 2>&- |";
     		if ($fh) {
 			while (<$fh>) {
 				chomp; s/(\A\s+|\s+\Z)//g;
@@ -987,7 +987,7 @@ if ($data_config{'product_info'}) {
     		}
   	}
 
-  	open my $fh, "$dmidecode -t memory 2>&1 |";
+  	open my $fh, "$dmidecode -t memory 2>&- |";
   	if ($fh) {
 		my $memdev_start = 0;
 		my @meminstalledsize = ();
