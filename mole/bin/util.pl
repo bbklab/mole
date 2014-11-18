@@ -145,11 +145,11 @@ sub format_toterm {
 	my $content = shift;
 	exit(1) if !defined $content;
 	exit(1) if $content =~ m/\A\s*\Z/;
-	$content =~ s/((<\s*font\s+color=(\w+)\s*>)\s*(.+?)\s*(<\s*\/font\s*>))/\n$3 ::: $4\n/ig;
+	$content =~ s/((<\s*font\s+color=(\w+)\s*>)(\s*.+?\s*)(<\s*\/font\s*>))/\n$3 ::: $4\n/ig;
 	open my $fh, "<", \$content;
 	  while(<$fh>){
 		### process_line: $_
-		if (/\A(\w+)\s+:::\s+(.+)\Z/){
+		if (/\A(\w+) ::: (.+)\Z/){
 			my ($color,$body) = ($1,$2);
 			### color: $color
 			### color_line: $body
