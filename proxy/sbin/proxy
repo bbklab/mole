@@ -263,7 +263,7 @@ sub make_new_accept_child {
 					my $client_ipaddr            = inet_ntoa   ($client_ip);
 					my $client_detail	     = $client_ipaddr . ':' . $client_port;
 					unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
-						$sockdata->shutdown(2);		# directly close connection
+						$sockdata->close();		# directly close connection
 						&log (FILE_LOG,
 						"NOTE accept child $childinfo deny connection from client $client_detail");
 					} else {
@@ -441,8 +441,6 @@ sub make_new_sender_child {
 
 		my $child_pid = $$;
 
-		my ($logflag_header, $data, $data_length);
-
 		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
 		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
 
@@ -451,42 +449,17 @@ sub make_new_sender_child {
 
 		while (1) {
 
-			# connect queue socket and SHIFT data from queue
-			my $unix_socket = IO::Socket::UNIX->new(
-				Type		=> SOCK_STREAM,
-				Peer		=> FILE_SOCK,
-			);
-			unless ($unix_socket) {
-				&log(FILE_LOG,
-				"CRIT sender child $child_pid connect unix domain socket error [$!].");
-				sleep (1);	# prevent from nonstop connecting (for example, delete FILE_SOCK)
-				next;
-			}
-			&log (FILE_LOG,
-			"DEBUG sender child $child_pid connect unix domain socket succeed.") if $debug;
-
-			# send SHIFT request
-			unless (print $unix_socket "SHIFT\r\n") {
-				&log (FILE_LOG,
-				"CRIT sender child $child_pid request SHIFT message from queue failed.");
-				sleep (1); 	# prevent from nonstop connecting (for example, delete FILE_SOCK)
-				next;
-			}
-
-			# read response
-			$_ = <$unix_socket>;
-
-			# close socket
-			$unix_socket->close() if ($unix_socket);
+			# read queue
+			$_ = &read_queue($child_pid);
 
 			# remove \r\n
 			if (defined) {
 				chomp; s/[\r\n]//g;
 			}
 
-			# sleep for a while if empty queue
+			# sleep for a while if empty queue or failed
 			unless (defined && length >0) {
-				sleep (1);
+				sleep (1);		# prevent from nonstop connecting (for example, delete FILE_SOCK)
 				next;
 			}
 			&log (FILE_LOG,
@@ -496,55 +469,55 @@ sub make_new_sender_child {
 			"DEBUG sender child $child_pid SHIFT message [$_]") if $debug;
 
 			# split data
-			if (m/\A(\S+?) (.+)\Z/) {
-				($logflag_header, $data) = ($1, $2);
-				$data_length = length $data;
-				&log (FILE_LOG,
-				"INFO sender child $child_pid read message (length=$data_length) from queue. header [$logflag_header]");
-			} else {
+			unless (m/\A(\S+?) (.+)\Z/) {
 				&log (FILE_LOG,
 				"NOTE sender child $child_pid read misform message from queue, SKIP");
 				next;		# skip misform data
 			}
 
-			# connect dest host
-			my $post_connect;
+			my ($header, $data) = ($1, $2);
+			my $data_length = length $data;
+			&log (FILE_LOG,
+			"INFO sender child $child_pid read message (length=$data_length) from queue. header [$header]");
 
 			eval {
-				# install ALRM handler
 				local $SIG{'ALRM'} = sub { die 'Send Timed Out'; };
 				alarm($Config{'sender_timeout'});
 			
-				# connect dest
 				my $dest_detail = "$Config{'dest_addr'}:$Config{'dest_port'}";
-				$post_connect = IO::Socket::INET->new(
+				my $post_connect = IO::Socket::INET->new(
 					PeerAddr		=>  $Config{'dest_addr'},
 					PeerPort		=>  $Config{'dest_port'},
 					Proto			=>  'tcp',
 				);
 				unless (defined $post_connect) {
 					&log (FILE_LOG,
-					"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$logflag_header]");
+					"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$header]");
 					die 'connect dest failed';
 				}
 				&log (FILE_LOG,
-				"DEBUG sender child $child_pid connect $dest_detail succeed. header [$logflag_header] ") if $debug;
+				"DEBUG sender child $child_pid connect $dest_detail succeed. header [$header] ") if $debug;
 
-				# post data
 				if (print $post_connect "$data\r\n") {;
 					&log (FILE_LOG,
-					"DEBUG sender child $child_pid send message to dest host succeed. header [$logflag_header]") if $debug;
+					"INFO sender child $child_pid send data to remote host succeed. header [$header]");
 				} else {
 					&log (FILE_LOG,
-					"CRIT sender child $child_pid send message to dest host failed. header [$logflag_header]");
+					"CRIT sender child $child_pid send data to remote host failed. header [$header]");
 					die 'send data failed';
 				}
 
-				my $response = <$post_connect>;
-				&log (FILE_LOG,
-				"INFO sender child $child_pid got response from dest host: [$response]. header [$logflag_header]");
+				my $response = <$post_connect> if ($post_connect);
+				if (defined $response && length $response) {
+					chomp $response;
+					&log (FILE_LOG,
+					"INFO sender child $child_pid receive response from remote host [$response]. header [$header]");
+				} else {
+					&log (FILE_LOG,
+					"NOTE sender child $child_pid didn't receive any response from remote host. header [$header]");
+				}
 
-				$post_connect->shutdown(2) if ($post_connect);
+				$post_connect->close() if ($post_connect);
 
 				alarm(0);
 			};
@@ -553,19 +526,21 @@ sub make_new_sender_child {
 			if ($@) {
 				if ($@ =~ m/Send Timed Out/) {
 					&log (FILE_LOG,
-					"CRIT sender child $child_pid send data timeout. header [$logflag_header]");
+					"CRIT sender child $child_pid send data timeout. header [$header]");
 				} else {
 					$@ =~ s/[\r\n]//g;
 					&log (FILE_LOG,
-					"CRIT sender child $child_pid send data error [$@]. header [$logflag_header]");
+					"CRIT sender child $child_pid send data error [$@]. header [$header]");
 				}
 			}
 		}
 
+		# tidy up gracefully and finish
+
 		# this exit is VERY important, otherwise the child will become
 		# a parent producer of more and more children, forking util death.
 		&log (FILE_LOG,
-		"INFO sender child $child_pid finish its job, will exit");
+		"NOTE sender child $child_pid finish its loop, exit");
 		exit (0);
 	}
 }
@@ -622,17 +597,19 @@ sub make_new_queue_child {
 		);
 		unless (defined $unix_socket) {
 			&log (FILE_LOG, "CRIT queue child $child_pid create unix domain socket error: [$!]");
+			sleep (3);		# prevent from nonstop restarting
 			exit (1);
 		}
 		&log (FILE_LOG, "INFO queue child $child_pid create unix domain socket succeed");
 
 		while (1) {
+
+			# accept request
 		 	my $sockdata = $unix_socket->accept();
-			&log (FILE_LOG,
-			"DEBUG queue child $child_pid accept request") if $debug;
+			&log (FILE_LOG, "DEBUG queue child $child_pid accept request") if $debug;
 			
 			# read request
-			$_ = <$sockdata>;
+			$_ = <$sockdata> if ($sockdata);
 
 			# remove \r\n
 			if (defined) {
@@ -692,10 +669,7 @@ sub make_new_queue_child {
 			}
 
 			CONNEND: {
-				# close socket
-				$sockdata->shutdown(2) if ($sockdata);
-
-				# start to accept next request
+				$sockdata->close() if ($sockdata);
 				next;
 			}
 		}
@@ -707,7 +681,7 @@ sub make_new_queue_child {
 		# this exit is VERY important, otherwise the child will become
 		# a parent producer of more and more children, forking util death.
 		&log (FILE_LOG,
-		"INFO queue child $child_pid finish its job, will exit");
+		"NOTE queue child $child_pid finish its loop, exit");
 		exit (0);
 	}
 }
@@ -786,9 +760,43 @@ sub write_queue {
 		return undef;
 	}
 
-	$unix_socket->close();
+	$unix_socket->close() if ($unix_socket);
 
 	1;
+}
+
+sub read_queue {
+
+	my ( $child )  = @_;
+	my $data = undef;
+
+	unless (defined $child && length $child) {
+		$child = 'Null-(N/A)';
+	}
+
+	my $unix_socket = IO::Socket::UNIX->new(
+		Type            => SOCK_STREAM,
+		Peer            => FILE_SOCK,
+	);
+	unless ($unix_socket) {
+		&log(FILE_LOG,
+		"CRIT sender child $child connect unix domain socket error [$@].");
+		return undef;
+	}
+	&log (FILE_LOG,
+		"DEBUG sender child $child connect unix domain socket succeed.") if $debug;
+
+	unless (print $unix_socket "SHIFT\r\n") {
+		&log (FILE_LOG,
+		"CRIT sender child $child request SHIFT message from queue failed.");
+		return undef;
+	}
+
+	$data = <$unix_socket> if ($unix_socket);
+
+	$unix_socket->close() if ($unix_socket);
+
+	return $data;
 }
 
 __END__
