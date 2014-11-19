@@ -33,8 +33,8 @@ use constant LOG_FILENAME => 'proxy.log';
 use constant FILE_LOG  => PATH_LOG  . '/' . LOG_FILENAME;
 use constant PID_FILENAME => 'proxy.pid';
 use constant FILE_PID  => PATH_RUN  . '/' . PID_FILENAME;
-use constant SOCK_FILENAME => 'queue.sock';
-use constant FILE_SOCK => PATH_TMP . '/' . SOCK_FILENAME;
+use constant QSOCK_FILENAME => 'queue.sock';
+use constant FILE_QSOCK => PATH_TMP . '/' . QSOCK_FILENAME;
 
 # Use our module 
 use lib PATH_LIB;
@@ -100,7 +100,7 @@ $SIG{'TERM'} = $SIG{'INT'} = sub {
 	kill 'TERM', keys %Accept_Children;
 	kill 'TERM', keys %Sender_Children;
 	kill 'TERM', keys %Queue_Children;
-	unlink FILE_SOCK if -S FILE_SOCK;
+	unlink FILE_QSOCK if -S FILE_QSOCK;
 	unlink FILE_PID if -s FILE_PID;
 	&log (FILE_LOG, "NOTE proxy finished."); 
 	exit (0);
@@ -175,10 +175,10 @@ die "$@\n" if ($@);
 while (1) {
 
 	# maintain children population
-	if (scalar keys %Queue_Children eq 0) {
+	unless (scalar keys %Queue_Children) {
 		&make_new_queue_child;
 	}
-	if (scalar keys %Sender_Children eq 0)  {
+	unless (scalar keys %Sender_Children)  {
 		&make_new_sender_child;
 	}
 	for (my $i = scalar keys %Accept_Children; $i < $Config{'start_child'}; $i++) {
@@ -459,7 +459,7 @@ sub make_new_sender_child {
 
 			# sleep for a while if empty queue or failed
 			unless (defined && length >0) {
-				sleep (1);		# prevent from nonstop connecting (for example, delete FILE_SOCK)
+				sleep (1);		# prevent from nonstop connecting (for example, delete socket)
 				next;
 			}
 			&log (FILE_LOG,
@@ -589,9 +589,9 @@ sub make_new_queue_child {
 		umask (0117);
 
 		# create unix domain socket	
-		unlink FILE_SOCK if -S FILE_SOCK;
+		unlink FILE_QSOCK if -S FILE_QSOCK;
 		my $unix_socket = IO::Socket::UNIX->new(
-			Local		=> FILE_SOCK,
+			Local		=> FILE_QSOCK,
 			Listen          => SOMAXCONN,
 			Type		=> SOCK_STREAM,
 		);
@@ -676,7 +676,7 @@ sub make_new_queue_child {
 
 		# tidy up gracefully and finish
 		$unix_socket->close() if ($unix_socket);
-		unlink FILE_SOCK if -S FILE_SOCK;
+		unlink FILE_QSOCK if -S FILE_QSOCK;
 
 		# this exit is VERY important, otherwise the child will become
 		# a parent producer of more and more children, forking util death.
@@ -744,7 +744,7 @@ sub write_queue {
 
 	my $unix_socket = IO::Socket::UNIX->new(
 		Type		=> SOCK_STREAM,
-		Peer		=> FILE_SOCK,
+		Peer		=> FILE_QSOCK,
 	);
 	unless ($unix_socket) {
 		&log(FILE_LOG,
@@ -776,7 +776,7 @@ sub read_queue {
 
 	my $unix_socket = IO::Socket::UNIX->new(
 		Type            => SOCK_STREAM,
-		Peer            => FILE_SOCK,
+		Peer            => FILE_QSOCK,
 	);
 	unless ($unix_socket) {
 		&log(FILE_LOG,
