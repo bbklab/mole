@@ -9,11 +9,13 @@ use warnings;
 use POSIX;
 use File::Spec::Functions qw(rel2abs);
 use File::Basename qw(dirname);
+use Time::HiRes qw(usleep);
 use Socket;
 use IO::Select;
 use IO::Socket;
 use IO::Socket::INET;
 use IO::Socket::UNIX;
+use Fcntl;
 use Tie::RefHash;
 use Smart::Comments;
 
@@ -55,10 +57,15 @@ our $listen_socket = IO::Socket::INET->new(
 	Type		=> SOCK_STREAM,
 	Listen		=> SOMAXCONN,
 	Resuse		=> 1,
-	Timeout		=> $Config{'accept_timeout'},
 );
 unless (defined $listen_socket) {
 	&log (FILE_LOG, "CRIT proxy create socket error: $@");
+	exit (1);
+}
+
+# set socket as non-block
+unless ( &nonblock($listen_socket) )  {
+	&log (FILE_LOG, "CRIT proxy set listening socket non-blocking error: $@");
 	exit (1);
 }
 &log (FILE_LOG, "INFO proxy listening on $Config{'listen_addr'}:$Config{'listen_port'}, ready for connection ...");
@@ -162,6 +169,7 @@ close FPID;
 die "$@\n" if ($@);
 
 # start only one sender child
+usleep (100000);
 &make_new_sender_child;
 die "$@\n" if ($@);
 
@@ -217,197 +225,247 @@ sub make_new_accept_child {
 		# records the child's birth and return.
 		&log (FILE_LOG, "INFO accept child $pid starting");
 		$Accept_Children{$pid}{'starton'} = time; 
+		return 1;
+	} 
 
 	# Child
-	} else {
-		# this is child process, pls do *NOT* return from this subroutine.
-		# must do exit instead of return. If it does, the child will return become a parent, 
-		# and spawn off its own children. Your system will fill up with processes util death.
+	# this is child process, pls do *NOT* return from this subroutine.
+	# must do exit instead of return. If it does, the child will return become a parent, 
+	# and spawn off its own children. Your system will fill up with processes util death.
 
-		my $child_pid = $$;
+	my $child_pid = $$;
 
-		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
-		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
 
-		# unblock signal
-		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+	my $i = 1;		# served request counter
+	my $handle;
+	my $inbuffer;
+	my $rv;
 
-		# init processed request number {maxrequest_perchild}
-		my $i = 0;
-		my $handle;
-		my $inbuffer;
-		my $rv;
+	my %client_inbuffer = ();
+	my %client_outbuffer = ();
+	my %client_ready = ();
+	my %client_other = ();
 
-		# init empty client connect hash
-		my %client_inbuffer = ();
-		my %client_outbuffer = ();
-		my %client_ready = ();
+	tie %client_ready, 'Tie::RefHash';
 
-		# create select object with {listen_socket}
-		my $select = IO::Select->new( $listen_socket );
+	my $select = IO::Select->new( $listen_socket );
 
-		while ( $i <= $Config{'maxrequest_perchild'} ) {
+	while ( $i <= $Config{'maxrequest_perchild'} ) {
 
-			my ($header, $data, $childinfo) = (undef, undef, "$child_pid-($i)");
+		my $header;
+		my $data;
+		my $datalength;
 
-			# accept connect or read socket data
-			foreach $handle ( $select->can_read(1) ) {
-				### %client_inbuffer
+		# accept connect or read socket data
+		foreach $handle ( $select->can_read(1) ) {
+			### found_readable_fd: $handle
 
-				# accept a new connection
-				if ($handle eq $listen_socket) {
-					### accetp_child_got_new_client: $child_pid
-					my ($sockdata,$client) = $handle->accept();
-					# check src address allow or not ?
-					my ($client_port,$client_ip) = sockaddr_in ($client);
-					my $client_ipaddr            = inet_ntoa   ($client_ip);
-					my $client_detail	     = $client_ipaddr . ':' . $client_port;
-					unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
-						$sockdata->close();		# directly close connection
-						&log (FILE_LOG,
-						"NOTE accept child $childinfo deny connection from client $client_detail");
-					} else {
-						$sockdata->autoflush(1);	# autoflush is must for server after accept()
-						$sockdata->send( "+OK ready\r\n" );
-						$select->add($sockdata);	# add allowed connect into SELECT_SET
-						$i ++; 				# add processed request number {maxrequest_perchild}
-						&log (FILE_LOG,
-						"INFO accept child $childinfo accept connection from client $client_detail");
-					}
-					next;
-				} 
+			my $childinfo;
+			my $cdetail;
 
-				# read socket data
-				$inbuffer = '';
-				$rv = $handle->recv($inbuffer, RCVBUFSIZE, 0);
-				unless ( defined $rv ) {	# recv error
-					### recv_error
-					goto READERR_END;
-				}
-				unless ( length $inbuffer ) {	# recv end
-					### recv_0_byte
-					goto READERR_END;
-				}
+			if ($handle eq $listen_socket) {
+				### accetp_child_got_new_client: $child_pid
 
-				$client_inbuffer{$handle} .= $inbuffer;
-				### add_in_buffer_hash: $inbuffer
-				### %{inbuffer}_after_add_in: %client_inbuffer
+				# if new connect, set {childinfo} with new counter {i}
+				$childinfo = "$child_pid-($i)";		
 
-				if ( length $client_inbuffer{$handle} > $Config{'maxlen_accept'} ) {
-					$handle->send( "-ERR message too long\r\n", 0 );
+				# if new connect, set {cdetail} with new connect
+				my ($sockdata,$client) = $handle->accept();
+				my ($client_port,$client_ip) = sockaddr_in ($client);
+				my $client_ipaddr = inet_ntoa ($client_ip);
+				$cdetail = $client_ipaddr . ':' . $client_port;
+				unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
+					$sockdata->close();	# directly close connection
 					&log (FILE_LOG,
-					"CRIT accept child $child_pid-($i) receive message length exceed");
-					goto READERR_END;
-				}
-
-				if ($client_inbuffer{$handle} =~ m/(.*)\r\n/) {
-					### receive_whole_line: $1
-					push @{$client_ready{$handle}{'request'}}, $1;
-					delete $client_inbuffer{$handle};
-					### %{ready}_after_receive_aline: %client_ready
-					### %{inbuffer}_after_receive_aline: %client_inbuffer
+					"NOTE accept child $childinfo deny connection, client $cdetail");
 					next;
 				}
-
-				READERR_END: {
-					delete $client_inbuffer{$handle} if exists $client_inbuffer{$handle};
-					delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
-					delete $client_ready{$handle} if exists $client_ready{$handle};
-					$handle->close();
-					$select->remove($handle);
+				$sockdata->autoflush(1);	# autoflush is must for server after accept()
+				$sockdata->send( "+OK ready\r\n" );
+				unless ( $select->add($sockdata) ) {
+					&log (FILE_LOG,
+					"CRIT accept child $childinfo failed SELECT-ADD connection, client $cdetail");
 					next;
 				}
+				unless ( &nonblock($sockdata) ) {
+					&log (FILE_LOG,
+					"CRIT accept child $childinfo failed NON-BLOCK connection, client $cdetail");
+					next;
+				}
+				$client_other{$sockdata}{'processor'} = $childinfo;	# save session processor
+				$client_other{$sockdata}{'client'}    = $cdetail;	# save session client
+				$client_other{$sockdata}{'starton'}   = time;		# save session start time
+				&log (FILE_LOG,
+				"INFO accept child $childinfo accept connection, client $cdetail");
+				$i ++;
+				next;
+			} 
+
+			### read_socket_data
+
+			# if old connect, set {childinfo} as previous saved
+			$childinfo = $client_other{$handle}{'processor'};
+			# if old connect, set {cdetail} as previous saved
+			$cdetail = $client_other{$handle}{'client'};
+
+			$inbuffer = '';
+			$rv = $handle->recv($inbuffer, RCVBUFSIZE, 0);
+			unless ( defined $rv ) {
+				### recv_error
+				goto READERR_END;
+			}
+			unless ( length $inbuffer ) {
+				### recv_0_byte_maybe_client_closed
+				goto READERR_END;
 			}
 
-			# process all full-line request saved in %client_ready
-			# and write response to {output_buffer}
-			foreach $handle (keys %client_ready) {
-				### %client_ready_on_dohandle: %client_ready
-				if ( scalar @{$client_ready{$handle}{'request'}} eq 1 ) {
-					if ( $client_ready{$handle}{'processing'} )  {
-						next;			# do **NOT** write to {output_buffer} repeatly
-					}
-					if ( $client_ready{$handle}{'request'}[0] =~ m/\AHEAD\s+(\w+,\S+,\S+)\Z/i ) {
-						$header = $1;
-						&log (FILE_LOG,
-						"INFO accept child $childinfo receive header [$header]");
-						$client_outbuffer{$handle} = "+OK recorded\r\n";
-						$client_ready{$handle}{'processing'} = 1;	# mark as processing
-						next;						# do **NOT** delete myself
-					} else {
-						$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
-					}
+			$client_inbuffer{$handle} .= $inbuffer;
+			### recv_success: $inbuffer
+			### %client_inbuffer
 
-				} elsif ( scalar @{$client_ready{$handle}{'request'}} eq 2 ) {
-					if ( $client_ready{$handle}{'request'}[0] =~ m/\AHEAD\s+(\w+,\S+,\S+)\Z/i ) {
-						$header = $1;
-						$data = $client_ready{$handle}{'request'}[1];
-						&log (FILE_LOG,
-						"INFO accept child $childinfo receive data, length " . length $data . ", header [$header]");
-						&log (FILE_LOG,
-						"DEBUG accept child $childinfo receive data [$data]") if $debug;
-						if ( &write_queue($childinfo, $header, $data) ) {
-							&log (FILE_LOG,
-							"INFO accept child $childinfo write data into queue succeed, header [$header]");
-							$client_outbuffer{$handle} = "+OK accepted\r\n";
-						} else {
-							&log (FILE_LOG,
-							"CRIT accept child $childinfo write data into queue failed, header [$header]");
-							$client_outbuffer{$handle} = "-ERR write queue fail\r\n";
-						}
-					} else {
-						$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
-					}
-				} 
-				# if go here, delete myself
-				delete $client_ready{$handle};
+			my $inbuffer_length = length $client_inbuffer{$handle};
+			if ( $inbuffer_length > $Config{'maxlen_accept'} ) {
+				$handle->send( "-ERR message too long\r\n", 0 );
+				&log (FILE_LOG,
+				"CRIT accept child $childinfo receive message length [$inbuffer_length] exceed, client [$cdetail]");
+				goto READERR_END;
 			}
 
-			# response to client
-			foreach $handle ( $select->can_write(1) ) {
-				### %client_outbuffer_on_output: %client_outbuffer
-				unless ( exists $client_outbuffer{$handle} ) {
-					next;
-				}
+			if ($client_inbuffer{$handle} =~ m/(.*)\r\n/) {
+				### receive_whole_line: $1
+				push @{$client_ready{$handle}{'request'}}, $1;
+				my @request = @{$client_ready{$handle}{'request'}};
+				### @request
+				delete $client_inbuffer{$handle};
+				next;
+			}
 
-				$rv = $handle->send( $client_outbuffer{$handle}, 0 );
-				unless ( defined $rv ) {
-					goto WRITEERR_END;
-				}
-				unless ( $rv eq length $client_outbuffer{$handle}
-					|| $! eq POSIX::EWOULDBLOCK ) {
-					goto WRITEERR_END;
-				}
-
-				substr( $client_outbuffer{$handle}, 0, $rv ) = '';	
-				unless ( length $client_outbuffer{$handle} ) {
-					delete $client_outbuffer{$handle};
-					if ( $client_ready{$handle}{'processing'} ) {
-						next;				# interactive not finished, continue
-					} else {
-						goto WRITEERR_END;		# interactive finished, close client
-					}
-				}
-
-				WRITEERR_END: {
-					delete $client_inbuffer{$handle} if exists $client_inbuffer{$handle};
-					delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
-					delete $client_ready{$handle} if exists $client_ready{$handle};
-					$select->remove($handle);
-					$handle->close();
-					next;
-				}
+			READERR_END: {
+				### got_into_readerr_end_close_myself_socket
+				delete $client_inbuffer{$handle} if exists $client_inbuffer{$handle};
+				delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
+				delete $client_ready{$handle} if exists $client_ready{$handle};
+				delete $client_other{$handle} if exists $client_other{$handle};
+				$select->remove($handle);	# remove first and then close
+				$handle->close();
+				next;
 			}
 		}
 
-		# tidy up gracefully and finish
+		# process all full-line request saved in %client_ready
+		# and write response to {output_buffer}
+		foreach $handle (keys %client_ready) {
 
-		# this exit is VERY important, otherwise the child will become
-		# a parent producer of more and more children, forking util death.
-		&log (FILE_LOG,
-		"INFO accept child $child_pid finish its job, will exit");
-		exit (0);
+			# this is old connect, set {childinfo} as previous saved
+			my $childinfo = $client_other{$handle}{'processor'};
+			# this is old connect, set {cdetail} as previous saved
+			my $cdetail = $client_other{$handle}{'client'};
+
+			if ( scalar @{$client_ready{$handle}{'request'}} eq 1 ) {
+				if ( $client_ready{$handle}{'processing'} )  {
+					next;			# do **NOT** write to {output_buffer} repeatly
+				}
+				if ( $client_ready{$handle}{'request'}[0] =~ m/\AHEAD\s+(\w+,\S+,\S+)\Z/i ) {
+					$header = $1;
+					&log (FILE_LOG,
+					"INFO accept child $childinfo receive header [$header], client [$cdetail]");
+					$client_outbuffer{$handle} = "+OK recorded\r\n";
+					$client_ready{$handle}{'processing'} = 1;	# mark as processing
+					next;						# do **NOT** delete myself
+				} else {
+					$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
+					$client_ready{$handle}{'processing'} = 0;	# mark as finished
+				}
+
+			} elsif ( scalar @{$client_ready{$handle}{'request'}} eq 2 ) {
+				if ( $client_ready{$handle}{'request'}[0] =~ m/\AHEAD\s+(\w+,\S+,\S+)\Z/i ) {
+					$header = $1;
+					$data = $client_ready{$handle}{'request'}[1];
+					$datalength = length $data;
+					### $data
+					### $datalength
+					&log (FILE_LOG,
+					"INFO accept child $childinfo receive data length [$datalength], client [$cdetail], header [$header]");
+					&log (FILE_LOG,
+					"DEBUG accept child $childinfo receive data [$data], client [$cdetail], header [$header]") if $debug;
+					if (!$datalength) {
+						&log (FILE_LOG,
+						"NOTE accept child $childinfo received empty data, client [$cdetail], header [$header]");
+						$client_outbuffer{$handle} = "-ERR empty data\r\n";
+					} elsif ( &write_queue($childinfo, $header, $data) ) {
+						&log (FILE_LOG,
+						"INFO accept child $childinfo write data into queue succeed, client [$cdetail], header [$header]");
+						$client_outbuffer{$handle} = "+OK accepted\r\n";
+					} else {
+						&log (FILE_LOG,
+						"CRIT accept child $childinfo write data into queue failed, client [$cdetail], header [$header]");
+						$client_outbuffer{$handle} = "-ERR write queue fail\r\n";
+					}
+					$client_ready{$handle}{'processing'} = 0;	# mark as finished
+				} else {
+					$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
+				}
+
+			} else { 
+				&log (FILE_LOG,
+				"NOTE accept child $childinfo more than two requests found, client [$cdetail], header [$header]");
+				delete $client_ready{$handle};
+			}
+		}
+
+		# response to client
+		foreach $handle ( $select->can_write(1) ) {
+			### found_writable_fd: $handle
+			### hash_prepared_to_output: %client_outbuffer
+			unless ( exists $client_outbuffer{$handle} ) {
+				next;
+			}
+
+			$rv = $handle->send( $client_outbuffer{$handle}, 0 );
+			unless ( defined $rv ) {
+				# send_error_1
+				goto WRITEERR_END;
+			}
+			unless ( $rv eq length $client_outbuffer{$handle}
+				|| $! eq POSIX::EWOULDBLOCK ) {
+				# send_error_2
+				goto WRITEERR_END;
+			}
+
+			substr( $client_outbuffer{$handle}, 0, $rv ) = '';	
+
+			unless ( length $client_outbuffer{$handle} ) {
+				delete $client_outbuffer{$handle};
+				if ( $client_ready{$handle}{'processing'} ) {
+					### interactive_not_finished_wait_for_next_output
+					next;
+				} else {
+					### interactive_finished_close_myself
+					goto WRITEERR_END;
+				}
+			}
+
+			WRITEERR_END: {
+				delete $client_inbuffer{$handle} if exists $client_inbuffer{$handle};
+				delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
+				delete $client_ready{$handle} if exists $client_ready{$handle};
+				delete $client_other{$handle} if exists $client_other{$handle};
+				$select->remove($handle);	# remove first and then close
+				$handle->close();
+				next;
+			}
+		}
 	}
+
+	# tidy up gracefully and finish
+
+	# this exit is VERY important, otherwise the child will become
+	# a parent producer of more and more children, forking util death.
+	&log (FILE_LOG,
+	"INFO accept child $child_pid finish its job, will exit");
+	exit (0);
 }
 
 sub make_new_sender_child {
@@ -432,117 +490,115 @@ sub make_new_sender_child {
 		&log (FILE_LOG, "INFO sender child $pid starting");
 		$Sender_Children{$pid}{'starton'} = time; 
 		return 1;
+	} 
 
 	# Child
-	} else {
-		# this is child process, pls do *NOT* return from this subroutine.
-		# must do exit instead of return. If it does, the child will return become a parent, 
-		# and spawn off its own children. Your system will fill up with processes util death.
+	# this is child process, pls do *NOT* return from this subroutine.
+	# must do exit instead of return. If it does, the child will return become a parent, 
+	# and spawn off its own children. Your system will fill up with processes util death.
 
-		my $child_pid = $$;
+	my $child_pid = $$;
 
-		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
-		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
 
-		# unblock signal
-		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+	while (1) {
 
-		while (1) {
+		# read queue
+		$_ = &read_queue($child_pid);
 
-			# read queue
-			$_ = &read_queue($child_pid);
-
-			# remove \r\n
-			if (defined) {
-				chomp; s/[\r\n]//g;
-			}
-
-			# sleep for a while if empty queue or failed
-			unless (defined && length >0) {
-				sleep (1);		# prevent from nonstop connecting (for example, delete socket)
-				next;
-			}
-			&log (FILE_LOG,
-			"DEBUG sender child $child_pid SHIFT message from queue succeed.") if $debug;
-
-			&log (FILE_LOG,
-			"DEBUG sender child $child_pid SHIFT message [$_]") if $debug;
-
-			# split data
-			unless (m/\A(\S+?) (.+)\Z/) {
-				&log (FILE_LOG,
-				"NOTE sender child $child_pid read misform message from queue, SKIP");
-				next;		# skip misform data
-			}
-
-			my ($header, $data) = ($1, $2);
-			my $data_length = length $data;
-			&log (FILE_LOG,
-			"INFO sender child $child_pid read message (length=$data_length) from queue. header [$header]");
-
-			eval {
-				local $SIG{'ALRM'} = sub { die 'Send Timed Out'; };
-				alarm($Config{'sender_timeout'});
-			
-				my $dest_detail = "$Config{'dest_addr'}:$Config{'dest_port'}";
-				my $post_connect = IO::Socket::INET->new(
-					PeerAddr		=>  $Config{'dest_addr'},
-					PeerPort		=>  $Config{'dest_port'},
-					Proto			=>  'tcp',
-				);
-				unless (defined $post_connect) {
-					&log (FILE_LOG,
-					"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$header]");
-					die 'connect dest failed';
-				}
-				&log (FILE_LOG,
-				"DEBUG sender child $child_pid connect $dest_detail succeed. header [$header] ") if $debug;
-
-				if (print $post_connect "$data\r\n") {;
-					&log (FILE_LOG,
-					"INFO sender child $child_pid send data to remote host succeed. header [$header]");
-				} else {
-					&log (FILE_LOG,
-					"CRIT sender child $child_pid send data to remote host failed. header [$header]");
-					die 'send data failed';
-				}
-
-				my $response = <$post_connect> if ($post_connect);
-				if (defined $response && length $response) {
-					chomp $response;
-					&log (FILE_LOG,
-					"INFO sender child $child_pid receive response from remote host [$response]. header [$header]");
-				} else {
-					&log (FILE_LOG,
-					"NOTE sender child $child_pid didn't receive any response from remote host. header [$header]");
-				}
-
-				$post_connect->close() if ($post_connect);
-
-				alarm(0);
-			};
-			alarm(0);
-
-			if ($@) {
-				if ($@ =~ m/Send Timed Out/) {
-					&log (FILE_LOG,
-					"CRIT sender child $child_pid send data timeout. header [$header]");
-				} else {
-					$@ =~ s/[\r\n]//g;
-					&log (FILE_LOG,
-					"CRIT sender child $child_pid send data error [$@]. header [$header]");
-				}
-			}
+		# remove \r\n
+		if (defined) {
+			chomp; s/[\r\n]//g;
 		}
 
-		# tidy up gracefully and finish
-
-		# this exit is VERY important, otherwise the child will become
-		# a parent producer of more and more children, forking util death.
+		# sleep for a while if empty queue or failed
+		unless (defined && length >0) {
+			&log (FILE_LOG,
+			"DEBUG sender child $child_pid SHIFT nothing from queue, sleep and try again.") if $debug;
+			sleep (3);		# prevent from nonstop connecting (for example, delete socket)
+			next;
+		}
 		&log (FILE_LOG,
-		"NOTE sender child $child_pid finish its loop, exit");
-		exit (0);
+		"DEBUG sender child $child_pid SHIFT message from queue succeed.") if $debug;
+
+		&log (FILE_LOG,
+		"DEBUG sender child $child_pid SHIFT message [$_]") if $debug;
+
+		# split data
+		unless (m/\A(\S+?) (.+)\Z/) {
+			&log (FILE_LOG,
+			"NOTE sender child $child_pid read misform message from queue, SKIP");
+			next;		# skip misform data
+		}
+
+		my ($header, $data) = ($1, $2);
+		my $data_length = length $data;
+		&log (FILE_LOG,
+		"INFO sender child $child_pid read message (length=$data_length) from queue. header [$header]");
+
+		eval {
+			local $SIG{'ALRM'} = sub { die 'Send Timed Out'; };
+			alarm($Config{'sender_timeout'});
+		
+			my $dest_detail = "$Config{'dest_addr'}:$Config{'dest_port'}";
+			my $post_connect = IO::Socket::INET->new(
+				PeerAddr		=>  $Config{'dest_addr'},
+				PeerPort		=>  $Config{'dest_port'},
+				Proto			=>  'tcp',
+			);
+			unless (defined $post_connect) {
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$header]");
+				die 'connect dest failed';
+			}
+			&log (FILE_LOG,
+			"DEBUG sender child $child_pid connect $dest_detail succeed. header [$header] ") if $debug;
+
+			if (print $post_connect "$data\r\n") {;
+				&log (FILE_LOG,
+				"INFO sender child $child_pid send data to remote host succeed. header [$header]");
+			} else {
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid send data to remote host failed. header [$header]");
+				die 'send data failed';
+			}
+
+			my $response = <$post_connect> if ($post_connect);
+			if (defined $response && length $response) {
+				chomp $response;
+				&log (FILE_LOG,
+				"INFO sender child $child_pid receive response from remote host [$response]. header [$header]");
+			} else {
+				&log (FILE_LOG,
+				"NOTE sender child $child_pid didn't receive any response from remote host. header [$header]");
+			}
+
+			$post_connect->close() if ($post_connect);
+
+			alarm(0);
+		};
+		alarm(0);
+
+		if ($@) {
+			if ($@ =~ m/Send Timed Out/) {
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid send data timeout. header [$header]");
+			} else {
+				$@ =~ s/[\r\n]//g;
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid send data error [$@]. header [$header]");
+			}
+		}
 	}
+
+	# tidy up gracefully and finish
+
+	# this exit is VERY important, otherwise the child will become
+	# a parent producer of more and more children, forking util death.
+	&log (FILE_LOG,
+	"NOTE sender child $child_pid finish its loop, exit");
+	exit (0);
 }
 
 sub make_new_queue_child {
@@ -567,123 +623,115 @@ sub make_new_queue_child {
 		&log (FILE_LOG, "INFO queue child $pid starting");
 		$Queue_Children{$pid}{'starton'} = time; 
 		return 1;
+	} 
 
 	# Child
-	} else {
-		# this is child process, pls do *NOT* return from this subroutine.
-		# must do exit instead of return. If it does, the child will return become a parent, 
-		# and spawn off its own children. Your system will fill up with processes util death.
+	# this is child process, pls do *NOT* return from this subroutine.
+	# must do exit instead of return. If it does, the child will return become a parent, 
+	# and spawn off its own children. Your system will fill up with processes util death.
 
-		my $child_pid = $$;
+	my $child_pid = $$;
 
-		# initial data queue
-		my @queue_data = ();
+	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
 
-		# recovery SIGHUP,SIGINT,SIGTERM,SIGCHLD
-		$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	my @queue_data = ();  	# initial data queue
+	umask (0117);		# set umask for rw-------
 
-		# unblock signal
-		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+	# create unix domain socket	
+	unlink FILE_QSOCK if -S FILE_QSOCK;
+	my $unix_socket = IO::Socket::UNIX->new(
+		Local		=> FILE_QSOCK,
+		Listen          => SOMAXCONN,
+		Type		=> SOCK_STREAM,
+	);
+	unless (defined $unix_socket) {
+		&log (FILE_LOG, "CRIT queue child $child_pid create unix domain socket error: [$!]");
+		sleep (3);		# prevent from nonstop restarting
+		exit (1);
+	}
+	&log (FILE_LOG, "INFO queue child $child_pid listening on unix domain socket ...");
 
-		# set umask for rw-------
-		umask (0117);
+	while (1) {
 
-		# create unix domain socket	
-		unlink FILE_QSOCK if -S FILE_QSOCK;
-		my $unix_socket = IO::Socket::UNIX->new(
-			Local		=> FILE_QSOCK,
-			Listen          => SOMAXCONN,
-			Type		=> SOCK_STREAM,
-		);
-		unless (defined $unix_socket) {
-			&log (FILE_LOG, "CRIT queue child $child_pid create unix domain socket error: [$!]");
-			sleep (3);		# prevent from nonstop restarting
-			exit (1);
+		# accept request
+	 	my $sockdata = $unix_socket->accept();
+		
+		# read request
+		$_ = <$sockdata> if ($sockdata);
+
+		# remove \r\n
+		if (defined) {
+			chomp; s/[\r\n]//g;
 		}
-		&log (FILE_LOG, "INFO queue child $child_pid create unix domain socket succeed");
 
-		while (1) {
+		# skip if empty request or read request failed
+		unless (defined && length >0) {
+			&log (FILE_LOG,
+			"CRIT queue child $child_pid skip empty request.") if $debug;
+                       	goto CONNEND;
+		}   
+		&log (FILE_LOG,
+		"DEBUG queue child $child_pid accept request $_") if $debug;
 
-			# accept request
-		 	my $sockdata = $unix_socket->accept();
-			&log (FILE_LOG, "DEBUG queue child $child_pid accept request") if $debug;
-			
-			# read request
-			$_ = <$sockdata> if ($sockdata);
-
-			# remove \r\n
-			if (defined) {
-				chomp; s/[\r\n]//g;
-			}
-
-                        # skip if empty request
-			unless (defined && length >0) {
+		# process PUSH
+		if (m/\APUSH (.+)\Z/) {
+			my $queue_number = scalar @queue_data;
+			if ($queue_number > $Config{'queue_maxlen'}) {
 				&log (FILE_LOG,
-				"CRIT queue child $child_pid skip empty request.") if $debug;
-                        	goto CONNEND;
-                        }   
-                        &log (FILE_LOG,
-                        "DEBUG queue child $child_pid accept request $_") if $debug;
-
-			# process PUSH
-			if (m/\APUSH (.+)\Z/) {
-				my $queue_number = scalar @queue_data;
-				if ($queue_number > $Config{'queue_maxlen'}) {
+				"NOTE queue child $child_pid queue number $queue_number reached uplimit, auto SHIFT");
+				my $oldest = shift @queue_data;
+				if ($oldest =~ m/\A(\S+?) (.+)\Z/) {
 					&log (FILE_LOG,
-					"NOTE queue child $child_pid queue number $queue_number reached uplimit, auto SHIFT");
-					my $oldest = shift @queue_data;
-					if ($oldest =~ m/\A(\S+?) (.+)\Z/) {
-						&log (FILE_LOG,
-						"NOTE queue child $child_pid remove oldest data, header [$1]");
-					} else {
-						&log (FILE_LOG,
-						"NOTE queue child $child_pid remove oldest data, header unknown");
-					}
-				} 
-				unless (push @queue_data, $1) {
+					"NOTE queue child $child_pid remove oldest data, header [$1]");
+				} else {
 					&log (FILE_LOG,
-					"CRIT queue child $child_pid push data into queue failed.");
-					goto CONNEND;
+					"NOTE queue child $child_pid remove oldest data, header unknown");
 				}
+			} 
+			unless (push @queue_data, $1) {
 				&log (FILE_LOG,
-				"DEBUG queue child $child_pid push data into queue succeed.") if $debug;
-
-			# process SHIFT
-			} elsif (m/\ASHIFT\Z/) {
-				unless (scalar @queue_data > 0) {
-					&log (FILE_LOG,
-					"DEBUG queue child $child_pid has empty queue, return nothing") if $debug;
-					goto CONNEND;
-				}
-				unless (print $sockdata (shift @queue_data) . "\r\n") {
-					&log (FILE_LOG,
-					"CRIT queue child $child_pid return first data in queue failed");
-					goto CONNEND;
-				}
-				&log (FILE_LOG,
-				"DEBUG queue child $child_pid return first data in queue succeed") if $debug;
-
-			# ignore other
-			} else {
+				"CRIT queue child $child_pid push data into queue failed.");
 				goto CONNEND;
 			}
+			&log (FILE_LOG,
+			"DEBUG queue child $child_pid push data into queue succeed.") if $debug;
 
-			CONNEND: {
-				$sockdata->close() if ($sockdata);
-				next;
+		# process SHIFT
+		} elsif (m/\ASHIFT\Z/) {
+			unless (scalar @queue_data > 0) {
+				&log (FILE_LOG,
+				"DEBUG queue child $child_pid has empty queue, return nothing") if $debug;
+				goto CONNEND;
 			}
+			unless (print $sockdata (shift @queue_data) . "\r\n") {
+				&log (FILE_LOG,
+				"CRIT queue child $child_pid return first data in queue failed");
+				goto CONNEND;
+			}
+			&log (FILE_LOG,
+			"DEBUG queue child $child_pid return first data in queue succeed") if $debug;
+
+		# ignore other
+		} else {
+			goto CONNEND;
 		}
 
-		# tidy up gracefully and finish
-		$unix_socket->close() if ($unix_socket);
-		unlink FILE_QSOCK if -S FILE_QSOCK;
-
-		# this exit is VERY important, otherwise the child will become
-		# a parent producer of more and more children, forking util death.
-		&log (FILE_LOG,
-		"NOTE queue child $child_pid finish its loop, exit");
-		exit (0);
+		CONNEND: {
+			$sockdata->close() if ($sockdata);
+			next;
+		}
 	}
+
+	# tidy up gracefully and finish
+	$unix_socket->close() if ($unix_socket);
+	unlink FILE_QSOCK if -S FILE_QSOCK;
+
+	# this exit is VERY important, otherwise the child will become
+	# a parent producer of more and more children, forking util death.
+	&log (FILE_LOG,
+	"NOTE queue child $child_pid finish its loop, exit");
+	exit (0);
 }
 
 
@@ -797,6 +845,20 @@ sub read_queue {
 	$unix_socket->close() if ($unix_socket);
 
 	return $data;
+}
+
+
+sub nonblock {
+	
+	my $socket = shift;
+	my $flags;
+	
+	$flags = fcntl($socket, F_GETFL, 0) 
+		or die "get flags for socket error: $!";
+
+	fcntl($socket, F_SETFL, $flags | O_NONBLOCK)
+		or die "set socket non-blocking error: $!";
+
 }
 
 __END__
