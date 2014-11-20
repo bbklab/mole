@@ -242,6 +242,8 @@ sub make_new_accept_child {
 	my $handle;
 	my $inbuffer;
 	my $rv;
+	my $deadend = 0;	# if set {deadend}, means this accept child have finished its job, 
+				# and it will **NOT** accept any new connection util exit.
 
 	my %client_inbuffer = ();
 	my %client_outbuffer = ();
@@ -252,11 +254,16 @@ sub make_new_accept_child {
 
 	my $select = IO::Select->new( $listen_socket );
 
-	while ( $i <= $Config{'maxrequest_perchild'} ) {
+
+	while (1) {
 
 		my $header;
 		my $data;
 		my $datalength;
+
+		if ($deadend) {
+			$select->remove( $listen_socket );		# do **NOT** accept new session
+		}
 
 		# accept connect or read socket data
 		foreach $handle ( $select->can_read(1) ) {
@@ -266,6 +273,7 @@ sub make_new_accept_child {
 			my $cinfo;
 
 			if ($handle eq $listen_socket) {
+
 				### accetp_child_got_new_client: $child_pid
 
 				# this is new connect, set {childinfo} with new counter {i}
@@ -275,7 +283,7 @@ sub make_new_accept_child {
 				my ($sockdata,$client) = (undef, undef);
 				unless ( ($sockdata, $client) = $handle->accept() ) {		# SKIP Thundering Herd
 					&log (FILE_LOG,
-					"NOTE accept child $childinfo maybe Thundering Herd, SKIP");
+					"NOTE accept child $childinfo maybe Thundering Herd, SKIP") if $debug;
 					next;
 				}
 
@@ -404,8 +412,6 @@ sub make_new_accept_child {
 					$header = $1;
 					$data = $client_ready{$handle}{'request'}[1];
 					$datalength = length $data;
-					### $data
-					### $datalength
 					&log (FILE_LOG,
 					"INFO accept child $childinfo receive data length [$datalength], client [$cinfo], header [$header]");
 					&log (FILE_LOG,
@@ -426,6 +432,7 @@ sub make_new_accept_child {
 					$client_ready{$handle}{'processing'} = 0;	# mark as finished
 				} else {
 					$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
+					$client_ready{$handle}{'processing'} = 0;	# mark as finished
 				}
 
 			} else { 
@@ -458,7 +465,7 @@ sub make_new_accept_child {
 
 			### hash_prepared_to_output: %client_outbuffer
 			unless ( exists $client_outbuffer{$handle} ) {
-				next;
+				next;		# SKIP session which not prepared to response
 			}
 
 			$rv = $handle->send( $client_outbuffer{$handle}, 0 );
@@ -485,6 +492,8 @@ sub make_new_accept_child {
 				}
 			}
 
+			next;		# this is **IMPORTANT** , go for next send 
+
 			WRITEERR_END: {
 				delete $client_inbuffer{$handle} if exists $client_inbuffer{$handle};
 				delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
@@ -493,6 +502,18 @@ sub make_new_accept_child {
 				$select->remove($handle);	# remove first and then close
 				$handle->close();
 				next;
+			}
+		}
+
+		# exit loop on reached maxrequest_perchild
+		if ( $i > $Config{'maxrequest_perchild'} ) {
+			$deadend = 1;
+			my @fdset = $select->handles;
+			### @fdset
+			if ( scalar @fdset ) {
+				next;		# wait for all fd processed
+			} else {
+				last;		# exit only on all fd processed
 			}
 		}
 	}
