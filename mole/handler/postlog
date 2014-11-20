@@ -362,11 +362,23 @@ eval {
 	}
 	&log ("INFO: $logfrom read proxy welcome banner [$sock_response]");
 	
+	my $rv;
+
 	# send HEAD
-	unless (print $sock "HEAD $type,$hid,$jobid\r\n") {
+	my $header = "HEAD $type,$hid,$jobid";
+	my $header_length = length $header;
+
+	$rv = $sock->send( "$header\r\n", 0 );
+	unless (defined $rv) {
 		&log ("CRIT: $logfrom send HEAD to socket failed.");
 		die 'HEAD Send Failed';
 	}
+	$rv -= 2;
+	unless ( $rv eq $header_length) {
+		&log ("CRIT: $logfrom send half HEAD to socket.");
+		die 'HEAD Send Half';
+	}
+
 	$sock_response = <$sock>;
 	unless (defined $sock_response) {
 		&log ("CRIT: $logfrom send HEAD to socket return nothing.");
@@ -378,13 +390,23 @@ eval {
 		&log ("CRIT: $logfrom send HEAD to socket return [$sock_response]");
 		die 'HEAD Return Error';
 	}
-	&log ("INFO: $logfrom send HEAD to socket return [$sock_response]");
+	&log ("INFO: $logfrom send HEAD ($rv) to socket return [$sock_response]");
 
 	# send DATA
-	unless (print $sock "$encode_data\r\n") {
+	my $data_length = length $encode_data;
+
+	$rv = $sock->send( "$encode_data\r\n", 0 );
+
+	unless (defined $rv) {
 		&log ("CRIT: $logfrom send DATA to socket failed.");
 		die 'DATA Send Failed';
 	}
+	$rv -= 2;
+	unless ( $rv eq $data_length) {
+		&log ("CRIT: $logfrom send half DATA to socket.");
+		die 'DATA Send Half';
+	}
+
 	$sock_response = <$sock>;
 	unless (defined $sock_response) {
 		&log ("CRIT: $logfrom send DATA to socket return nothing.");
@@ -396,7 +418,7 @@ eval {
 		&log ("CRIT: $logfrom send DATA to socket return [$sock_response]");
 		die 'DATA Return Error';
 	}
-	&log ("INFO: $logfrom send DATA to socket return [$sock_response]");
+	&log ("INFO: $logfrom send DATA ($rv) to socket return [$sock_response]");
 
 	alarm(0);
 };
