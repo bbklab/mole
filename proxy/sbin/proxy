@@ -263,52 +263,69 @@ sub make_new_accept_child {
 			### found_readable_fd: $handle
 
 			my $childinfo;
-			my $cdetail;
+			my $cinfo;
 
 			if ($handle eq $listen_socket) {
 				### accetp_child_got_new_client: $child_pid
 
-				# if new connect, set {childinfo} with new counter {i}
+				# this is new connect, set {childinfo} with new counter {i}
 				$childinfo = "$child_pid-($i)";		
 
 				# if new connect, set {cdetail} with new connect
-				my ($sockdata,$client) = $handle->accept();
+				my ($sockdata,$client) = (undef, undef);
+				unless ( ($sockdata, $client) = $handle->accept() ) {		# SKIP Thundering Herd
+					&log (FILE_LOG,
+					"NOTE accept child $childinfo maybe Thundering Herd, SKIP");
+					next;
+				}
+
 				my ($client_port,$client_ip) = sockaddr_in ($client);
 				my $client_ipaddr = inet_ntoa ($client_ip);
-				$cdetail = $client_ipaddr . ':' . $client_port;
+				$cinfo = $client_ipaddr . ':' . $client_port;
 				unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
 					$sockdata->close();	# directly close connection
 					&log (FILE_LOG,
-					"NOTE accept child $childinfo deny connection, client $cdetail");
+					"NOTE accept child $childinfo deny connection, client $cinfo");
 					next;
 				}
 				$sockdata->autoflush(1);	# autoflush is must for server after accept()
 				$sockdata->send( "+OK ready\r\n" );
 				unless ( $select->add($sockdata) ) {
 					&log (FILE_LOG,
-					"CRIT accept child $childinfo failed SELECT-ADD connection, client $cdetail");
+					"CRIT accept child $childinfo failed SELECT-ADD connection, client $cinfo");
 					next;
 				}
 				unless ( &nonblock($sockdata) ) {
 					&log (FILE_LOG,
-					"CRIT accept child $childinfo failed NON-BLOCK connection, client $cdetail");
+					"CRIT accept child $childinfo failed NON-BLOCK connection, client $cinfo");
 					next;
 				}
 				$client_other{$sockdata}{'processor'} = $childinfo;	# save session processor
-				$client_other{$sockdata}{'client'}    = $cdetail;	# save session client
+				$client_other{$sockdata}{'client'}    = $cinfo;		# save session client
 				$client_other{$sockdata}{'starton'}   = time;		# save session start time
 				&log (FILE_LOG,
-				"INFO accept child $childinfo accept connection, client $cdetail");
+				"INFO accept child $childinfo accept connection, client [$cinfo]");
 				$i ++;
 				next;
 			} 
 
-			### read_socket_data
-
-			# if old connect, set {childinfo} as previous saved
+			# this is old connect, set {childinfo} as previous saved
 			$childinfo = $client_other{$handle}{'processor'};
-			# if old connect, set {cdetail} as previous saved
-			$cdetail = $client_other{$handle}{'client'};
+			# this is old connect, set {cdetail} as previous saved
+			$cinfo = $client_other{$handle}{'client'};
+
+			### process_timeout_session_socket
+			if (exists $client_other{$handle}{'starton'}) { 
+				my $session_duration = time - $client_other{$handle}{'starton'};
+				### $session_duration
+				if ( $session_duration >= $Config{'accept_timeout'} ) {
+					&log (FILE_LOG,
+					"NOTE accept child $childinfo close timeout connection, client $cinfo");
+					goto READERR_END;
+				}
+			}
+
+			### read_socket_data
 
 			$inbuffer = '';
 			$rv = $handle->recv($inbuffer, RCVBUFSIZE, 0);
@@ -329,18 +346,21 @@ sub make_new_accept_child {
 			if ( $inbuffer_length > $Config{'maxlen_accept'} ) {
 				$handle->send( "-ERR message too long\r\n", 0 );
 				&log (FILE_LOG,
-				"CRIT accept child $childinfo receive message length [$inbuffer_length] exceed, client [$cdetail]");
+				"CRIT accept child $childinfo receive message length [$inbuffer_length] exceed, client [$cinfo]");
 				goto READERR_END;
 			}
 
 			if ($client_inbuffer{$handle} =~ m/(.*)\r\n/) {
 				### receive_whole_line: $1
 				push @{$client_ready{$handle}{'request'}}, $1;
-				my @request = @{$client_ready{$handle}{'request'}};
-				### @request
+				# my @request = @{$client_ready{$handle}{'request'}};
+				## @request
 				delete $client_inbuffer{$handle};
 				next;
 			}
+
+			next;		# this is **IMPORTANT** , go for next recv
+					# especially for data larger than RCVBUFSIZE
 
 			READERR_END: {
 				### got_into_readerr_end_close_myself_socket
@@ -361,7 +381,7 @@ sub make_new_accept_child {
 			# this is old connect, set {childinfo} as previous saved
 			my $childinfo = $client_other{$handle}{'processor'};
 			# this is old connect, set {cdetail} as previous saved
-			my $cdetail = $client_other{$handle}{'client'};
+			my $cinfo = $client_other{$handle}{'client'};
 
 			if ( scalar @{$client_ready{$handle}{'request'}} eq 1 ) {
 				if ( $client_ready{$handle}{'processing'} )  {
@@ -370,7 +390,7 @@ sub make_new_accept_child {
 				if ( $client_ready{$handle}{'request'}[0] =~ m/\AHEAD\s+(\w+,\S+,\S+)\Z/i ) {
 					$header = $1;
 					&log (FILE_LOG,
-					"INFO accept child $childinfo receive header [$header], client [$cdetail]");
+					"DEBUG accept child $childinfo receive header [$header], client [$cinfo]") if $debug;
 					$client_outbuffer{$handle} = "+OK recorded\r\n";
 					$client_ready{$handle}{'processing'} = 1;	# mark as processing
 					next;						# do **NOT** delete myself
@@ -387,20 +407,20 @@ sub make_new_accept_child {
 					### $data
 					### $datalength
 					&log (FILE_LOG,
-					"INFO accept child $childinfo receive data length [$datalength], client [$cdetail], header [$header]");
+					"INFO accept child $childinfo receive data length [$datalength], client [$cinfo], header [$header]");
 					&log (FILE_LOG,
-					"DEBUG accept child $childinfo receive data [$data], client [$cdetail], header [$header]") if $debug;
+					"DEBUG accept child $childinfo receive data [$data], client [$cinfo], header [$header]") if $debug;
 					if (!$datalength) {
 						&log (FILE_LOG,
-						"NOTE accept child $childinfo received empty data, client [$cdetail], header [$header]");
+						"NOTE accept child $childinfo received empty data, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "-ERR empty data\r\n";
 					} elsif ( &write_queue($childinfo, $header, $data) ) {
 						&log (FILE_LOG,
-						"INFO accept child $childinfo write data into queue succeed, client [$cdetail], header [$header]");
+						"INFO accept child $childinfo write data into queue succeed, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "+OK accepted\r\n";
 					} else {
 						&log (FILE_LOG,
-						"CRIT accept child $childinfo write data into queue failed, client [$cdetail], header [$header]");
+						"CRIT accept child $childinfo write data into queue failed, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "-ERR write queue fail\r\n";
 					}
 					$client_ready{$handle}{'processing'} = 0;	# mark as finished
@@ -410,14 +430,32 @@ sub make_new_accept_child {
 
 			} else { 
 				&log (FILE_LOG,
-				"NOTE accept child $childinfo more than two requests found, client [$cdetail], header [$header]");
+				"NOTE accept child $childinfo more than two requests found, client [$cinfo], header [$header]");
 				delete $client_ready{$handle};
 			}
 		}
 
 		# response to client
 		foreach $handle ( $select->can_write(1) ) {
+
 			### found_writable_fd: $handle
+
+			# this is old connect, set {childinfo} as previous saved
+			my $childinfo = $client_other{$handle}{'processor'};
+			# this is old connect, set {cdetail} as previous saved
+			my $cinfo = $client_other{$handle}{'client'};
+
+			### process_timeout_session_socket
+			if (exists $client_other{$handle}{'starton'}) { 
+				my $session_duration = time - $client_other{$handle}{'starton'};
+				### $session_duration
+				if ( $session_duration >= $Config{'accept_timeout'} ) {
+					&log (FILE_LOG,
+					"NOTE accept child $childinfo close timeout connection, client $cinfo");
+					goto WRITEERR_END;
+				}
+			}
+
 			### hash_prepared_to_output: %client_outbuffer
 			unless ( exists $client_outbuffer{$handle} ) {
 				next;
@@ -555,14 +593,23 @@ sub make_new_sender_child {
 			&log (FILE_LOG,
 			"DEBUG sender child $child_pid connect $dest_detail succeed. header [$header] ") if $debug;
 
-			if (print $post_connect "$data\r\n") {;
-				&log (FILE_LOG,
-				"INFO sender child $child_pid send data to remote host succeed. header [$header]");
-			} else {
+			my $rv = $post_connect->send( "$data\r\n", 0 );
+	
+			unless (defined $rv) {
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid send data to remote host failed. header [$header]");
 				die 'send data failed';
 			}
+
+			$rv -= 2;
+			unless ( $rv eq $data_length ) {
+				&log (FILE_LOG,
+				"CRIT sender child $child_pid send half data (length=$rv) to remote host. header [$header]");
+				die 'send half data';
+			}
+
+			&log (FILE_LOG,
+			"INFO sender child $child_pid send (length=$rv) data to remote host succeed. header [$header]");
 
 			my $response = <$post_connect> if ($post_connect);
 			if (defined $response && length $response) {
@@ -676,6 +723,7 @@ sub make_new_queue_child {
 
 		# process PUSH
 		if (m/\APUSH (.+)\Z/) {
+			my $data = $1;
 			my $queue_number = scalar @queue_data;
 			if ($queue_number > $Config{'queue_maxlen'}) {
 				&log (FILE_LOG,
@@ -689,13 +737,7 @@ sub make_new_queue_child {
 					"NOTE queue child $child_pid remove oldest data, header unknown");
 				}
 			} 
-			unless (push @queue_data, $1) {
-				&log (FILE_LOG,
-				"CRIT queue child $child_pid push data into queue failed.");
-				goto CONNEND;
-			}
-			&log (FILE_LOG,
-			"DEBUG queue child $child_pid push data into queue succeed.") if $debug;
+			push @queue_data, $data;
 
 		# process SHIFT
 		} elsif (m/\ASHIFT\Z/) {
@@ -849,7 +891,6 @@ sub read_queue {
 
 
 sub nonblock {
-	
 	my $socket = shift;
 	my $flags;
 	
@@ -858,7 +899,6 @@ sub nonblock {
 
 	fcntl($socket, F_SETFL, $flags | O_NONBLOCK)
 		or die "set socket non-blocking error: $!";
-
 }
 
 __END__
