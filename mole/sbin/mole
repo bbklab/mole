@@ -373,11 +373,15 @@ else
 
 	# === Execute Inner Plugins ON Start
 	gettext "6. running inner plugins       ... "
-	for plugin_name in mole_clear_overdue mole_log_rotate
+	for plugin_name in mole_clear_overdue mole_log_rotate mole_iam_alive
 	do
 		write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [${plugin_name}] ..."
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
+	rm -f /var/tmp/.mole.gendiff.tmp /var/tmp/.mole_report_sysinfo.tmp 2>&-
+	write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [mole_report_sysinfo] ..."
+	process_inner_plugin "mole_report_sysinfo" "startrun"   # startrun: no need to un_lock
+
 	echo -e "[$(echo_green "$(gettext "succeed!")")]"
 	write_log -f "${MOLE_LOG}" "START000 MOLE inner plugins execution done. details in ${INNER_LOG##*/}."
 	
