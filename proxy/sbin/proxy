@@ -382,7 +382,7 @@ sub make_new_accept_child {
 				delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
 				delete $client_ready{$handle} if exists $client_ready{$handle};
 				delete $client_other{$handle} if exists $client_other{$handle};
-				$select->remove($handle);	# remove first and then close
+				$select->remove($handle);	# remove first and then close, otherwise select() will lead to 100% CPU
 				$handle->close();
 				next;
 			}
@@ -505,7 +505,7 @@ sub make_new_accept_child {
 				delete $client_outbuffer{$handle} if exists $client_outbuffer{$handle};
 				delete $client_ready{$handle} if exists $client_ready{$handle};
 				delete $client_other{$handle} if exists $client_other{$handle};
-				$select->remove($handle);	# remove first and then close
+				$select->remove($handle);	# remove first and then close, otherwise select() will lead to 100% CPU
 				$handle->close();
 				next;
 			}
