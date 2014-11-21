@@ -1,0 +1,46 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "version required!"
+  echo "example: 1.0.1  1.1.0"
+  exit 1
+fi
+
+esop="/usr/local/esop"
+rsync="/usr/bin/rsync"
+allin="/data/esop_codes/rpm_workdir/esop_agent_build/allin"
+
+# src dir
+src="/src/esop_codes/"
+
+# dest dir
+dst="/data/esop_codes"
+
+# exclude
+eld="server-side"
+
+# remove esop
+/bin/rm -rf "${esop}"
+
+# check rsync
+if [ -f "${rsync}" ] && [ -x "${rsync}" ]; then
+	:
+else
+	echo "--- ${rsync} not prepared."
+fi
+
+# rsync codes to {dest}
+${rsync} -avzrtopgl --stats --progress --delete "${src}" "${dst}" --exclude="${eld}"
+if [ $? -eq 0 ]; then
+	echo "--- rsync ${src} to ${dst} succeed!"
+else
+	echo "--- rsync ${src} to ${dst} failed!"
+	exit 1
+fi
+
+# check {allin}
+if [ -f "${allin}" ] && [ -x "${allin}" ]; then
+	/bin/bash ${allin} ${1}
+else
+	echo "--- {allin} scripts not prepared."
+fi
