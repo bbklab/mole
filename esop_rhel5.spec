@@ -1,13 +1,13 @@
 Summary: 	agent of esop
 Name: 		esop
-Version: 	1.1.1
+Version: 	1.2.0
 Release: 	rhel5
-License: 	Commercial
+License: 	GPL
 Group:  	Extension
 Vendor:		Beijing eYou Information Technology Co., Ltd.
 Packager: 	Guangzheng Zhang<zhangguangzheng@eyou.net>
 BuildRoot: 	/var/tmp/%{name}-%{version}-%{release}-root
-Source0: 	esop-1.1.1-rhel5.tgz
+Source0: 	esop-1.2.0-rhel5.tgz
 Source1: 	esop.init
 Requires: 		coreutils >= 5.97, bash >= 3.1
 Requires:		e2fsprogs >= 1.39, procps >= 3.2.7
@@ -167,8 +167,15 @@ fi
 
 %changelog
 * Wed Oct  8 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
-- 测试发布 1.1.1
-- 新增: sysinfo协议数据, 合并来自于之前的插件:system_fixinfo和system_dyninfo
+- 测试发布 1.2.0
+- 新增: 新版传输代理通道, 功能更加稳定, 解决通道经常丢数据的问题
+- 新增: 传输代理通道新增待发数据的队列总数控制参数
+- 新增: 传输代理通道和mole都增加会话超时控制参数, 解决插件执行超时的问题
+- 优化: 用Perl完全重构传输代理通道, 安装包体积从12M大幅精简为1.3M
+- 优化: 由mole在生成数据的同时就对数据进行压缩和加密, 从源头保护数据
+- 优化: 合并插件system_fixinfo/system_dyninfo为可增量变化的协议数据, 压缩传输量
+- 调整: 其他优化和调整
+- 
 * Wed Sep 17 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 正式版 1.1.0
 - 新增: 客户端通知(SMS/Email)的策略控制,可配置通知次数和时间范围
