@@ -113,8 +113,12 @@ $SIG{'TERM'} = $SIG{'INT'} = sub {
 	exit (0);
 };
 
+# Install Signal Handler: Broken PIPE
+$SIG{'PIPE'} = sub {		# log SIGPIPE and exit
+	&log (FILE_LOG, "CRIT proxy caught signal PIPE, exiting...");
+	exit (1);
+};
 
-=head1
 
 # Run as a Daemon
 my $child = fork(); 
@@ -160,7 +164,6 @@ unless (print FPID $$) {
 close FPID;
 &log (FILE_LOG, "INFO proxy daemon $$ running ...");
 
-=cut
 
 # On Startup Initial
 # Fork Off Our Queue -> Sender -> Accept Children
@@ -238,6 +241,12 @@ sub make_new_accept_child {
 	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
 	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
 
+	$SIG{'PIPE'} = sub {		# log SIGPIPE and exit
+		&log (FILE_LOG,
+		"CRIT accept child $child_pid caught SIGPIPE, exit");
+		exit (1);
+	};
+	
 	my $i = 1;		# served request counter
 	my $handle;
 	my $inbuffer;
@@ -558,6 +567,12 @@ sub make_new_sender_child {
 	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
 	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
 
+	$SIG{'PIPE'} = sub {		# log SIGPIPE and exit
+		&log (FILE_LOG,
+		"CRIT sender child $child_pid caught SIGPIPE, exit");
+		exit (1);
+	};
+
 	while (1) {
 
 		# read queue
@@ -699,6 +714,12 @@ sub make_new_queue_child {
 
 	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
 	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+	$SIG{'PIPE'} = sub {		# log SIGPIPE and exit
+		&log (FILE_LOG,
+		"CRIT queue child $child_pid caught SIGPIPE, exit");
+		exit (1);
+	};
 
 	my @queue_data = ();  	# initial data queue
 	umask (0117);		# set umask for rw-------
