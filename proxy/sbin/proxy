@@ -115,8 +115,7 @@ $SIG{'TERM'} = $SIG{'INT'} = sub {
 
 # Install Signal Handler: Broken PIPE
 $SIG{'PIPE'} = sub {		# log SIGPIPE and exit
-	&log (FILE_LOG, "CRIT proxy caught signal PIPE, exiting...");
-	exit (1);
+	&log (FILE_LOG, "CRIT proxy caught signal PIPE, keep running...");
 };
 
 
