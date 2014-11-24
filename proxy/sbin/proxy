@@ -647,10 +647,28 @@ sub make_new_sender_child {
 			if (defined $response && length $response) {
 				chomp $response;
 				&log (FILE_LOG,
-				"INFO sender child $child_pid receive response from remote host [$response]. header [$header]");
+				"DEBUG sender child $child_pid receive response from remote host [$response]. header [$header]") if $debug;
+				if ($response =~ /\A(\d)\s+(\d+)\Z/) {
+					my ($flag,$rcvlen) = ($1,$2);
+					if ($flag eq 0) {
+						if ($rcvlen eq $data_length) {
+							&log (FILE_LOG,
+							"INFO sender child $child_pid receive fulldata (length=$rcvlen) response from remote host. header [$header]");
+						} else {
+							&log (FILE_LOG,
+							"CRIT sender child $child_pid receive halfdata (length=$rcvlen) response from remote host. header [$header]");
+						}
+					} else {
+						&log (FILE_LOG,
+						"CRIT sender child $child_pid receive failed response from remote host [$response]. header [$header]");
+					}
+				} else {
+					&log (FILE_LOG,
+					"CRIT sender child $child_pid receive unrecognized response from remote host [$response]. header [$header]");
+				}
 			} else {
 				&log (FILE_LOG,
-				"NOTE sender child $child_pid didn't receive any response from remote host. header [$header]");
+				"CRIT sender child $child_pid didn't receive any response from remote host. header [$header]");
 			}
 
 			$post_connect->close() if ($post_connect);
