@@ -48,6 +48,7 @@ our %Accept_Children = (); 		# current accept children, only used in parent proc
 our %Sender_Children = ();		# current sender children, only used in parent process
 our %Queue_Children = ();		# current queue children, only used in parent process
 our $debug = $Config{'debug'};
+### %Config
 
 # Establish server socket, bind and listen.
 our $listen_socket = IO::Socket::INET->new(
@@ -834,6 +835,8 @@ sub make_new_queue_child {
 
 
 sub load_configs {
+	my %Result_Config = ();
+
 	my %Config = (
 		'debug'				=> 	['global','debug',0],
 		'listen_addr'			=> 	['accept','listen_addr','0.0.0.0'],
@@ -843,10 +846,10 @@ sub load_configs {
 		'start_child'			=>	['accept','start_child',5],
 		'maxrequest_perchild'		=>	['accept','maxrequest_perchild',2000],
 		'accept_timeout'		=>	['accept','accept_timeout',10],
+		'queue_maxlen'                  =>      ['queue','queue_maxlen',1000],
 		'dest_addr'			=>	['sender','dest_addr','mole.eyousop.com'],
 		'dest_port'			=>	['sender','dest_port',8538],
 		'sender_timeout'		=>	['sender','sender_timeout',30],
-		'queue_maxlen'                  =>      ['queue','queue_maxlen',1000],
 	);
 
 	# load proxy ini configs
@@ -854,18 +857,72 @@ sub load_configs {
 		my ($section,$key,$default) = @{$Config{$config}};
 		my ($value, $error) = &read_ini($section,$key,FILE_CONF);
 		if (defined $value) {
-			$Config{$config} = $value;
+			$Result_Config{$config} = $value;
 			&log (FILE_LOG, "INFO load config $config = $value");
 		} else {
 			&log (FILE_LOG, "NOTE load config $config error: $error, load default ($default)");
-			$Config{$config} = $default;
+			$Result_Config{$config} = $default;
 		}
 	}
 
-	# use anoymous array ref
-	$Config{'src_allow'} = [ split(/\s*,\s*/, $Config{'src_allow'}) ];
+	# reset src_allow
+	$Result_Config{'src_allow'} = [ split(/\s*,\s*/, $Result_Config{'src_allow'}) ];		# use anoymous array ref
 
-	return %Config;
+	if ($Result_Config{'debug'} ne 0 && $Result_Config{'debug'} ne 1) {
+		my ($section,$key,$default) = @{$Config{'debug'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'debug'} = $default;
+	}
+
+	if ($Result_Config{'listen_port'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'listen_port'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'listen_port'} = $default;
+	}
+
+	if ($Result_Config{'maxlen_accept'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'maxlen_accept'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'maxlen_accept'} = $default;
+	}
+
+	if ($Result_Config{'start_child'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'start_child'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'start_child'} = $default;
+	}
+
+	if ($Result_Config{'maxrequest_perchild'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'maxrequest_perchild'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'maxrequest_perchild'} = $default;
+	}
+
+	if ($Result_Config{'accept_timeout'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'accept_timeout'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'accept_timeout'} = $default;
+	}
+
+	if ($Result_Config{'queue_maxlen'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'queue_maxlen'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'queue_maxlen'} = $default;
+	}
+
+	if ($Result_Config{'dest_port'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'dest_port'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'dest_port'} = $default;
+	}
+
+	if ($Result_Config{'sender_timeout'} =~ m/\D/) {
+		my ($section,$key,$default) = @{$Config{'sender_timeout'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'sender_timeout'} = $default;
+	}
+
+	return %Result_Config;
 }
 
 sub write_queue {
