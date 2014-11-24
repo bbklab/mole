@@ -761,6 +761,11 @@ sub make_new_queue_child {
 
 	while (1) {
 
+		unless ( -S FILE_QSOCK ) {
+			&log (FILE_LOG, "CRIT queue child $child_pid lost find its SOCK FILE, exit");
+			exit (1);
+		}
+
 		# accept request
 	 	my $sockdata = $unix_socket->accept();
 		
@@ -831,8 +836,7 @@ sub make_new_queue_child {
 
 	# this exit is VERY important, otherwise the child will become
 	# a parent producer of more and more children, forking util death.
-	&log (FILE_LOG,
-	"NOTE queue child $child_pid finish its loop, exit");
+	&log (FILE_LOG, "NOTE queue child $child_pid finish its loop, exit");
 	exit (0);
 }
 
