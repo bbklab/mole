@@ -48,6 +48,7 @@ our %Accept_Children = (); 		# current accept children, only used in parent proc
 our %Sender_Children = ();		# current sender children, only used in parent process
 our %Queue_Children = ();		# current queue children, only used in parent process
 our $debug = $Config{'debug'};
+our $daemon = $Config{'daemon'};
 ### %Config
 
 # Establish server socket, bind and listen.
@@ -121,48 +122,50 @@ $SIG{'PIPE'} = sub {		# log SIGPIPE and exit
 
 
 # Run as a Daemon
-my $child = fork(); 
-unless (defined $child) {
-	&log (FILE_LOG, "CRIT proxy fork failed, $!");
-	exit (1);
-}
+if ($daemon) {
+	my $child = fork(); 
+	unless (defined $child) {
+		&log (FILE_LOG, "CRIT proxy fork failed, $!");
+		exit (1);
+	}
 
-# father exit
-if ($child) {
-	exit (0);
-}
+	# father exit
+	if ($child) {
+		exit (0);
+	}
      
-# close STDIN/STDOUT/STDERR
-for my $handle (*STDIN, *STDOUT, *STDERR) {
-	unless ( open ($handle, "+<", "/dev/null") ) {
-		&log (FILE_LOG, "CRIT proxy reopen $handle to /dev/null error: $!");
+	# close STDIN/STDOUT/STDERR
+	for my $handle (*STDIN, *STDOUT, *STDERR) {
+		unless ( open ($handle, "+<", "/dev/null") ) {
+			&log (FILE_LOG, "CRIT proxy reopen $handle to /dev/null error: $!");
+			die "$!\n";
+		}
+	}
+ 
+	# child become leader
+	POSIX::setsid() ||  die "$!\n";
+
+	# chaning into /
+	chdir '/' || die "$!\n";
+
+	# set umask
+	umask(022) || die "$!\n";
+
+	# set ENV
+	$ENV{'PATH'} = '/sbin:/bin:/usr/sbin:/usr/bin';
+ 
+	# save daemon pid
+	unless ( open (FPID,">",FILE_PID) ) {
+		&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
 		die "$!\n";
 	}
+	unless (print FPID $$) {
+		&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
+		die "$!\n";
+	}
+	close FPID;
+	&log (FILE_LOG, "INFO proxy daemon $$ running ...");
 }
- 
-# child become leader
-POSIX::setsid() ||  die "$!\n";
-
-# chaning into /
-chdir '/' || die "$!\n";
-
-# set umask
-umask(022) || die "$!\n";
-
-# set ENV
-$ENV{'PATH'} = '/sbin:/bin:/usr/sbin:/usr/bin';
- 
-# save daemon pid
-unless ( open (FPID,">",FILE_PID) ) {
-	&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
-	die "$!\n";
-}
-unless (print FPID $$) {
-	&log (FILE_LOG, "CRIT proxy save daemon pid failed, $!");
-	die "$!\n";
-}
-close FPID;
-&log (FILE_LOG, "INFO proxy daemon $$ running ...");
 
 
 # On Startup Initial
@@ -839,6 +842,7 @@ sub load_configs {
 
 	my %Config = (
 		'debug'				=> 	['global','debug',0],
+		'daemon'			=> 	['global','daemon',1],
 		'listen_addr'			=> 	['accept','listen_addr','0.0.0.0'],
 		'listen_port'			=> 	['accept','listen_port',8548],
 		'src_allow'			=>	['accept','src_allow','127.0.0.1'],
@@ -860,18 +864,33 @@ sub load_configs {
 			$Result_Config{$config} = $value;
 			&log (FILE_LOG, "INFO load config $config = $value");
 		} else {
-			&log (FILE_LOG, "NOTE load config $config error: $error, load default ($default)");
+			&log (FILE_LOG, "NOTE load config $config error: [$error], load default ($default)");
 			$Result_Config{$config} = $default;
 		}
 	}
 
-	# reset src_allow
-	$Result_Config{'src_allow'} = [ split(/\s*,\s*/, $Result_Config{'src_allow'}) ];		# use anoymous array ref
+	if ($Result_Config{'src_allow'} =~ s/\A\s*file://gi) {
+		$Result_Config{'src_allow'} = [ &read_fitem($Result_Config{'src_allow'},PATH_BASE,'#') ];
+	} else {
+		$Result_Config{'src_allow'} = [ split(/\s*,\s*/, $Result_Config{'src_allow'}) ];		# use anoymous array ref
+	}
+
+	unless (scalar @{$Result_Config{'src_allow'}}) {
+		my ($section,$key,$default) = @{$Config{'src_allow'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'src_allow'} = $default;
+	}
 
 	if ($Result_Config{'debug'} ne 0 && $Result_Config{'debug'} ne 1) {
 		my ($section,$key,$default) = @{$Config{'debug'}};
 		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
-		$Result_Config{'debug'} = $default;
+		$Result_Config{'debug'} = [ $default ];
+	}
+
+	if ($Result_Config{'daemon'} ne 0 && $Result_Config{'daemon'} ne 1) {
+		my ($section,$key,$default) = @{$Config{'daemon'}};
+		&log (FILE_LOG, "NOTE load config [$section-$key] misform, load default ($default)");
+		$Result_Config{'daemon'} = $default;
 	}
 
 	if ($Result_Config{'listen_port'} =~ m/\D/) {

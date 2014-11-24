@@ -18,6 +18,7 @@ our @ISA = qw(Exporter);
 # will save memory.
 our %EXPORT_TAGS = ( 'all' => [ qw(
     read_ini 
+    read_fitem
     hrtime
     is_sub
     log
@@ -27,6 +28,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw(
     read_ini
+    read_fitem
     hrtime
     is_sub
     log
@@ -80,6 +82,32 @@ sub read_ini {
     	}
     	close FH;
     	return (undef, "config [$section]-[$key] not defined");
+}
+
+sub read_fitem {
+	my ($config,$basedir,$comment) = @_;
+	my @item = ();
+	
+	if ($config && $basedir) {
+		$config =~ s/\A\s*file://gi;
+		unless ($config =~ m/\A\//) {
+			$config = $basedir . '/' . $config;
+		}
+		unless ($comment) {
+			$comment = '#';
+		}
+		if (open FH, "<", $config) {
+			while (<FH>) {
+				next if (m/\A\s*\Q$comment\E/);
+				next if (m/\A\s*\Z/);
+				chomp;
+				push @item, (split /\s+/, $_);
+			}
+			close FH;
+		}
+	}
+
+	return @item;
 }
 
 sub hrtime {
