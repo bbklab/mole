@@ -37,6 +37,8 @@ use constant PID_FILENAME => 'proxy.pid';
 use constant FILE_PID  => PATH_RUN  . '/' . PID_FILENAME;
 use constant QSOCK_FILENAME => 'queue.sock';
 use constant FILE_QSOCK => PATH_TMP . '/' . QSOCK_FILENAME;
+use constant STATUS_FILENAME => 'status';
+use constant FILE_STATUS => PATH_TMP . '/' . STATUS_FILENAME;
 
 # Use our module 
 use lib PATH_LIB;
@@ -110,6 +112,7 @@ $SIG{'TERM'} = $SIG{'INT'} = sub {
 	kill 'TERM', keys %Sender_Children;
 	kill 'TERM', keys %Queue_Children;
 	unlink FILE_QSOCK if -S FILE_QSOCK;
+	unlink FILE_STATUS if -f FILE_STATUS;
 	unlink FILE_PID if -s FILE_PID;
 	&log (FILE_LOG, "NOTE proxy finished."); 
 	exit (0);
@@ -120,6 +123,13 @@ $SIG{'PIPE'} = sub {		# log SIGPIPE and exit
 	&log (FILE_LOG, "CRIT proxy caught signal PIPE, keep running...");
 };
 
+# Install Signal Handler: USR1, Output PerfData
+$SIG{'USR1'} = sub {
+	unlink FILE_STATUS if -f FILE_STATUS;
+	kill 'USR1', keys %Accept_Children;
+	kill 'USR1', keys %Sender_Children;
+	kill 'USR1', keys %Queue_Children;
+};
 
 # Run as a Daemon
 if ($daemon) {
@@ -250,6 +260,32 @@ sub make_new_accept_child {
 		exit (1);
 	};
 	
+	my %perfdata = (	# init perfdata counter hash
+		'counter'	=> 1,	# nower request counter
+		'connect'	=> 0,	# connect sum
+		'deny'		=> 0,	# denied connect sum
+		'allow'		=> 0,	# allowed connect sum
+		'tmout'		=> 0,	# tmout session sum
+		'nohead'	=> 0,	# nohead session sum
+		'maxlen'	=> 0,	# lengthexceed session sum
+		'reqline'	=> 0,	# request line sum
+		'nulldata'	=> 0,	# empty data sum
+		'queueerror'	=> 0,	# write queue error sum
+		'succeed'	=> 0,	# accepted succeed sum
+		'unusual'	=> 0,	# unusual event sum
+	);
+
+	$SIG{'USR1'} = sub {
+		if (open FH, ">>", FILE_STATUS) {
+			my $perfdata = "accept $child_pid: ";
+			foreach (keys %perfdata) {
+				$perfdata .= "$_:$perfdata{$_}, ";
+			}
+			print FH "$perfdata\n";
+			close FH;
+		}
+	};
+
 	my $i = 1;		# served request counter
 	my $handle;
 	my $inbuffer;
@@ -290,6 +326,7 @@ sub make_new_accept_child {
 
 				# this is new connect, set {childinfo} with new counter {i}
 				$childinfo = "$child_pid-($i)";		
+				$perfdata{'counter'} = $i;
 
 				# if new connect, set {cdetail} with new connect
 				my ($sockdata,$client) = (undef, undef);
@@ -299,23 +336,28 @@ sub make_new_accept_child {
 					next;
 				}
 
+				$perfdata{'connect'} ++;
 				my ($client_port,$client_ip) = sockaddr_in ($client);
 				my $client_ipaddr = inet_ntoa ($client_ip);
 				$cinfo = $client_ipaddr . ':' . $client_port;
 				unless (&is_sub ($client_ipaddr, @{$Config{'src_allow'}})) {
+					$perfdata{'deny'} ++;
 					$sockdata->close();	# directly close connection
 					&log (FILE_LOG,
 					"NOTE accept child $childinfo deny connection, client $cinfo");
 					next;
 				}
+				$perfdata{'allow'} ++;
 				$sockdata->autoflush(1);	# autoflush is must for server after accept()
 				$sockdata->send( "+OK ready\r\n" );
 				unless ( $select->add($sockdata) ) {
+					$perfdata{'unusual'} ++;
 					&log (FILE_LOG,
 					"CRIT accept child $childinfo failed SELECT-ADD connection, client $cinfo");
 					next;
 				}
 				unless ( &nonblock($sockdata) ) {
+					$perfdata{'unusual'} ++;
 					&log (FILE_LOG,
 					"CRIT accept child $childinfo failed NON-BLOCK connection, client $cinfo");
 					next;
@@ -339,6 +381,7 @@ sub make_new_accept_child {
 				my $session_duration = time - $client_other{$handle}{'starton'};
 				### $session_duration
 				if ( $session_duration >= $Config{'accept_timeout'} ) {
+					$perfdata{'tmout'} ++;
 					&log (FILE_LOG,
 					"NOTE accept child $childinfo close timeout connection, client $cinfo");
 					goto READERR_END;
@@ -350,6 +393,7 @@ sub make_new_accept_child {
 			$inbuffer = '';
 			$rv = $handle->recv($inbuffer, RCVBUFSIZE, 0);
 			unless ( defined $rv ) {
+				$perfdata{'unusual'} ++;
 				### recv_error
 				goto READERR_END;
 			}
@@ -364,6 +408,7 @@ sub make_new_accept_child {
 
 			my $inbuffer_length = length $client_inbuffer{$handle};
 			if ( $inbuffer_length > $Config{'maxlen_accept'} ) {
+				$perfdata{'maxlen'} ++;
 				$handle->send( "-ERR message too long\r\n", 0 );
 				&log (FILE_LOG,
 				"CRIT accept child $childinfo receive message length [$inbuffer_length] exceed, client [$cinfo]");
@@ -371,6 +416,7 @@ sub make_new_accept_child {
 			}
 
 			if ($client_inbuffer{$handle} =~ m/(.*)\r\n/) {
+				$perfdata{'reqline'} ++;
 				### receive_whole_line: $1
 				push @{$client_ready{$handle}{'request'}}, $1;
 				delete $client_inbuffer{$handle};
@@ -413,6 +459,7 @@ sub make_new_accept_child {
 					$client_ready{$handle}{'processing'} = 1;	# mark as processing
 					next;						# do **NOT** delete myself
 				} else {
+					$perfdata{'nohead'} ++;
 					$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
 					$client_ready{$handle}{'processing'} = 0;	# mark as finished
 				}
@@ -427,25 +474,30 @@ sub make_new_accept_child {
 					&log (FILE_LOG,
 					"DEBUG accept child $childinfo receive data [$data], client [$cinfo], header [$header]") if $debug;
 					if (!$datalength) {
+						$perfdata{'nulldata'} ++;
 						&log (FILE_LOG,
 						"NOTE accept child $childinfo received empty data, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "-ERR empty data\r\n";
 					} elsif ( &write_queue($childinfo, $header, $data) ) {
+						$perfdata{'succeed'} ++;
 						&log (FILE_LOG,
 						"INFO accept child $childinfo write data into queue succeed, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "+OK accepted\r\n";
 					} else {
+						$perfdata{'queueerror'} ++;
 						&log (FILE_LOG,
 						"CRIT accept child $childinfo write data into queue failed, client [$cinfo], header [$header]");
 						$client_outbuffer{$handle} = "-ERR write queue fail\r\n";
 					}
 					$client_ready{$handle}{'processing'} = 0;	# mark as finished
 				} else {
+					$perfdata{'nohead'} ++;
 					$client_outbuffer{$handle} = "-ERR HEAD message first\r\n";
 					$client_ready{$handle}{'processing'} = 0;	# mark as finished
 				}
 
 			} else { 
+				$perfdata{'unusua'} ++;
 				&log (FILE_LOG,
 				"NOTE accept child $childinfo more than two requests found, client [$cinfo], header [$header]");
 				delete $client_ready{$handle};
@@ -467,6 +519,7 @@ sub make_new_accept_child {
 				my $session_duration = time - $client_other{$handle}{'starton'};
 				### $session_duration
 				if ( $session_duration >= $Config{'accept_timeout'} ) {
+					$perfdata{'tmout'} ++;
 					&log (FILE_LOG,
 					"NOTE accept child $childinfo close timeout connection, client $cinfo");
 					goto WRITEERR_END;
@@ -481,11 +534,13 @@ sub make_new_accept_child {
 			$rv = $handle->send( $client_outbuffer{$handle}, 0 );
 			unless ( defined $rv ) {
 				# send_error_1
+				$perfdata{'unusual'} ++;
 				goto WRITEERR_END;
 			}
 			unless ( $rv eq length $client_outbuffer{$handle}
 				|| $! eq POSIX::EWOULDBLOCK ) {
 				# send_error_2
+				$perfdata{'unusual'} ++;
 				goto WRITEERR_END;
 			}
 
@@ -576,10 +631,37 @@ sub make_new_sender_child {
 		exit (1);
 	};
 
+	my %perfdata = (	# init perfdata counter hash
+		'readqueue'		=> 0,		# read queue sum
+		'readempty'		=> 0,		# read empty sum
+		'readnormal'		=> 0,		# read normal sum
+		'readmisform'		=> 0,		# read misform sum
+		'sendtmout'		=> 0,		# send timout sum
+		'senderror'		=> 0,		# send errror sum
+		'sendhalf'		=> 0,		# send halfdata sum
+		'sendsucc'		=> 0,		# send success sum
+		'empty'			=> 0,		# response empty sum (at last)
+		'error'			=> 0,		# response error sum (at last)
+		'half'			=> 0,		# response halfdata sum (at last)
+		'succ'			=> 0,		# response succ sum (at last)
+	);
+
+	$SIG{'USR1'} = sub {
+		if (open FH, ">>", FILE_STATUS) {
+			my $perfdata = "sender $child_pid: ";
+			foreach (keys %perfdata) {
+				$perfdata .= "$_:$perfdata{$_}, ";
+			}
+			print FH "$perfdata\n";
+			close FH;
+		}
+	};
+
 	while (1) {
 
 		# read queue
 		$_ = &read_queue($child_pid);
+		$perfdata{'readqueue'} ++;
 
 		# remove \r\n
 		if (defined) {
@@ -588,6 +670,7 @@ sub make_new_sender_child {
 
 		# sleep for a while if empty queue or failed
 		unless (defined && length >0) {
+			$perfdata{'readempty'} ++;
 			&log (FILE_LOG,
 			"DEBUG sender child $child_pid SHIFT nothing from queue, sleep and try again.") if $debug;
 			sleep (3);		# prevent from nonstop connecting (for example, delete socket)
@@ -601,10 +684,12 @@ sub make_new_sender_child {
 
 		# split data
 		unless (m/\A(\S+?) (.+)\Z/) {
+			$perfdata{'readmisform'} ++;
 			&log (FILE_LOG,
 			"NOTE sender child $child_pid read misform message from queue, SKIP");
 			next;		# skip misform data
 		}
+		$perfdata{'readnormal'} ++;
 
 		my ($header, $data) = ($1, $2);
 		my $data_length = length $data;
@@ -622,6 +707,7 @@ sub make_new_sender_child {
 				Proto			=>  'tcp',
 			);
 			unless (defined $post_connect) {
+				$perfdata{'senderror'} ++;
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid connect $dest_detail failed [$@]. header [$header]");
 				die 'connect dest failed';
@@ -632,6 +718,7 @@ sub make_new_sender_child {
 			my $rv = $post_connect->send( "$data\r\n", 0 );
 	
 			unless (defined $rv) {
+				$perfdata{'senderror'} ++;
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid send data to remote host failed. header [$header]");
 				die 'send data failed';
@@ -639,6 +726,7 @@ sub make_new_sender_child {
 
 			$rv -= 2;
 			unless ( $rv eq $data_length ) {
+				$perfdata{'sendhalf'} ++;
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid send half data (length=$rv) to remote host. header [$header]");
 				die 'send half data';
@@ -646,6 +734,7 @@ sub make_new_sender_child {
 
 			&log (FILE_LOG,
 			"INFO sender child $child_pid send (length=$rv) data to remote host succeed. header [$header]");
+			$perfdata{'sendsucc'} ++;
 
 			my $response = <$post_connect> if ($post_connect);
 			if (defined $response && length $response) {
@@ -656,21 +745,26 @@ sub make_new_sender_child {
 					my ($flag,$rcvlen) = ($1,$2);
 					if ($flag eq 0) {
 						if ($rcvlen eq $data_length) {
+							$perfdata{'succ'} ++;
 							&log (FILE_LOG,
 							"INFO sender child $child_pid receive fulldata (length=$rcvlen) response from remote host. header [$header]");
 						} else {
+							$perfdata{'half'} ++;
 							&log (FILE_LOG,
 							"CRIT sender child $child_pid receive halfdata (length=$rcvlen) response from remote host. header [$header]");
 						}
 					} else {
+						$perfdata{'error'} ++;
 						&log (FILE_LOG,
 						"CRIT sender child $child_pid receive failed response from remote host [$response]. header [$header]");
 					}
 				} else {
+					$perfdata{'error'} ++;
 					&log (FILE_LOG,
 					"CRIT sender child $child_pid receive unrecognized response from remote host [$response]. header [$header]");
 				}
 			} else {
+				$perfdata{'empty'} ++;
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid didn't receive any response from remote host. header [$header]");
 			}
@@ -683,6 +777,7 @@ sub make_new_sender_child {
 
 		if ($@) {
 			if ($@ =~ m/Send Timed Out/) {
+				$perfdata{'sendtmout'} ++;
 				&log (FILE_LOG,
 				"CRIT sender child $child_pid send data timeout. header [$header]");
 			} else {
@@ -742,6 +837,26 @@ sub make_new_queue_child {
 		exit (1);
 	};
 
+	my %perfdata = (	# init perfdata counter hash
+		'accept'	=>	0,	# accept request sum
+		'empty'		=>	0,	# request empty sum
+		'normal'	=>	0,	# request normal sum
+		'push'		=>	0,	# request PUSH sum
+		'shift'		=>	0,	# request SHIFT sum
+		'queue'		=> 	0,	# queue item sum
+	);
+
+	$SIG{'USR1'} = sub {
+		if (open FH, ">>", FILE_STATUS) {
+			my $perfdata = "queue $child_pid: ";
+			foreach (keys %perfdata) {
+				$perfdata .= "$_:$perfdata{$_}, ";
+			}
+			print FH "$perfdata\n";
+			close FH;
+		}
+	};
+
 	my @queue_data = ();  	# initial data queue
 	umask (0117);		# set umask for rw-------
 
@@ -768,7 +883,8 @@ sub make_new_queue_child {
 
 		# accept request
 	 	my $sockdata = $unix_socket->accept();
-		
+		$perfdata{'accept'} ++;
+
 		# read request
 		$_ = <$sockdata> if ($sockdata);
 
@@ -779,15 +895,18 @@ sub make_new_queue_child {
 
 		# skip if empty request or read request failed
 		unless (defined && length >0) {
+			$perfdata{'empty'} ++;
 			&log (FILE_LOG,
 			"CRIT queue child $child_pid skip empty request.") if $debug;
                        	goto CONNEND;
 		}   
 		&log (FILE_LOG,
 		"DEBUG queue child $child_pid accept request $_") if $debug;
+		$perfdata{'normal'} ++;
 
 		# process PUSH
 		if (m/\APUSH (.+)\Z/) {
+			$perfdata{'push'} ++;
 			my $data = $1;
 			my $queue_number = scalar @queue_data;
 			if ($queue_number > $Config{'queue_maxlen'}) {
@@ -806,6 +925,7 @@ sub make_new_queue_child {
 
 		# process SHIFT
 		} elsif (m/\ASHIFT\Z/) {
+			$perfdata{'shift'} ++;
 			unless (scalar @queue_data > 0) {
 				&log (FILE_LOG,
 				"DEBUG queue child $child_pid has empty queue, return nothing") if $debug;
@@ -823,6 +943,8 @@ sub make_new_queue_child {
 		} else {
 			goto CONNEND;
 		}
+	
+		$perfdata{'queue'} = scalar @queue_data;
 
 		CONNEND: {
 			$sockdata->close() if ($sockdata);
