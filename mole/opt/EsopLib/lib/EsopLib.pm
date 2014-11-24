@@ -121,6 +121,7 @@ sub read_file_recvlst {
 	chomp;
 	$result .= $_ . ' ';
     }
+    close FH;
 
     unless ($result) {
     	return undef;
