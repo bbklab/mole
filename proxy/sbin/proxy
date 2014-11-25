@@ -660,16 +660,17 @@ sub make_new_sender_child {
 	while (1) {
 
 		# read queue
-		$_ = &read_queue($child_pid);
+		my $queueline = &read_queue($child_pid);
 		$perfdata{'readqueue'} ++;
 
 		# remove \r\n
-		if (defined) {
-			chomp; s/[\r\n]//g;
+		if (defined $queueline) {
+			chomp ($queueline);
+			$queueline =~ s/[\r\n]//g;
 		}
 
 		# sleep for a while if empty queue or failed
-		unless (defined && length >0) {
+		unless (defined $queueline && length($queueline) >0) {
 			$perfdata{'readempty'} ++;
 			&log (FILE_LOG,
 			"DEBUG sender child $child_pid SHIFT nothing from queue, sleep and try again.") if $debug;
@@ -680,10 +681,10 @@ sub make_new_sender_child {
 		"DEBUG sender child $child_pid SHIFT message from queue succeed.") if $debug;
 
 		&log (FILE_LOG,
-		"DEBUG sender child $child_pid SHIFT message [$_]") if $debug;
+		"DEBUG sender child $child_pid SHIFT message [$queueline]") if $debug;
 
 		# split data
-		unless (m/\A(\S+?) (.+)\Z/) {
+		unless ($queueline =~ m/\A(\S+?) (.+)\Z/) {
 			$perfdata{'readmisform'} ++;
 			&log (FILE_LOG,
 			"NOTE sender child $child_pid read misform message from queue, SKIP");
@@ -843,6 +844,7 @@ sub make_new_queue_child {
 		'normal'	=>	0,	# request normal sum
 		'push'		=>	0,	# request PUSH sum
 		'shift'		=>	0,	# request SHIFT sum
+		'other'		=>	0,	# request other sum
 		'queue'		=> 	0,	# queue item sum
 	);
 
@@ -886,26 +888,27 @@ sub make_new_queue_child {
 		$perfdata{'accept'} ++;
 
 		# read request
-		$_ = <$sockdata> if ($sockdata);
+		my $sockline = <$sockdata> if ($sockdata);
 
 		# remove \r\n
-		if (defined) {
-			chomp; s/[\r\n]//g;
+		if (defined $sockline) {
+			chomp ($sockline);
+			$sockline =~ s/[\r\n]//g;
 		}
 
 		# skip if empty request or read request failed
-		unless (defined && length >0) {
+		unless (defined $sockline && length($sockline) >0) {
 			$perfdata{'empty'} ++;
 			&log (FILE_LOG,
 			"CRIT queue child $child_pid skip empty request.") if $debug;
                        	goto CONNEND;
 		}   
 		&log (FILE_LOG,
-		"DEBUG queue child $child_pid accept request $_") if $debug;
+		"DEBUG queue child $child_pid accept request $sockline") if $debug;
 		$perfdata{'normal'} ++;
 
 		# process PUSH
-		if (m/\APUSH (.+)\Z/) {
+		if ($sockline =~ m/\APUSH (.+)\Z/) {
 			$perfdata{'push'} ++;
 			my $data = $1;
 			my $queue_number = scalar @queue_data;
@@ -924,7 +927,7 @@ sub make_new_queue_child {
 			push @queue_data, $data;
 
 		# process SHIFT
-		} elsif (m/\ASHIFT\Z/) {
+		} elsif ($sockline =~ m/\ASHIFT\Z/) {
 			$perfdata{'shift'} ++;
 			unless (scalar @queue_data > 0) {
 				&log (FILE_LOG,
@@ -941,6 +944,7 @@ sub make_new_queue_child {
 
 		# ignore other
 		} else {
+			$perfdata{'other'} ++;
 			goto CONNEND;
 		}
 	
