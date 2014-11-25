@@ -69,7 +69,6 @@ cat << EOF
 	stop		[proc]
 	status		[proc]
 	restart		[proc]
-	mole		mole arguments
 	?		show alias
 
    $(echo_green "Example:")
@@ -78,7 +77,6 @@ cat << EOF
 	stop		[proxy|mole]
 	status		[proxy|mole]
 	restart		[proxy|mole]
-	mole
 
 EOF
 exit 0
@@ -92,14 +90,14 @@ cat << EOF
 	stop	=> 	z, kill, k
 	status	=>	s, watch, w
 	restart	=>	r
-	mole	=> 	m
+	proxy	=>	1
+	mole	=>	2
 
    $(echo_green "Example:")
-	a		[proxy|1|mole|2]
-	z,k		[proxy|1|mole|2]
-	s,w		[proxy|1|mole|2]
-	r		[proxy|1|mole|2]
-	m
+	a 1 => 		start proxy
+	z 2 => k 2 => 	stop mole
+	s 1 => w 1 => 	status proxy
+	r 2 => 		restart mole
 EOF
 }
 
@@ -334,15 +332,6 @@ fi
 
 
 # 2. process args
-
-# 2.1   pass ${*} to mole
-if [ "${1}" == "mole" ] || [ "${1}" == "m" ]; then
-  shift; args=$(echo -e "${@}" | sed -e 's/"/\"/g')
-  ${PATH_MOLE_SBIN}/mole ${args}
-  exit $?
-fi
-
-# 2.2   process esop args
 case "$#" in  
 "1")
         arg1=$1;
