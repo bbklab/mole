@@ -62,6 +62,16 @@ if ( scalar @ARGV ) {
 	}
 } 
 
+# install __WARN__/__DIE__ handler
+$SIG{__DIE__} = sub {
+	&log (FILE_LOG, "CRIT proxy caught event die: [@_]");
+	die @_;
+};
+$SIG{__WARN__} = sub {
+	&log (FILE_LOG, "CRIT proxy caught event warn: [@_]");
+	warn @_;
+};
+
 # Define Global Vars
 our %Config = &load_configs;		# proxy config
 our %Accept_Children = (); 		# current accept children, only used in parent process
