@@ -44,6 +44,22 @@ use constant FILE_STATUS => PATH_TMP . '/' . STATUS_FILENAME;
 use lib PATH_LIB;
 use EsopLib;
 
+# Define SelfName
+our $SelfName = (split /\//, __FILE__)[-1];
+
+# Process CLI Args
+if ( scalar @ARGV ) {
+	if ( scalar @ARGV eq 1 ) {
+		if ( $ARGV[0] eq 'status' ) {
+			&show_perfdata( FILE_PID, FILE_STATUS );
+		} elsif ( $ARGV[0] eq 'help' || $ARGV[0] eq '-h' ) {
+			&show_help;
+		}
+	} else {
+		&show_help;
+	}
+} 
+
 # Define Global Vars
 our %Config = &load_configs;		# proxy config
 our %Accept_Children = (); 		# current accept children, only used in parent process
@@ -125,6 +141,7 @@ $SIG{'PIPE'} = sub {		# log SIGPIPE and exit
 
 # Install Signal Handler: USR1, Output PerfData
 $SIG{'USR1'} = sub {
+	&log (FILE_LOG, "INFO proxy caught signal USR1, perfdata outputing...");
 	unlink FILE_STATUS if -f FILE_STATUS;
 	kill 'USR1', keys %Accept_Children;
 	kill 'USR1', keys %Sender_Children;
@@ -1152,7 +1169,6 @@ sub read_queue {
 	return $data;
 }
 
-
 sub nonblock {
 	my $socket = shift;
 	my $flags;
@@ -1163,5 +1179,53 @@ sub nonblock {
 	fcntl($socket, F_SETFL, $flags | O_NONBLOCK)
 		or die "set socket non-blocking error: $!";
 }
+
+sub show_perfdata {
+	my ($fpid, $fstatus) = @_;
+	my $pid;
+	unless ($fpid && $fstatus) {
+		die "missing-args\n";
+	}
+	unless (-f $fpid) {
+		die "dead\n";
+	}
+	unless ( open (FPID, "<", $fpid) ) {
+		die "$!\n";
+	}
+	$pid = <FPID>;
+	close FPID;
+	unless ($pid && $pid =~ /\A\d+\Z/) {
+		die "pid not-int\n";
+	}
+	unless (kill 0, $pid) {
+		die "dead\n";
+	}
+	print "$SelfName ($pid) running ...\n\n";
+
+	if ( kill 'USR1', $pid ) {
+		usleep (100000);
+		if ( open (FSTATUS, "<", $fstatus) ) {
+			print "PerfData:\n";
+			print "-----------\n";
+			while (<FSTATUS>) {
+				printf "$_";	
+			}
+			print "-----------\n";
+			close FSTATUS;
+		}
+	}
+	exit (0);
+}
+
+sub show_help {
+print <<HELP;
+	$SelfName                 start proxy (default run as daemon)
+	$SelfName status          print status and perfdata
+	$SelfName help            print help
+	$SelfName -h              print help
+HELP
+exit(0);
+}
+
 
 __END__
