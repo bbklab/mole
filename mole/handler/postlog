@@ -52,12 +52,6 @@ binmode(STDOUT, ":encoding(utf8)");
 
 $| = 1;
 
-# check mole
-unless (-f $mole && -x $mole) {
-  printf "$mole not prepared.\n";
-  exit 1;
-} 
-
 # declar global vars
 our $filename = (split /\//, __FILE__)[-1];
 our %opts = ();
@@ -66,22 +60,7 @@ our $logfrom;
 our (%json_data,$json_result) = ('','');
 
 our $postlog = "$basedir/log/postlog.log";
-open my $fh, "$mole printdef POSTLOG_LOG 2>&- | ";
-if($fh){
-	while(<$fh>){
-		chomp; $postlog = $_;
-		last;
-  	}
-}
-
 our $statfile = "$basedir/tmp/.posthost.status";
-open $fh, "$mole printdef POSTHOST_STATUS 2>&- | ";
-if($fh){
-  	while(<$fh>){
-		chomp; $statfile = $_;
-		last;
-  	}
-}
 
 our $parter_id = read_mole_config('global','parter_id');
 our $hid = read_mole_config('global','id');
@@ -89,6 +68,23 @@ our $hname = read_mole_config('global','name');
 if ($hid && $hname) {
 	$hname = $hid . '__' . $hname;
 }
+
+# install __WARN__/__DIE__ handler
+$SIG{__DIE__} = sub {
+	&log("CRIT: caught event die: [@_]");
+	die @_;
+};
+$SIG{__WARN__} = sub {
+	&log("CRIT: caught event warn: [@_]");
+	warn @_;
+};
+
+# check mole
+unless (-f $mole && -x $mole) {
+  printf "$mole not prepared.\n";
+  exit 1;
+} 
+
 
 # read args from cli
 getopts('t:p:j:o:h:e:s:f:r:i:d',\%opts);
@@ -1012,20 +1008,12 @@ sub genjson_config() {
 	'notify_onmisform'	=> '',
 	'locale'		=> '',
   );
-  my $proxy_version = '/usr/local/esop/agent/app/sbin/esop_version';
-  if (-f $proxy_version && -x $proxy_version) {
-	open $fh, "$proxy_version 2>&- |";
-	if($fh) {
-		while(<$fh>){
-			chomp; $raw_global{'proxy_version'} = $_;
-			last;
-		}
-	}
-  }
+
+  my $fh;
   open $fh, "$mole version 2>&- |";
   if($fh) {
 	while(<$fh>){
-		chomp; $raw_global{'mole_version'} = $_;
+		chomp; $raw_global{'mole_version'} = $_; $raw_global{'proxy_version'} = $_;
 		last;
 	}
   }
