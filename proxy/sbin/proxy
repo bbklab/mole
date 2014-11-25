@@ -54,6 +54,8 @@ if ( scalar @ARGV ) {
 			&show_perfdata( FILE_PID, FILE_STATUS );
 		} elsif ( $ARGV[0] eq 'help' || $ARGV[0] eq '-h' ) {
 			&show_help;
+		} else {
+			&show_help;
 		}
 	} else {
 		&show_help;
@@ -122,7 +124,7 @@ $SIG{'CHLD'} = sub {
 
 # Install Signal Handler: Exit Clean
 $SIG{'TERM'} = $SIG{'INT'} = sub {
-	&log (FILE_LOG, "NOTE proxy caught signal TERM/INT, exiting..."); 
+	&log (FILE_LOG, "NOTE proxy caught signal SIGTERM/SIGINT, exiting..."); 
 	local ($SIG{'CHLD'}) = 'IGNORE';
 	kill 'TERM', keys %Accept_Children;
 	kill 'TERM', keys %Sender_Children;
@@ -301,6 +303,16 @@ sub make_new_accept_child {
 			print FH "$perfdata\n";
 			close FH;
 		}
+	};
+
+	$SIG{'TERM'} = $SIG{'INT'} = sub {
+		my $perfdata = "accept $child_pid: ";
+		foreach (keys %perfdata) {
+			$perfdata .= "$_:$perfdata{$_}, ";
+		}
+		&log (FILE_LOG,
+		"NOTE accept child $child_pid caught SIGTERM/SIGINT, write perfdata [$perfdata] and exit");
+		exit (0);
 	};
 
 	my $i = 1;		# served request counter
@@ -603,8 +615,12 @@ sub make_new_accept_child {
 
 	# this exit is VERY important, otherwise the child will become
 	# a parent producer of more and more children, forking util death.
+	my $_perfdata = "accept $child_pid: ";
+	foreach (keys %perfdata) {
+		$_perfdata .= "$_:$perfdata{$_}, ";
+	}
 	&log (FILE_LOG,
-	"INFO accept child $child_pid finish its job, will exit");
+	"INFO accept child $child_pid finish its job, write perfdata [$_perfdata] and exit");
 	exit (0);
 }
 
@@ -672,6 +688,16 @@ sub make_new_sender_child {
 			print FH "$perfdata\n";
 			close FH;
 		}
+	};
+
+	$SIG{'TERM'} = $SIG{'INT'} = sub {
+		my $perfdata = "sender $child_pid: ";
+		foreach (keys %perfdata) {
+			$perfdata .= "$_:$perfdata{$_}, ";
+		}
+		&log (FILE_LOG,
+		"NOTE sender child $child_pid caught SIGTERM/SIGINT, write perfdata [$perfdata] and exit");
+		exit (0);
 	};
 
 	while (1) {
@@ -875,6 +901,16 @@ sub make_new_queue_child {
 			print FH "$perfdata\n";
 			close FH;
 		}
+	};
+
+	$SIG{'TERM'} = $SIG{'INT'} = sub {
+		my $perfdata = "queue $child_pid: ";
+		foreach (keys %perfdata) {
+			$perfdata .= "$_:$perfdata{$_}, ";
+		}
+		&log (FILE_LOG,
+		"NOTE queue child $child_pid caught SIGTERM/SIGINT, write perfdata [$perfdata] and exit");
+		exit (0);
 	};
 
 	my @queue_data = ();  	# initial data queue
