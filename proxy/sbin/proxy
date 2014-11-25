@@ -741,7 +741,8 @@ sub make_new_sender_child {
 		"INFO sender child $child_pid read message (length=$data_length) from queue. header [$header]");
 
 		eval {
-			local $SIG{'USR1'} = 'IGNORE';
+			local $SIG{'USR1'} = 'IGNORE';		# **IMPORTANT**  IGNORE USR1 signal to avoid error: 
+								# IO::Socket::INET error: Inappropriate ioctl for device
 			local $SIG{'ALRM'} = sub { die 'Send Timed Out'; };
 			alarm($Config{'sender_timeout'});
 		
