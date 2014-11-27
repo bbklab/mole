@@ -762,6 +762,90 @@ if ($data_config{'netstat'}) {
 		$netstat{'net_flow'} = \@net_flow;
  	}
   }
+  my $netstat = '/bin/netstat';
+  if ( -f $netstat && -x $netstat) {
+	open my $fh, "$netstat -s 2>&- | ";
+	if ($fh) {
+		my %tcp_statistics = ();
+		my %udp_statistics = ();
+		my ($flag_tcp, $flag_udp) = (0, 0);
+		while(<$fh>){
+			chomp;
+			if (m/\ATcp:\s*\Z/i) {
+				$flag_udp = 0;
+				$flag_tcp = 1;
+				next;
+			} elsif (m/\AUdp:\s*\Z/i) {
+				$flag_udp = 1;
+				$flag_tcp = 0;
+				next;
+			} elsif (m/\A(\w+):\Z/i) {
+				$flag_udp = 0;
+				$flag_tcp = 0;
+				next;
+			}
+			if ($flag_tcp) {
+				if (m/(\d+)\s+?active connections openings/i) {
+					$tcp_statistics{'active_conn'} = $1; next;
+				} 
+				if (m/(\d+)\s+?passive connection openings/i) {
+					$tcp_statistics{'passive_conn'} = $1; next;
+				} 
+				if (m/(\d+)\s+?failed connection attempts/i) {
+					$tcp_statistics{'failed_conn'} = $1; next;
+				} 
+				if (m/(\d+)\s+?connection resets received/i) {
+					$tcp_statistics{'recvreset_conn'} = $1; next;
+				} 
+				if (m/(\d+)\s+?segments received/i) {
+					$tcp_statistics{'seg_received'} = $1; next;
+				} 
+				if (m/(\d+)\s+?segments send out/i) {
+					$tcp_statistics{'seg_sendout'} = $1; next;
+				} 
+				if (m/(\d+)\s+?segments retransmited/i) {
+					$tcp_statistics{'seg_retrans'} = $1; next;
+				} 
+				if (m/(\d+)\s+?bad segments received/i) {
+					$tcp_statistics{'seg_badrecv'} = $1; next;
+				} 
+				if (m/(\d+)\s+?resets sent/i) {
+					$tcp_statistics{'reset_sent'} = $1; next;
+				} 
+			}
+			if ($flag_udp) {
+				if (m/(\d+)\s+?packets received/i) {
+					$udp_statistics{'packet_recv'} = $1; next;
+				} 
+				if (m/(\d+)\s+?packets to unknown port received/i) {
+					$udp_statistics{'packetunknownport_recv'} = $1; next;
+				} 
+				if (m/(\d+)\s+?packet receive errors/i) {
+					$udp_statistics{'packet_recverror'} = $1; next;
+				} 
+				if (m/(\d+)\s+?packets sent/i) {
+					$udp_statistics{'packet_sent'} = $1; next;
+				} 
+			}
+		}
+		if ($tcp_statistics{'seg_sendout'}) {
+			if ($tcp_statistics{'seg_retrans'}) {
+				$tcp_statistics{'seg_retrans_rate'} = sprintf ("%0.2f", 100*$tcp_statistics{'seg_retrans'}/$tcp_statistics{'seg_sendout'}).'%';
+			} else {
+				$tcp_statistics{'seg_retrans_rate'} = '0.00%';
+			}
+		}
+		if ($udp_statistics{'packet_recv'}) {
+			if ($udp_statistics{'packet_recverror'}) {
+				$udp_statistics{'packet_lostrate'} = sprintf ("%0.2f", 100*$udp_statistics{'packet_recverror'}/$udp_statistics{'packet_recv'}).'%';
+			} else {
+				$udp_statistics{'packet_lostrate'} = '0.00%';
+			}
+		}
+		$netstat{'tcp_statistics'} = \%tcp_statistics;
+		$netstat{'udp_statistics'} = \%udp_statistics;
+	}
+  }
   ### %netstat
   $result{'netstat'} = \%netstat;
 }
