@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+#
+# stress on agent_server for recving data
+#
+
+BEGIN {
+	$| = 1;
+}
+
+use strict;
+use warnings;
+use POSIX;
+use IO::Socket;
+
+# Define SelfName
+our $SelfName = (split /\//, __FILE__)[-1];
+
+unless (scalar @ARGV) {
+printf <<HELP;
+	Usage:		$SelfName  {start_number} {address} {port} {times} {package_size}
+	Example:	$SelfName  100 172.16.100.114 8538 100 4096
+HELP
+exit (0);
+}
+our $runn = shift || 10;
+our $addr = shift || '127.0.0.1';
+our $port = shift || 8538;
+our $time = shift || 100;
+our $size = shift || 4096;
+
+for (1 .. $runn) {
+	&make_new_sender_child;
+}
+exit (0);
+
+sub make_new_sender_child {
+
+	my $sigset = POSIX::SigSet->new(SIGHUP,SIGINT,SIGTERM,SIGCHLD);
+	POSIX::sigprocmask(SIG_BLOCK, $sigset);
+	my $pid = fork;
+
+	if (not defined $pid ){
+		return undef;
+
+	} elsif ($pid) {
+		POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+		return 1;
+	} 
+
+	$SIG{'HUP'} = $SIG{'INT'} = $SIG{'TERM'} = $SIG{'CHLD'} = 'DEFAULT'; 
+	POSIX::sigprocmask(SIG_UNBLOCK, $sigset);
+
+	my $child_pid = $$;
+
+	my ($half, $error, $misform, $succ, $empty, $total) = (0,0,0,0,0,0);
+	for my $i (1 .. $time) {
+		my $sock = IO::Socket::INET->new(
+			'PeerHost'	=> $addr,
+			'PeerPort'	=> $port,
+			'Proto'		=> 'tcp',
+			'Type'		=> SOCK_STREAM,
+		) or die $@;
+
+		$total ++;
+		my $data = 'a' x $size;
+
+		print $sock "$data\r\n";
+		my $response = <$sock>;
+
+		unless (defined $response) {
+			$empty ++;
+			close $sock;
+			next;
+		}
+		chomp $response; $response =~ s/[\r\n]//g;
+
+		if ($response =~ /\A(\d)\s+(\d+)\Z/) {
+			my ($flag,$rcvlen) = ($1,$2);
+			if ($flag eq 0) {
+				if ($rcvlen eq $size) {
+					$succ ++;
+				} else {
+					$half ++;
+				}
+			} else {
+				$error ++;
+			}
+		} else {
+			$misform ++;
+		}
+		close $sock;
+		next;
+	}
+	print "\n($child_pid) total:$total, succ:$succ, error:$error, empty:$empty, misform:$misform, half:$half\n";
+	exit (0);
+}

@@ -1,4 +1,9 @@
 #!/usr/bin/perl 
+
+#
+# stress on proxy for recving data
+#
+
 use strict;
 use warnings;
 use IO::Socket;
