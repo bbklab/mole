@@ -176,6 +176,7 @@ fi
 - 优化: 用Perl完全重构传输代理通道, 安装包体积从12M大幅精简为1.3M
 - 优化: 由mole在生成数据的同时就对数据进行压缩和加密, 从源头保护数据
 - 优化: 合并插件system_fixinfo/system_dyninfo为可增量变化的协议数据, 压缩传输量
+- 调整: 修正所有插件使忽略SIGPIPE信号, 防止Broken-PIPE导致的异常输出
 - 调整: 其他优化和调整
 - 
 * Wed Sep 17 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
