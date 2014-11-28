@@ -15,7 +15,7 @@
 # Check that networking is up.
 [ "$NETWORKING" = "no" ] && exit 0
 
-esop="/usr/local/esop/agent/app/sbin/esop"
+esop="/usr/local/esop/agent/mole/sbin/esop"
 prog="$(basename ${esop})"
 
 start() {
