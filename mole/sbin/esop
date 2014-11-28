@@ -176,7 +176,7 @@ start_proxy(){
   if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 	echo -en "$(echo_yellow "SKIP")"
   else
-  	${PATH_PROXY_SBIN}/proxy >>$PATH_INITLOG 2>&1
+  	${PATH_PROXY_SBIN}/proxy start >>$PATH_INITLOG 2>&1
 	wait; sleep 1
 	if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_green "OK")"
@@ -190,9 +190,7 @@ start_proxy(){
 stop_proxy(){
   echo -en "Stoping proxy ... " | tee -a $PATH_INITLOG
   if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
-  	local pid=$(get_pid ${PIDF_PROXY})
-  	[ ! -z "${pid}" ] && kill ${pid} >>$PATH_INITLOG 2>&1
-  	[ -f ${PIDF_PROXY} ] && rm -f ${PIDF_PROXY} >> $PATH_INITLOG 2>&1
+	${PATH_PROXY_SBIN}/proxy stop >>$PATH_INITLOG 2>&1
 	wait; sleep 1
 	if is_running "${PIDF_PROXY}" "proxy" >>$PATH_INITLOG 2>&1; then
 		echo -en "$(echo_red "FAIL")"
