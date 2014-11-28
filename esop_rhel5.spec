@@ -135,7 +135,9 @@ ESOP_UPGRADE_MODE=1 ESOP_RPM_UPGRADE=1 /bin/bash /usr/local/%{name}/agent/mole/u
 
 # create symbolic link for esop,mole
 /bin/ln -s /usr/local/%{name}/agent/mole/sbin/%{name} /bin/%{name} >/dev/null 2>&1
-/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole /bin/mole >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole    /bin/%{name}-mole >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/proxy/sbin/proxy  /bin/%{name}-proxy >/dev/null 2>&1
+/bin/ln -s /usr/local/%{name}/agent/mole/sbin/mole    /bin/mole >/dev/null 2>&1
 
 # clear old tmp status file if exists
 if [ -f "/usr/local/esop/agent/mole/tmp/.status.dat" ]; then
