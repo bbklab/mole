@@ -310,6 +310,9 @@ msgstr "查看某个插件的某一个配置参数所设定的值"
 msgid "print config->value for plugin user-defined config"
 msgstr "查看某个插件的所有自定义配置项所设定的值"
 
+msgid "automatic set config for plugin"
+msgstr "自动设定某个插件的自定义配置值 (仅支持部分插件)"
+
 msgid "print the value of variable name"
 msgstr "打印出某个全局变量的值 (供其他程序调用)"
 

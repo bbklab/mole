@@ -106,6 +106,7 @@ cat << EOF
 	run		plugin			$(gettext "run plugin once and format output on terminal")
 	view		plugin [key]		$(gettext "print config->value, [all] for every plugin")
 	udef		plugin			$(gettext "print config->value for plugin user-defined config")
+	autoconf	plugin			$(gettext "automatic set config for plugin")
 	printdef	{VAR}			$(gettext "print the value of variable name")
 	iget		{gkey}			$(gettext "print global config-value through inner function")
 	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
@@ -161,6 +162,7 @@ cat << EOF
 	mole  view	sysload
 	mole  view	sysload   enable
 	mole  udef	sysload
+	mole  autoconf  sysload
 	mole  printdef	CONF_DIR
 	mole  iget	g_parter_id
 	mole  iget	sysload   p_debug
@@ -818,6 +820,14 @@ case "$#" in
 	"udef")
 		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### must be plugin
 			view_extra_config "$arg2" 1
+		else
+			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
+			exit 9;
+		fi
+			;;
+	"autoconf")
+		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then        ### must be plugin
+			${AUTOCONF_SH} "rpminit" "$arg2"
 		else
 			echo "$(echo_yellow "[$arg2]") : $(gettext "not registered in any config file.")"
 			exit 9;
