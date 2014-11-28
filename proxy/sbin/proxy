@@ -48,19 +48,23 @@ use EsopLib;
 our $SelfName = (split /\//, __FILE__)[-1];
 
 # Process CLI Args
-if ( scalar @ARGV ) {
-	if ( scalar @ARGV eq 1 ) {
-		if ( $ARGV[0] eq 'status' ) {
-			&show_perfdata( FILE_PID, FILE_STATUS );
-		} elsif ( $ARGV[0] eq 'help' || $ARGV[0] eq '-h' ) {
-			&show_help;
-		} else {
-			&show_help;
-		}
-	} else {
-		&show_help;
-	}
-} 
+unless (scalar @ARGV) {
+	&show_help;
+}
+unless ( scalar @ARGV eq 1 ) {
+	&show_help;
+}
+if ( $ARGV[0] eq 'status' || $ARGV[0] eq 's' ) {
+	&show_perfdata( FILE_PID, FILE_STATUS );
+} elsif ( $ARGV[0] eq 'start' ) {
+	
+} elsif ( $ARGV[0] eq 'stop' ) {
+	&stop_proxy ( FILE_PID );
+} elsif ( $ARGV[0] eq 'help' || $ARGV[0] eq '-h' ) {
+	&show_help;
+} else {
+	&show_help;
+}
 
 # install __WARN__/__DIE__ handler
 $SIG{__DIE__} = sub {
@@ -1264,10 +1268,32 @@ sub show_perfdata {
 	exit (0);
 }
 
+sub stop_proxy {
+	my $fpid = shift;
+	my $pid;
+	unless ($fpid) {
+		die "require pidfile\n";
+	}
+	unless (-f $fpid) {
+		die "already dead\n";
+	}
+	unless ( open (FPID, "<", $fpid) ) {
+		die "open pidfile error: $!\n";
+	}
+	$pid = <FPID>;
+	close FPID;
+	unless ($pid && $pid =~ /\A\d+\Z/) {
+		die "pid not-int\n";
+	}
+	kill 'TERM', $pid;
+	exit (0);
+}
+
 sub show_help {
 print <<HELP;
-	$SelfName                 start proxy (default run as daemon)
-	$SelfName status          print status and perfdata
+	$SelfName start           start proxy (default run as daemon)
+	$SelfName stop            stop proxy daemon
+	$SelfName status          print proxy status and perfdata
 	$SelfName help            print help
 	$SelfName -h              print help
 HELP
