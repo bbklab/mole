@@ -69,6 +69,7 @@ cat << EOF
 	stop		[proc]
 	status		[proc]
 	restart		[proc]
+	perfdata	proxy
 	?		show alias
 
    $(echo_green "Example:")
@@ -77,6 +78,7 @@ cat << EOF
 	stop		[proxy|mole]
 	status		[proxy|mole]
 	restart		[proxy|mole]
+	perfdata	proxy
 
 EOF
 exit 0
@@ -86,12 +88,13 @@ show_alias() {
 cat << EOF
 
    $(echo_green "Alias:")
-	start	=> 	a
-	stop	=> 	z, kill, k
-	status	=>	s, watch, w
-	restart	=>	r
-	proxy	=>	1
-	mole	=>	2
+	start	   => 	a
+	stop	   => 	z, kill, k
+	status	   =>	s, watch, w
+	restart	   =>	r
+	perfdata   =>   p
+	proxy	   =>	1
+	mole	   =>	2
 
    $(echo_green "Example:")
 	a 1 => 		start proxy
@@ -203,6 +206,10 @@ stop_proxy(){
   echo -en "\n" | tee -a $PATH_INITLOG
 }
 
+perfdata_proxy() {
+  echo -en "Output proxy perfdata ..." >> $PATH_INITLOG
+  ${PATH_PROXY_SBIN}/proxy status | tee -a $PATH_INITLOG
+}
 
 start_mole(){
   echo -e "Starting mole ... " | tee -a $PATH_INITLOG
@@ -398,6 +405,13 @@ case "$#" in
 		stop_${arg2}
 		sleep 1
 		start_${arg2}
+						;;
+	"perfdata"|"p")
+		if [ "${arg2}" == "proxy" ]; then
+			perfdata_proxy
+		else
+			show_help
+		fi
 						;;
 	*)
 		show_help			;;
