@@ -59,6 +59,15 @@ unless (-f $mole && -x $mole) {
   exit $state_unkn;
 }
 
+# get EPINFO_SH path
+our $epinfo = undef;
+open my $fh, "$mole printdef EPINFO_SH 2>&- |";
+if ($fh) {
+	while (<$fh>) {
+		chomp; $epinfo = $_;
+		last;
+	}
+}
 
 our $SaveFile = "/var/tmp/.mole.$filename.tmp";
 
@@ -145,7 +154,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {arp}
-  if (@{$newinfo{'arp'}} ne @{$oldinfo{'arp'}}) {
+  if (scalar @{$newinfo{'arp'}} ne scalar @{$oldinfo{'arp'}}) {
 	$diffinfo{'arp'} = \@{$newinfo{'arp'}};
   } else {
         my @newinfo_arp = @{$newinfo{'arp'}};   # item in array sort order same
@@ -180,7 +189,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {disk_space}
-  if (@{$newinfo{'disk_space'}} ne @{$oldinfo{'disk_space'}}) {
+  if (scalar @{$newinfo{'disk_space'}} ne scalar @{$oldinfo{'disk_space'}}) {
 	$diffinfo{'disk_space'} = \@{$newinfo{'disk_space'}};
   } else {
         my @newinfo_diskspace = @{$newinfo{'disk_space'}};   # item in array sort order same
@@ -201,7 +210,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {dns}
-  if (@{$newinfo{'dns'}} ne @{$oldinfo{'dns'}}) {
+  if (scalar @{$newinfo{'dns'}} ne scalar @{$oldinfo{'dns'}}) {
 	$diffinfo{'dns'} = \@{$newinfo{'dns'}};
   } else {
 	if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$oldinfo{'dns'}})) {
@@ -210,7 +219,7 @@ sub genjson_diffinfo {
   }
   
   ### diff {inet_name}
-  if (@{$newinfo{'inet_name'}} ne @{$oldinfo{'inet_name'}}) {
+  if (scalar @{$newinfo{'inet_name'}} ne scalar @{$oldinfo{'inet_name'}}) {
 	$diffinfo{'inet_name'} = \@{$newinfo{'inet_name'}};
   } else {
         my @newinfo_inetname = @{$newinfo{'inet_name'}};   # item in array sort order same
@@ -231,7 +240,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {input_dev}
-  if (@{$newinfo{'input_dev'}} ne @{$oldinfo{'input_dev'}}) {
+  if (scalar @{$newinfo{'input_dev'}} ne scalar @{$oldinfo{'input_dev'}}) {
 	$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
   } else {
 	if (join("",sort @{$newinfo{'input_dev'}}) ne join("",sort @{$oldinfo{'input_dev'}})) {
@@ -268,7 +277,7 @@ sub genjson_diffinfo {
 
   
   ### diff {mount}
-  if (@{$newinfo{'mount'}} ne @{$oldinfo{'mount'}}) {
+  if (scalar @{$newinfo{'mount'}} ne scalar @{$oldinfo{'mount'}}) {
 	$diffinfo{'mount'} = \@{$newinfo{'mount'}};
   } else {
         my @newinfo_mount = @{$newinfo{'mount'}};   # item in array sort order same
@@ -293,7 +302,7 @@ sub genjson_diffinfo {
   $diffinfo{'netstat'} = \%{$newinfo{'netstat'}};
 
   ### diff {online_user}
-  if (@{$newinfo{'online_user'}} ne @{$oldinfo{'online_user'}}) {
+  if (scalar @{$newinfo{'online_user'}} ne scalar @{$oldinfo{'online_user'}}) {
 	$diffinfo{'online_user'} = \@{$newinfo{'online_user'}};
   } else {
         my @newinfo_onlineuser = @{$newinfo{'online_user'}};   # item in array sort order same
@@ -343,7 +352,7 @@ sub genjson_diffinfo {
 
 
   ### diff {route}
-  if (@{$newinfo{'route'}} ne @{$oldinfo{'route'}}) {
+  if (scalar @{$newinfo{'route'}} ne scalar @{$oldinfo{'route'}}) {
 	$diffinfo{'route'} = \@{$newinfo{'route'}};
   } else {
         my @newinfo_route = @{$newinfo{'route'}};   # item in array sort order same
@@ -377,7 +386,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {startups}
-  if (@{$newinfo{'startups'}} ne @{$oldinfo{'startups'}}) {
+  if (scalar @{$newinfo{'startups'}} ne scalar @{$oldinfo{'startups'}}) {
 	$diffinfo{'startups'} = \@{$newinfo{'startups'}};
   } else {
 	if (join("",sort @{$newinfo{'startups'}}) ne join("",sort @{$oldinfo{'startups'}})) {
@@ -432,7 +441,7 @@ sub genjson_diffinfo {
   }
 
   ### diff {sysuser}
-  if (@{$newinfo{'sysuser'}} ne @{$oldinfo{'sysuser'}}) {
+  if (scalar @{$newinfo{'sysuser'}} ne scalar @{$oldinfo{'sysuser'}}) {
 	$diffinfo{'sysuser'} = \@{$newinfo{'sysuser'}};
   } else {
 	my @newinfo_sysuser = @{$newinfo{'sysuser'}};	# item in array sort order same
@@ -452,12 +461,23 @@ sub genjson_diffinfo {
 	}
   }
 
-  ### %diffinfo
-  if ($diffjson = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%diffinfo)) {
-  	return $diffjson;
-  } else {
-	return $diffjson;
+  ### diff {epinfo}
+  if (exists $newinfo{'epinfo'}) {
+	if (! exists $oldinfo{'epinfo'}) {
+		$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+	} else {
+  		foreach my $i (sort keys %{$newinfo{'epinfo'}}) {
+  		}
+	}
   }
+  
+  ### %diffinfo
+  eval { $diffjson = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%diffinfo); };
+  if ($@) {
+	$diffjson = '{}';
+  }
+
+  return $diffjson;
 }
 #
 # global sub def end
@@ -514,7 +534,7 @@ our %result = ();
 
 
 ##
-##  system dyninfo
+##  part_1. system dyninfo
 ##
 
 # sysload
@@ -1016,7 +1036,7 @@ if ($data_config{'cpu_usage'}) {
 
 
 ##
-##  system fixinfo
+##  part_2. system fixinfo
 ##
 
 if ($data_config{'product_info'}) {
@@ -2078,6 +2098,42 @@ if ($data_config{'raid_info'}) {
   }
   ### @raid_info
   $result{'raid_info'} = \@raid_info;
+}
+
+##
+##  part_3. eyou product info 
+##		this is optional, do it or not according by result of [epinfo have]
+##
+
+if (defined $epinfo && -f $epinfo && -x $epinfo) {
+  my $ephave = 0;
+  open my $fh, "$epinfo have 2>&- |";
+  if ($fh) {
+  	while (<$fh>) {
+		chomp; $ephave = $_;
+		last;
+  	}
+  }
+  if ($ephave) {
+  	my %epinfo = ();
+	my ($_tmp_epinfo_json, $_tmp_epinfo_decode);
+	open $fh, "$epinfo 2>&- |";
+	if ($fh) {
+		while (<$fh>) {
+			chomp; $_tmp_epinfo_json = $_;
+			last;
+		}
+	}
+	if ($_tmp_epinfo_json) {
+		eval { $_tmp_epinfo_decode = JSON->new->allow_nonref->utf8(1)->ascii(1)->decode($_tmp_epinfo_json); };
+		if ($@) {
+			%epinfo = ();
+		} else {
+			%epinfo = %{$_tmp_epinfo_decode};
+		}
+	}
+  	$result{'epinfo'} = \%epinfo;
+  }
 }
 
 
