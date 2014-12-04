@@ -62,10 +62,6 @@ our $filename = (split /\//, __FILE__)[-1];
 our $dirname  = dirname(rel2abs(__FILE__));
 our $maillicense_decoder = $dirname . '/mail_license.php';
 
-#
-#  BEGIN to COLLECT eYou INFORMATION 
-#
-
 # define EYOU_XXX
 use constant EYOUMAIL_INST  => '/usr/local/eyou/mail';
 use constant EYOUMAIL_ETC   => EYOUMAIL_INST . '/etc';
@@ -87,6 +83,31 @@ use constant EYOUARCIV_INST => EYOUMAIL4_INST;
 use constant EYOUARCIV_ETC  => EYOUMAIL4_ETC;
 use constant EYOUARCIV_CTRL => EYOUMAIL4_ETC  . '/eyouarchive';
 
+# check product exist or not ?
+my %ep_exists = (
+	'mail'		=> (-d EYOUMAIL_INST && -f EYOUMAIL_CFG) ? 1 : 0,
+	'gw'		=> (-d EYOUGATE_INST && -f EYOUGATE_CFG) ? 1 : 0,
+	'epush'		=> (-d EYOUPUSH_INST && -f EYOUPUSH_CFG) ? 1 : 0,
+	'mail4'		=> (-d EYOUMAIL4_INST && -f EYOUMAIL4_CTRL) ? 1 : 0,
+	'archive'	=> (-d EYOUARCIV_INST && -f EYOUARCIV_CTRL) ? 1 : 0,
+);
+
+# process cli args
+if (@ARGV) {
+	if ($ARGV[0] eq 'have') {
+		for (keys %ep_exists) {
+			if ($ep_exists{$_}) {
+				print '1'; exit(0);
+			}
+		}
+		print '0';
+	}
+	exit (0);
+}
+
+#
+#  BEGIN to COLLECT eYou INFORMATION 
+#
 
 # init each eyou product hash
 my (%mail, %gw, %epush, %mail4, %archive, %result);
@@ -169,7 +190,7 @@ if (-f EYOUMAIL_CFG) {
 			next if (m/\A\s*#/ || m/\A\s*;/ || m/\A\s*\Z/);
 			if (m/\A\s*(db_|mta_db_|dbumi_|mta_dbumi_|dblog_|dbdml_|memcache_|server_me|restrict_).*\s+/i) {
 				my ($key, $value) = (m/\A\s*(\w+?)\s*=\s*(.+)\s*\Z/);
-				if ($key && $value && length $key && length $value) { 
+				if (defined $key && defined $value && length $key && length $value) { 
 					map { s/\A\s*[\'\"]|[\'\"]\s*\Z//gi } $key, $value;
 					$mail_config{$key} = $value; next;
 				}
@@ -330,7 +351,7 @@ if (-f $mail4_scriptd) {
 
 # PREPARE LAST RESULT HASH
 %mail = (
-	'is_installed'		=> (-d EYOUMAIL_INST && -f EYOUMAIL_CFG) ? 1 : 0,
+	'is_installed'		=> $ep_exists{'mail'},
         'license'		=> \%mail_license,
 	'serial'		=> $mail_serial,
 	'startups'		=> \@mail_startups,
@@ -338,7 +359,7 @@ if (-f $mail4_scriptd) {
 );
 
 %gw = (
-	'is_installed'		=> (-d EYOUGATE_INST && -f EYOUGATE_CFG) ? 1 : 0,
+	'is_installed'		=> $ep_exists{'gw'},
 	'version'		=> $gw_version,
 	'serial'		=> $gw_serial,
 	'domains'		=> $gw_domainsum,
@@ -347,17 +368,17 @@ if (-f $mail4_scriptd) {
 );
 
 %epush = (
-	'is_installed'		=> (-d EYOUPUSH_INST && -f EYOUPUSH_CFG) ? 1 : 0,
+	'is_installed'		=> $ep_exists{'epush'},
 	'version'		=> $epush_version,
 );
 
 %mail4 = (
-	'is_installed'		=> (-d EYOUMAIL4_INST && -f EYOUMAIL4_CTRL) ? 1 : 0,
+	'is_installed'		=> $ep_exists{'mail4'},
 	'version'		=> $mail4_version,
 );
 
 %archive = (
-	'is_installed'		=> (-d EYOUARCIV_INST && -f EYOUARCIV_CTRL) ? 1 : 0,
+	'is_installed'		=> $ep_exists{'archive'},
 );
 
 %result = (
