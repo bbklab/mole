@@ -21,7 +21,8 @@ use Tie::RefHash;
 
 # Define Constant
 use constant RCVBUFSIZE => POSIX::BUFSIZ * 2;
-use constant PATH_BASE => dirname(dirname(rel2abs(__FILE__)));
+# use constant PATH_BASE => dirname(dirname(rel2abs(__FILE__)));	# do **NOT** use this to avoid symbolic link [/bin/esop-proxy]
+use constant PATH_BASE => '/usr/local/esop/agent/proxy';		# complain for errror: Can't locate EsopLib.pm in @INC
 use constant PATH_CONF => PATH_BASE . '/conf';
 use constant PATH_LIB  => PATH_BASE . '/lib';
 use constant PATH_LOG  => PATH_BASE . '/log';
