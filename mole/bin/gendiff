@@ -114,7 +114,7 @@ sub load_oldinfo {
   } 
   if (open my $fh, "<", $savefile) {
 	while(<$fh>){
-		$oldinfo = $_;		# read only one line and exit
+		chomp; $oldinfo = $_;		# read only one line and exit
 		last;
 	}
 	close $fh if ($fh);
@@ -466,8 +466,228 @@ sub genjson_diffinfo {
 	if (! exists $oldinfo{'epinfo'}) {
 		$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 	} else {
-  		foreach my $i (sort keys %{$newinfo{'epinfo'}}) {
-  		}
+		my %newinfo_archive = %{$newinfo{'epinfo'}{'archive'}};
+		my %oldinfo_archive = %{$oldinfo{'epinfo'}{'archive'}};
+		foreach my $x (sort keys %newinfo_archive) {
+			if (defined $newinfo_archive{$x}) {
+				if (defined $oldinfo_archive{$x}) {
+					unless ( $newinfo_archive{$x} eq $oldinfo_archive{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				if (defined $oldinfo_archive{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} 
+		}
+
+		my %newinfo_epush   = %{$newinfo{'epinfo'}{'epush'}};
+		my %oldinfo_epush   = %{$oldinfo{'epinfo'}{'epush'}};
+		foreach my $x (sort keys %newinfo_epush) {
+			if (defined $newinfo_epush{$x}) {
+				if (defined $oldinfo_epush{$x}) {
+					unless ( $newinfo_epush{$x} eq $oldinfo_epush{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				if (defined $oldinfo_epush{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			}
+		}
+
+		my %newinfo_mail4   = %{$newinfo{'epinfo'}{'mail4'}};
+		my %oldinfo_mail4   = %{$oldinfo{'epinfo'}{'mail4'}};
+		foreach my $x (sort keys %newinfo_mail4) {
+			if (defined $newinfo_mail4{$x}) {
+				if (defined $oldinfo_mail4{$x}) {
+					unless ( $newinfo_mail4{$x} eq $oldinfo_mail4{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				if (defined $oldinfo_mail4{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			}
+		}
+
+		my %newinfo_gw      = %{$newinfo{'epinfo'}{'gw'}};
+		my %oldinfo_gw      = %{$oldinfo{'epinfo'}{'gw'}};
+		foreach my $x ( qw(domains is_installed serial version) ) {
+			if (defined $newinfo_gw{$x}) {
+				if (defined $oldinfo_gw{$x}) {
+					unless ( $newinfo_gw{$x} eq $oldinfo_gw{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				if (defined $oldinfo_gw{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			}
+		}
+		if (defined $newinfo_gw{'license'}{'expire_date'}) {
+			if (defined $oldinfo_gw{'license'}{'expire_date'}) {
+				unless ( $newinfo_gw{'license'}{'expire_date'} eq $oldinfo_gw{'license'}{'expire_date'} ) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+				
+			}
+		} else {
+			if (defined $oldinfo_gw{'license'}{'expire_date'}) {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		}
+		if (exists $newinfo_gw{'configs'}) {
+			if (exists $oldinfo_gw{'configs'}) {
+				my %newinfo_gwconfigs      = %{$newinfo_gw{'configs'}};
+				my %oldinfo_gwconfigs      = %{$oldinfo_gw{'configs'}};
+				foreach my $x (sort keys %newinfo_gwconfigs) {
+					if (defined $newinfo_gwconfigs{$x}) {
+						if (defined $oldinfo_gwconfigs{$x}) {
+							unless ( $newinfo_gwconfigs{$x} eq $oldinfo_gwconfigs{$x} ) {
+								$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+								goto EPINFO_BREAK;
+							}
+						} else {
+							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+							goto EPINFO_BREAK;
+						}
+					} else {
+						if (defined $oldinfo_gwconfigs{$x}) {
+							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+							goto EPINFO_BREAK;
+						}
+					}
+				}
+			} else {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		} else {
+			if (exists $oldinfo_gw{'configs'}) {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		}
+
+		my %newinfo_mail    = %{$newinfo{'epinfo'}{'mail'}};
+		my %oldinfo_mail    = %{$oldinfo{'epinfo'}{'mail'}};
+		foreach my $x ( qw(is_installed serial) ) {
+			if (defined $newinfo_mail{$x}) {
+				if (defined $oldinfo_mail{$x}) {
+					unless ( $newinfo_mail{$x} eq $oldinfo_mail{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				if (defined $oldinfo_mail{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			}
+		}
+		if (defined $newinfo_mail{'license'}{'end_time'}) {
+			if (defined $oldinfo_mail{'license'}{'end_time'}) {
+				unless ( $newinfo_mail{'license'}{'end_time'} eq $oldinfo_mail{'license'}{'end_time'} ) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+				
+			}
+		} else {
+			if (defined $oldinfo_mail{'license'}{'end_time'}) {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		}
+		if (exists $newinfo_mail{'configs'}) {
+			if (exists $oldinfo_mail{'configs'}) {
+				my %newinfo_mailconfigs      = %{$newinfo_mail{'configs'}};
+				my %oldinfo_mailconfigs      = %{$oldinfo_mail{'configs'}};
+				foreach my $x (sort keys %newinfo_mailconfigs) {
+					if (defined $newinfo_mailconfigs{$x}) {
+						if (defined $oldinfo_mailconfigs{$x}) {
+							unless ( $newinfo_mailconfigs{$x} eq $oldinfo_mailconfigs{$x} ) {
+								$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+								goto EPINFO_BREAK;
+							}
+						} else {
+							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+							goto EPINFO_BREAK;
+						}
+					} else {
+						if (defined $oldinfo_mailconfigs{$x}) {
+							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+							goto EPINFO_BREAK;
+						}
+					}
+				}
+			} else {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		} else {
+			if (exists $oldinfo_mail{'configs'}) {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		}
+		if (exists $newinfo_mail{'startups'}) {
+			if (defined $oldinfo_mail{'startups'}) {
+				if (join("",sort @{$newinfo_mail{'startups'}}) ne join("",sort @{$oldinfo_mail{'startups'}})) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
+			} else {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		} else {
+			if (exists $oldinfo_mail{'startups'}) {
+				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+				goto EPINFO_BREAK;
+			}
+		}
+
+	}
+	EPINFO_BREAK: {
+		;
 	}
   }
   
