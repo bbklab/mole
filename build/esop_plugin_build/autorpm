@@ -51,8 +51,13 @@ else
 	exit 1
 fi
 
-/bin/cp -afL "${path}"/${source0}   "${path}"/SOURCES/${source0}
-/bin/cp -afL "${specfile}"  "${path}"/SPECS/
+if [ -f "${path}/${source0}"  ]; then
+	/bin/cp -afL "${path}"/${source0}   "${path}"/SOURCES/${source0}
+	/bin/cp -afL "${specfile}"  "${path}"/SPECS/
+else
+	echo "${path}/${source0} not prepared"
+	exit 1
+fi
 
 cat > ~/.rpmmacros <<EOF
 %_topdir ${path}/
