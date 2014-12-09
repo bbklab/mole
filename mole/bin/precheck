@@ -105,9 +105,15 @@ check_root() {
 
 check_tmp() {
   if [ -d "/tmp" ] && [ -r "/tmp" ] && [ -w "/tmp" ] && [ -x "/tmp" ]; then
-	echo -e "${OK} : $(gettext "directory /tmp accessable")"
-	((ok_num++))
-	return 0
+	if [ -d "/var/tmp" ] && [ -r "/var/tmp" ] && [ -w "/var/tmp" ] && [ -x "/var/tmp" ]; then
+		echo -e "${OK} : $(gettext "systmp directory accessable")"
+		((ok_num++))
+		return 0
+	else
+		echo -e "${CRIT} : $(gettext "directory /var/tmp not accessable")"
+		((crit_num++))
+		return 1
+	fi
   else
 	echo -e "${CRIT} : $(gettext "directory /tmp not accessable")"
 	((crit_num++))

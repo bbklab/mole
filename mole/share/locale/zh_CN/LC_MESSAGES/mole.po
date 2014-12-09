@@ -621,11 +621,14 @@ msgstr "需要ROOT权限来运行, 当前用户ID为"
 msgid "root privilege available"
 msgstr "当前以ROOT权限运行"
 
-msgid "directory /tmp accessable"
-msgstr "目录/tmp可访问读写"
+msgid "systmp directory accessable"
+msgstr "系统临时目录可读写访问"
 
 msgid "directory /tmp not accessable"
-msgstr "目录/tmp可不可读访问"
+msgstr "目录/tmp不可读写访问"
+
+msgid "directory /var/tmp not accessable"
+msgstr "目录/var/tmp不可读写访问"
 
 msgid "Result: ${crit_num} Error, ${ok_num} OK"
 msgstr "环境检查结果: 异常${crit_num}, 正常${ok_num}"
