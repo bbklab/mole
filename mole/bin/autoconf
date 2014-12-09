@@ -1369,6 +1369,24 @@ config_premote_mailtest() {
 	local plugin="remote_mailtest"
 	local cfg1="helo_greeting_fqdn"	cfg_value1=
 	local cfg2="base_domain"	cfg_value2=
+	local cfg3="sample_email_file"	cfg_value3="opt/sample_email.cfg"
+
+local headline="# default file which [remote_mailtest]->sample_email_file specified. 
+#
+# Fromat:  @domain   :::  MX-Host   :::  Dest EmailAddress List
+#
+# Note: if MX-Host left empty, will auto detect the best preference MX
+# Note: usually, you just left MX-Host part empty will be all right except such conditions:
+#   1. the best preference MX-Server can **NOT** be conncted.
+#   2. you have specified remote relay routing for emails.
+#
+
+# Example:
+# @qq.com     :::  mx1.qq.com    :::    eyou-uetest@qq.com   eyoutest@qq.com
+@qq.com     :::  mx1.qq.com    :::    eyou-uetest@qq.com
+@126.com    :::                :::    eyou_uetest@126.com
+@163.com    :::                        :::    eyou_uetest@163.com
+"
 	cfg_value1="$(get_basedomain)"
 	if [ -z "${cfg_value1}" ]; then
 		cfg_value1="localhost.localdomain"
@@ -1383,6 +1401,21 @@ config_premote_mailtest() {
 	if [ ! -z "${cfg_value2}" ]; then
 		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
 	fi
+
+	local file="${MOLE_PATH}/${cfg_value3}"
+	touch "${file}" 1>/dev/null 2>&1
+	if [ "$?" == "0" ]; then
+        	{ 
+		echo -e "${headline}"
+		} > "${file}" 2>/dev/null
+	else
+		((rc+=1))
+	fi
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
+		${MOLE} config-clear ${plugin} ${cfg3}; ((rc+=$?))
+		${MOLE} config-update ${plugin} ${cfg3} "file:${cfg_value3}"; ((rc+=$?))
+	fi
+
 	
 	return $rc
 }
