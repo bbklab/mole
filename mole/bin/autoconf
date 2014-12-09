@@ -1370,6 +1370,7 @@ config_premote_mailtest() {
 	local cfg1="helo_greeting_fqdn"	cfg_value1=
 	local cfg2="base_domain"	cfg_value2=
 	local cfg3="sample_email_file"	cfg_value3="opt/sample_email.cfg"
+	local cfg4="mail_body_file"	cfg_value4="opt/remote_mail.body"
 
 local headline="# default file which [remote_mailtest]->sample_email_file specified. 
 #
@@ -1416,7 +1417,12 @@ local headline="# default file which [remote_mailtest]->sample_email_file specif
 		${MOLE} config-update ${plugin} ${cfg3} "file:${cfg_value3}"; ((rc+=$?))
 	fi
 
-	
+	file="${MOLE_PATH}/${cfg_value4}"
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
+		${MOLE} config-clear ${plugin} ${cfg4}; ((rc+=$?))
+		${MOLE} config-update ${plugin} ${cfg4} "file:${cfg_value4}"; ((rc+=$?))
+	fi
+
 	return $rc
 }
 
