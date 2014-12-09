@@ -1426,6 +1426,84 @@ local headline="# default file which [remote_mailtest]->sample_email_file specif
 	return $rc
 }
 
+config_pemp_smtpauth_limit() {
+	local rc=0
+
+	local plugin="emp_smtpauth_limit"
+	local cfg1="mysqlcli_path"		cfg_value1=
+	local cfg2="usrmysql_conn_conf"		cfg_value2=		# eyou_mail.ini sucks, left this empty
+	local cfg3="logmysql_conn_conf"		cfg_value3=		# eyou_mail.ini sucks, left this empty
+	local cfg4="mysql_time_out"		cfg_value4=10
+	local cfg5="smtp_auth_limit"		cfg_value5=300
+	local cfg6="smtp_white_list"		cfg_value6="opt/smtpauth_white.lst"
+	local cfg7="action_pipe_file"		cfg_value7="/var/tmp/${plugin}.pipe"
+	local cfg8="action_tag_path"		cfg_value8="/var/tmp/${plugin}.tag/"
+	local cfg9="user_max_repeat"		cfg_value9=1
+	local cfg10="action_lock_user"		cfg_value10=1
+	local cfg11="action_mod_pass"		cfg_value11="{\"enable\":0,\"password\":{\"fixed\":1,\"password\":\"Anti_Cracker_1237\",\"display\":1}}"
+
+	local mysqlcli="/usr/local/eyou/mail/opt/mysql/bin/mysql"
+	if [ -f "${mysqlcli}" ] && [ -x "${mysqlcli}" ]; then
+		cfg_value1="${mysqlcli}"
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
+	fi
+	if [ ! -z "${cfg_value4}" ]; then
+		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
+	fi
+	if [ ! -z "${cfg_value5}" ]; then
+		${MOLE} config-update ${plugin} ${cfg5} "${cfg_value5}"; ((rc+=$?))
+	fi
+
+	local file="${MOLE_PATH}/${cfg_value6}"
+	local headline="# default file which [emp_smtpauth_limit]->smtp_white_list specified.
+# Format:  {email_address1}  {email_address2} ...
+# comment line start with (#)
+# Example:
+# boss@test.net  leader@test.net  ad@test.net
+"
+	touch "${file}" 1>/dev/null 2>&1
+	if [ "$?" == "0" ]; then
+        	{ 
+		echo -e "${headline}"
+		} > "${file}" 2>/dev/null
+	else
+		((rc+=1))
+	fi
+	if [ -f "${file}" ] && [ -s "${file}" ]; then
+		${MOLE} config-clear ${plugin} ${cfg6}; ((rc+=$?))
+		${MOLE} config-update ${plugin} ${cfg6} "file:${cfg_value6}"; ((rc+=$?))
+	fi
+
+	if [ ! -z "${cfg_value7}" ]; then
+		if /bin/touch "${cfg_value7}" 2>/dev/null; then
+			${MOLE} config-update ${plugin} ${cfg7} "${cfg_value7}"; ((rc+=$?))
+		fi
+	fi
+	if [ ! -z "${cfg_value8}" ]; then
+		if /bin/mkdir -p -m 777 "${cfg_value8}" 2>/dev/null; then
+			${MOLE} config-update ${plugin} ${cfg8} "${cfg_value8}"; ((rc+=$?))
+		fi
+	fi
+	if [ ! -z "${cfg_value9}" ]; then
+		${MOLE} config-update ${plugin} ${cfg9} "${cfg_value9}"; ((rc+=$?))
+	fi
+
+	file="${MOLE_PATH}/handler/lock_user"
+	if [ -f "${file}" ] && [ -s "${file}" ]; then 
+		if [ ! -z "${cfg_value10}" ]; then
+			${MOLE} config-update ${plugin} ${cfg10} "${cfg_value10}"; ((rc+=$?))
+		fi
+		if [ ! -z "${cfg_value11}" ]; then
+			${MOLE} config-update ${plugin} ${cfg11} "${cfg_value11}"; ((rc+=$?))
+		fi
+	fi
+	
+	return $rc
+}
+
 
 ####################################
 #                                  #
