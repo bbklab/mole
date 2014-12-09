@@ -228,7 +228,7 @@ read_conf() {
 	fi
 
 	if [ -f "${file}" ] && [ -s "${file}" ]; then
-		if [ -z "${config}" ]; then
+		if [ -z "${config}" ]; then	# read and output the first un-empty line
 			result=$( ${awk} '($0~/^[ \t]*$/){next;} ($0~/^[ \t]*#/){next;} {print $1;exit}' "${file}" 2>&- )
 		else
 			result=$( ${awk} '($1~/^'$config'\>/) {$1="";print;exit;}' "${file}" 2>&- )
@@ -1358,6 +1358,30 @@ config_pemp_mailqueue() {
 
 	if [ ! -z "${cfg_value}" ]; then
 		${MOLE} config-update ${plugin} ${cfg} "${cfg_value}"; ((rc+=$?))
+	fi
+	
+	return $rc
+}
+
+config_premote_mailtest() {
+	local rc=0
+
+	local plugin="remote_mailtest"
+	local cfg1="helo_greeting_fqdn"	cfg_value1=
+	local cfg2="base_domain"	cfg_value2=
+	cfg_value1="$(get_basedomain)"
+	if [ -z "${cfg_value1}" ]; then
+		cfg_value1="localhost.localdomain"
+		cfg_value2="demo.eyou.net"
+	else
+		cfg_value2="${cfg_value1}"
+	fi
+
+	if [ ! -z "${cfg_value1}" ]; then
+		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
+	fi
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
 	fi
 	
 	return $rc
