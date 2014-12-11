@@ -127,8 +127,11 @@ build_esop(){
   	cp -a $PATH_EXTRACT/$dirname/* $PATH_ESOP
   	check_rc "install $filename"
 
-	$CMD_GCC $PATH_MOLE_IOPP -o $PATH_MOLE_IOPP
-	check_rc "compile ${PATH_MOLE_IOPP##*/} as ${PATH_MOLE_IOPP##*/}"
+	$CMD_GCC $PATH_MOLE_IOPPC -o $PATH_MOLE_IOPP
+	check_rc "compile ${PATH_MOLE_IOPPC##*/} as ${PATH_MOLE_IOPP##*/}"
+
+	/bin/rm -f $PATH_MOLE_IOPPC
+	check_rc "remove ${PATH_MOLE_IOPPC##*/}"
   fi
 }
 
