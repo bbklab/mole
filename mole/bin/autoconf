@@ -130,6 +130,9 @@ ARRAY_SUPPORTED_EMVERSION=(
   "8.1.0.3"
   "8.1.0.3.fix1"
   "8.1.0.4"
+  "8.3"
+  "8.4"
+  "8.12"
 )
 
 # EMG VERSION SUPPORTED
@@ -949,11 +952,23 @@ config_pport() {
 			fi
 			if is_emstarton "${comp}" ; then
 				if [ -z "${cfg_value}" ]; then
-					cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+					if [[ "${comp}" =~ "mproxy" ]] || [[ "{comp}" =~ "gearman" ]]; then	# if mproxy/gearman, skip {conn_addr} checking
+						cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					elif [[ "${comp}" =~ "gearman" ]]; then
+						cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					else
+						cfg_value="$(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+						cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+					fi
 				else
-					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
-					cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+					if [[ "${comp}" =~ "mproxy" ]]; then	# if mproxy/gearman, skip {conn_addr} checking
+						cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					elif [[ "${comp}" =~ "gearman" ]]; then
+						cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+					else
+						cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "bind_addr" 2>&-)"
+						cfg_value="${cfg_value} $(get_emcompinfo "${comp}" "conn_addr" 2>&-)"
+					fi
 				fi
 			fi
 		done
