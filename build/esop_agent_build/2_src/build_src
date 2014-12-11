@@ -19,12 +19,16 @@ PATH_MOLE="${PATH_ESOP}/mole"
 PATH_MOLE_OPT="${PATH_MOLE}/opt"
 PATH_PLINSTALL="${PATH_MOLE_OPT}/plmods"
 
+PATH_MOLE_IOPPC="${PATH_MOLE_OPT}/iopp.c"
+PATH_MOLE_IOPP="${PATH_MOLE_OPT}/iopp"
+
 
 # Command Def
 CMD_UNTAR="tar -xf"
 CMD_UNTAR_BZ2="tar -jxf"
 CMD_UNTAR_GZ="tar -zxf"
 CMD_MAKE="make"
+CMD_GCC="/usr/bin/gcc"
 
 
 # Perl Modules Def
@@ -87,7 +91,8 @@ build_esop(){
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
 
-  if (echo "${filename}" | grep -E "mole-plugin") >/dev/null 2>&1; then
+  # build build-in plugins
+  if (echo "${filename}" | grep -E "^mole-plugin") >/dev/null 2>&1; then
 	cd $PATH_EXTRACT/$dirname
 	for p in `ls`
 	do
@@ -116,9 +121,14 @@ build_esop(){
   			check_rc "install ${p} en readme"
 		}
 	done
-  else
+
+  # build esop (mole/proxy/iopp)
+  elif (echo "${filename}" | grep -E "^esop-") >/dev/null 2>&1; then
   	cp -a $PATH_EXTRACT/$dirname/* $PATH_ESOP
   	check_rc "install $filename"
+
+	$CMD_GCC $PATH_MOLE_IOPP -o $PATH_MOLE_IOPP
+	check_rc "compile ${PATH_MOLE_IOPP##*/} as ${PATH_MOLE_IOPP##*/}"
   fi
 }
 
