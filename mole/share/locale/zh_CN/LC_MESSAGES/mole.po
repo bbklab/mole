@@ -468,6 +468,12 @@ msgstr "智能运维平台最多向您<font color=#6dbb4a><strong>连续发送${
 msgid "mail notify range: ${hit_range_detail}"
 msgstr "发送时间范围: <font color=#6dbb4a><strong>${hit_range_detail}</strong></font>"
 
+msgid "auto handler file [${handler}] return"
+msgstr "自动响应程序 [${handler}] 执行后返回:"
+
+msgid "auto handler file [${handler}] not exist or empty. Nothing to do"
+msgstr "自动响应程序 [${handler}] 不存在, 什么也没做."
+
 ### bin/checkconf
 
 msgid "empty policy"

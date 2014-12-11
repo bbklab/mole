@@ -4050,11 +4050,11 @@ process_plugin_timeout() {
 			write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 				"handler output length normal ${handler_output_length}, CONTINUE";
                 fi   
-		hd_output="auto handler file [${handler}] return ### ### ${hd_output}"
+		hd_output="$(eval_gettext "auto handler file [\${handler}] return") ### ### ${hd_output}"
         else
                 write_log -f "${MOLE_LOG}" "$jid ${plugin_name}"\
 			"auto handler [${HANDLER_DIR}/${handler}] not exist or empty. SKIP"
-		hd_output="auto handler file [${handler}] not exist or empty. Nothing to do"
+		hd_output="$(eval_gettext "auto handler file [\${handler}] not exist or empty. Nothing to do")"
         fi
   fi
 
