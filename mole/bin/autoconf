@@ -82,6 +82,7 @@ fi
 EM_INSTALL="/usr/local/eyou/mail"
 EM_OPT_INSTALL="$EM_INSTALL/opt"
 EM_CONFDIR="$EM_INSTALL/etc"
+EM_DATADIR="$EM_INSTALL/data"
 EM_CONFDIR_MYSQL="$EM_CONFDIR/mysql"
 EM_CONFDIR_NGINX="$EM_CONFDIR/nginx/conf"
 EM_CONFDIR_APACHE="$EM_CONFDIR/httpd/conf"
@@ -1443,13 +1444,33 @@ config_pemp_smtpauth_limit() {
 	local cfg11="action_mod_pass"		cfg_value11="{\"enable\":0,\"password\":{\"fixed\":1,\"password\":\"Anti_Cracker_1237\",\"display\":1}}"
 
 	local mysqlcli="/usr/local/eyou/mail/opt/mysql/bin/mysql"
+	local mysqlcli1="/usr/bin/mysql"
+	local mysqlcli2="/usr/local/bin/mysql"
 	if [ -f "${mysqlcli}" ] && [ -x "${mysqlcli}" ]; then
 		cfg_value1="${mysqlcli}"
+	elif [ -f "${mysqlcli1}" ] && [ -x "${mysqlcli1}" ]; then
+		cfg_value1="${mysqlcli1}"
+	elif [ -f "${mysqlcli2}" ] && [ -x "${mysqlcli2}" ]; then
+		cfg_value1="${mysqlcli2}"
 	fi
-
 	if [ ! -z "${cfg_value1}" ]; then
 		${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
 	fi
+
+	if [ -d "${EM_DATADIR}/mysql_index" ] || [ -d "${EM_DATADIR}/mysql_log" ]; then
+		cfg_value2="127.0.0.1,3306,eyou,eyou,eyou_mail"
+		cfg_value3="127.0.0.1,3326,eyou,eyou,eyou_mail_log"
+	else
+		cfg_value2="127.0.0.1,3306,eyou,eyou,eyou_mail"
+		cfg_value3="${cfg_value2}"
+	fi
+	if [ ! -z "${cfg_value2}" ]; then
+		${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+	fi
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
+	fi
+
 	if [ ! -z "${cfg_value4}" ]; then
 		${MOLE} config-update ${plugin} ${cfg4} "${cfg_value4}"; ((rc+=$?))
 	fi
