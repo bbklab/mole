@@ -70,6 +70,7 @@ EPINFO_SH="${EP_DIR}/epinfo"
 # UTIL DEF
 UTIL_IOSTAT="${OPT_BINDIR}/iostat"
 UTIL_MPSTAT="${OPT_BINDIR}/mpstat"
+UTIL_IOPP="${OPT_DIR}/iopp"
 
 # MAIL_TPL DEF
 TPL_MAIL="${TPL_DIR}/notify_mail.tpl"
