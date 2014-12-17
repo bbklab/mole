@@ -1540,6 +1540,31 @@ config_pemp_smtpauth_limit() {
 	return $rc
 }
 
+config_pdnsbl() {
+	local rc=0
+
+	local plugin="dnsbl"
+	local cfg1="dnsbl_server"		cfg_value1="zen.spamhaus.org"
+	local cfg2="time_out"			cfg_value2=10
+	local cfg3="exposed_addr"		cfg_value3=
+
+	local exposed_addr=$( /usr/bin/curl -s --max-time 3 --max-redirs 3 "http://esop.so" 2>&- )
+	if [ -z "${exposed_addr}" ]; then
+		exposed_addr=$( /usr/bin/curl -s --max-time 5 --max-redirs 3 "http://ifconfig.me" 2>&- )
+	fi
+	if [ -n "${exposed_addr}" ]; then
+		cfg_value3="${exposed_addr}"
+	fi
+
+	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
+	${MOLE} config-update ${plugin} ${cfg2} "${cfg_value2}"; ((rc+=$?))
+	
+	if [ ! -z "${cfg_value3}" ]; then
+		${MOLE} config-update ${plugin} ${cfg3} "${cfg_value3}"; ((rc+=$?))
+	fi
+	
+	return $rc
+}
 
 ####################################
 #                                  #
