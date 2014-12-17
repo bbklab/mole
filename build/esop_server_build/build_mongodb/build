@@ -1,0 +1,142 @@
+#!/bin/bash
+
+export PATH="${PATH}:/usr/kerberos/sbin:/usr/kerberos/bin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+
+### Global Vars Def
+BASE_DIR="$(cd $(dirname $0); pwd)"
+LOG_DIR="${BASE_DIR}/logs"
+LOGFILE="${BASE_DIR}/logs/${0##*/}.log"
+
+PATH_TARBALL="${BASE_DIR}/opt/balls"
+PATH_EXTRACT="${BASE_DIR}/opt/extract"
+
+PATH_ESOP="/usr/local/eyou/toolmail"
+
+PATH_OPT="${PATH_ESOP}/opt"
+
+
+
+[ "$1" == "clean" ] && {
+   rm -rf "${PATH_EXTRACT}"
+   exit 0
+}
+
+# Command Def
+CMD_UNTAR_GZ="tar -zxf"
+CMD_MAKE="make"
+
+
+OS_BIT=$(getconf LONG_BIT 2>&-)
+if [ -z "${OS_BIT}" ] || [ ! -z "${OS_BIT//[0-9]}" ]; then
+	OS_BIT="32"
+fi
+
+
+
+# Global Func Def
+
+# - check_rc
+check_rc() {
+  if [ $? == 0 ]; then
+        echo -e " -- $(date +%F_%T)  succed!  ${*} " | tee -a $LOGFILE
+  else
+        echo -e " -- $(date +%F_%T)  failed!  ${*} " | tee -a $LOGFILE
+        exit 1
+  fi
+}
+
+
+# Build Func Def
+
+
+# -- build_mongodb
+build_mongodb() {
+  local filename="mongodb-linux-x86_64-2.6.6.gz"  dirname="mongodb-linux-x86_64-2.6.6"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  /bin/cp -a $PATH_EXTRACT/$dirname  $PATH_OPT/mongodb
+  check_rc "install $filename"
+
+  for x in mongo mongod mongostat
+  do
+	/bin/ln -s $PATH_OPT/mongodb/${x} $PATH_OPT/bin/${x}
+	check_rc "create link for ${x}"
+  done
+
+  mkdir -p $PATH_ESOP/etc/mongodb $PATH_ESOP/app/sbin $PATH_ESOP/data/mongodb $PATH_ESOP/run
+  check_rc "create directory etc/mongodb app/sbin data/mongodb run"
+
+  /bin/cp -fL $PATH_TARBALL/etc/mongodb/mongo.ini  $PATH_ESOP/etc/mongodb
+  check_rc "copy etc/mongodb/mongo.ini to $PATH_ESOP/etc/mongodb"
+
+  /bin/cp -fL $PATH_TARBALL/etc/etm_init_config $PATH_ESOP/etc
+  check_rc "copy etc/etm_init_config to ${PATH_ESOP}/etc"
+
+  /bin/cp -fL $PATH_TARBALL/app/sbin/eyou_toolmail $PATH_ESOP/app/sbin
+  check_rc "copy app/sbin/eyou_toolmail to ${PATH_ESOP}/app/sbin"
+}
+
+
+# -- make_tarball 
+make_tarball() {
+
+  local tar_createdir="$BASE_DIR/esop_mongodb"
+  local tar_filename="esop_mongodb.tar.gz"
+
+  mkdir -p $tar_createdir/files
+  check_rc "create local $tar_createdir/files"
+  
+  cp -a ${PATH_ESOP}/*  $tar_createdir/files
+  check_rc "copy $PATH_ESOP to local $tar_createdir/files"
+
+  cp -a $PATH_TARBALL/install $tar_createdir
+  check_rc "copy $PATH_TARBALL/install  to local $tar_createdir/"
+
+  cd $BASE_DIR
+  check_rc "changing into $BASE_DIR"
+
+  tar -czf $tar_filename ${tar_createdir##*/}
+  check_rc "make tarball on $tar_createdir for $BASE_DIR/$tar_filename"
+
+  rm -rf $tar_createdir
+  check_rc "remove $tar_createdir"
+}
+
+### Main Body Begin ...
+
+if [ "$(id -u)" != "0" ]; then
+  echo " root privileges required! "
+  exit 1
+fi
+
+echo -e "\n -- $(date +%F_%T) -- BUILD START -- \n\n" >> $LOGFILE
+
+if [ -d "${PATH_ESOP}" ]; then
+  rm -rf "${PATH_ESOP}"
+  check_rc "remove ${PATH_ESOP}"
+fi
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+
+mkdir -p "${LOG_DIR}" "${PATH_EXTRACT}" "${PATH_OPT}"
+
+
+build_mongodb
+make_tarball
+
+
+if [ -d "${PATH_ESOP}" ]; then
+  rm -rf "${PATH_ESOP}"
+  check_rc "remove ${PATH_ESOP}"
+fi
+
+if [ -d "${PATH_EXTRACT}" ]; then
+  rm -rf "${PATH_EXTRACT}"
+  check_rc "remove ${PATH_EXTRACT}"
+fi
+echo -e "\n -- $(date +%F_%T) -- BUILD END -- \n\n" >> $LOGFILE

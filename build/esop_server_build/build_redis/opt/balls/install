@@ -36,7 +36,7 @@ add_user() {
 	if id ${USER} >/dev/null 2>&1; then
 		check_rc "no need to add system user ($USER)"
 	else
-        	useradd ${USER} -m -d /usr/local/%{name}/ -u ${USERID} >/dev/null 2>&1
+        	useradd ${USER} -m -d /usr/local/${name}/ -u ${USERID} >/dev/null 2>&1
 		check_rc "add system user $USER($USERID)"
 	fi
 }

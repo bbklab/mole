@@ -5,6 +5,8 @@ basedir="$(cd $(dirname $0); pwd)"
 array=(
   mysql
   redis
+  rabbitmq
+  mongodb
   opt
   api
   web

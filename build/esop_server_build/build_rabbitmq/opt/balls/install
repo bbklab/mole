@@ -12,8 +12,7 @@ FILEDIR="${BASE_DIR}/files"
 PATH_ESOP="/usr/local/eyou/toolmail"
 PATH_LOG="${PATH_ESOP}/log"
 PATH_RUN="${PATH_ESOP}/run"
-PATH_TMP="${PATH_ESOP}/tmp"
-PATH_DYN="${PATH_ESOP}/app/inc/dynamic"
+MQ_DATA="${PATH_ESOP}/data/rabbitmq"
 
 # USER DEF
 USER="eyou"
@@ -43,14 +42,14 @@ add_user() {
 }
 
 chown_path() {
-	/bin/chown -R eyou:eyou ${PATH_LOG} ${PATH_RUN} ${PATH_TMP} ${PATH_DYN}
-	check_rc "change ower/group as eyou:eyou for ${PATH_LOG} ${PATH_RUN} ${PATH_TMP} ${PATH_DYN}"
+	/bin/chown -R eyou:eyou ${MQ_DATA} ${PATH_LOG} ${PATH_RUN}
+	check_rc "change ower/group as eyou:eyou for ${MQ_DATA} ${PATH_LOG} ${PATH_RUN}"
 }
 
 create_link() {
         local link="/usr/bin/eyou_toolmail"   dest="/usr/local/eyou/toolmail/app/sbin/eyou_toolmail"
         if [ -L $link -a -e $link ]; then
-		check_rc "no need to create link for $link"
+ 		check_rc "no need to create link for $link"
         else
 		rm -f $link >/dev/null 2>&1  
                 ln -s $dest $link >/dev/null 2>&1
@@ -69,8 +68,8 @@ fi
 if [ -d ${PATH_ESOP} ]; then
   read -p " ${PATH_ESOP} already exist, continue ? [yes|no]: "  response
   if [ "${response}" != "yes" ]; then
-	exit 1
-  fi
+        exit 1
+  fi  
 fi
 
 /bin/mkdir -p ${PATH_ESOP}
