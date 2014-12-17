@@ -73,23 +73,10 @@ build_erlang() {
 
   $CMD_MAKE install >> $LOGFILE 2>&1
   check_rc "install $filename"
-
-  for x in erl erlc escript
-  do
-	org="/usr/bin/${x}"
-	dst="$PATH_OPT/erlang/bin/${x}"
-
-	if [ -e "${org}" ]; then
-		mv "${org}" "${org}.bak.$(date +%s)" >> $LOGFILE 2>&1
-	fi
-
-	/bin/ln -s ${dst} ${org} >> $LOGFILE 2>&1
-	check_rc "create link $org"
-  done
 } 
 
 # -- build_rabbitmq
-build_rabbitmq {
+build_rabbitmq() {
   local filename="rabbitmq-server-3.3.5.tar.gz"  dirname="rabbitmq-server-3.3.5"
 
   $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
@@ -100,6 +87,9 @@ build_rabbitmq {
 		MAN_DIR=$PATH_OPT/rabbitmq/man \
 		DOC_INSTALL_DIR=$PATH_OPT/rabbitmq/doc  install  >> $LOGFILE 2>&1
   check_rc "install $filename"
+
+  /bin/mkdir -p $PATH_OPT/bin/
+  check_rc "create directory opt/bin"
 
   /bin/ln -s $PATH_OPT/rabbitmq/sbin/{rabbitmqctl,rabbitmq-server,rabbitmq-defaults,rabbitmq-env,rabbitmq-plugins} $PATH_OPT/bin/
   check_rc "create five rabbitmq links"

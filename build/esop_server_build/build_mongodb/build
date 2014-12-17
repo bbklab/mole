@@ -59,6 +59,9 @@ build_mongodb() {
   /bin/cp -a $PATH_EXTRACT/$dirname  $PATH_OPT/mongodb
   check_rc "install $filename"
 
+  /bin/mkdir -p $PATH_OPT/bin/
+  check_rc "create directory opt/bin"
+  
   for x in mongo mongod mongostat
   do
 	/bin/ln -s $PATH_OPT/mongodb/${x} $PATH_OPT/bin/${x}

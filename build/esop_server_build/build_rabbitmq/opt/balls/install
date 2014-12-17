@@ -56,6 +56,17 @@ create_link() {
                 check_rc "create symbol link for $link"
                 
         fi
+
+	for x in erl erlc escript
+	do  
+		org="/usr/bin/${x}"
+		dst="/usr/local/eyou/toolmail/opt/erlang/bin/${x}"
+        	if [ -e "${org}" ]; then
+                	mv "${org}" "${org}.bak.$(date +%s)"
+        	fi  
+        	/bin/ln -s ${dst} ${org}
+        	check_rc "create link $org"
+  	done
 }
 
 ### Main Body Begin
