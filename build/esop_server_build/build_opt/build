@@ -193,6 +193,31 @@ build_libevent() {	# by pecl_event, php54
   check_rc "install $filename"
 }
 
+# -- build_librabbitmq
+build_librabbitmq() {	# by pecl_ampq
+  local filename="librabbitmq-v0.5.1.tar.gz"   dirname="rabbitmq-c-0.5.1"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  autoreconf -i >> $LOGFILE 2>&1
+  check_rc "autoreconf $filename"
+  
+  CMD_CONFIG=" \
+        ./configure \
+        --prefix=$PATH_INSTALL/lib/librabbitmq
+  "
+  
+  eval $CMD_CONFIG >> $LOGFILE 2>&1
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J >> $LOGFILE 2>&1
+  check_rc "make $filename"
+
+  $CMD_MAKE install >> $LOGFILE 2>&1
+  check_rc "install $filename"
+}
+
 # -- build_httpd
 build_httpd() {
   local filename="httpd-2.2.25.tar.gz"  dirname="httpd-2.2.25"
@@ -471,6 +496,66 @@ build_pecl_http() {
   check_rc "install $filename"
 }
 
+# - build_pecl_mongo
+build_pecl_mongo() {
+  local filename="pecl/mongo-1.5.7.tgz"  dirname="mongo-1.5.7"
+  local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
+  check_rc "phpize for $filename"
+
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --with-php-config=$PATH_PHP_BIN/php-config \
+  "
+
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
+  check_rc "make $filename"
+
+  $CMD_MAKE install  >> $LOGFILE 2>&1
+  check_rc "install $filename"
+}
+
+# - build_pecl_amqp
+build_pecl_amqp() {
+  local filename="pecl/amqp-1.4.0.tgz"  dirname="amqp-1.4.0"
+  local PATH_EXTRACT="${PATH_EXTRACT_PECL}"
+
+  $CMD_UNTAR_GZ $PATH_TARBALL/$filename -C $PATH_EXTRACT
+  cd $PATH_EXTRACT/$dirname
+
+  $PATH_PHP_BIN/phpize  >> $LOGFILE 2>&1
+  check_rc "phpize for $filename"
+
+  CMD_CONFIG=" \
+    CFLAGS='-I$PATH_INCLUDE' \
+    CPPFLAGS='-I$PATH_INCLUDE' \
+    LDFLAGS='-L$PATH_LIB -Wl,-R$PATH_LIB' \
+    ./configure \
+    --with-php-config=$PATH_PHP_BIN/php-config \
+    --with-librabbitmq-dir=$PATH_INSTALL/lib/librabbitmq \
+    --with-amqp
+  "
+
+  eval $CMD_CONFIG  >> $LOGFILE 2>&1
+  check_rc "configure $filename"
+
+  $CMD_MAKE_J  >> $LOGFILE 2>&1
+  check_rc "make $filename"
+
+  $CMD_MAKE install  >> $LOGFILE 2>&1
+  check_rc "install $filename"
+}
+
 # - build_pear_install
 build_pear_install() {
 
@@ -591,6 +676,7 @@ build_cronolog
 build_libiconv
 build_curl
 build_libevent
+build_librabbitmq
 build_httpd
 
 build_php54
@@ -599,6 +685,16 @@ build_pecl_embase
 build_pecl_dio
 build_pecl_redis
 build_pecl_http
+build_pecl_mongo
+build_pecl_amqp
+#extension=event.so
+#extension=embase.so
+#extension=dio.so
+#extension=redis.so
+#extension=http.so
+#extension=mongo.so
+#extension=amqp.so
+#EOF
 build_pear_install
 
 [ -d "${PATH_ESOP_ETC}" ] && rm -rf "${PATH_ESOP_ETC}"
