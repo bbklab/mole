@@ -93,7 +93,7 @@ our $listen_socket = IO::Socket::INET->new(
 	Proto		=> 'tcp',
 	Type		=> SOCK_STREAM,
 	Listen		=> SOMAXCONN,
-	Resuse		=> 1,
+	Reuse		=> 1,		# SO_REUSEADDR, avoid error: [bind: Address already in use]
 );
 unless (defined $listen_socket) {
 	&log (FILE_LOG, "CRIT proxy create socket error: $@");
