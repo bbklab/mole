@@ -1553,7 +1553,9 @@ config_pdnsbl() {
 		exposed_addr=$( /usr/bin/curl -s --max-time 5 --max-redirs 3 "http://ifconfig.me" 2>&- )
 	fi
 	if [ -n "${exposed_addr}" ]; then
-		cfg_value3="${exposed_addr}"
+		if is_ipaddr "${exposed_addr}" >/dev/null 2>&1 ; then
+			cfg_value3="${exposed_addr}"
+		fi
 	fi
 
 	${MOLE} config-update ${plugin} ${cfg1} "${cfg_value1}"; ((rc+=$?))
