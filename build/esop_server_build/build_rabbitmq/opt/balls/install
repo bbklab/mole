@@ -69,6 +69,38 @@ create_link() {
   	done
 }
 
+start_rabbitmq() {
+	/usr/bin/eyou_toolmail start rabbitmq
+	check_rc "start rabbitmq"
+}
+
+init_rabbitmq() {
+	local mqcli="/usr/local/eyou/toolmail/opt/bin/rabbitmqctl"
+
+	$mqcli add_user notify_user notify@rbmq354356
+	check_rc "mq add user1"
+
+	$mqcli add_user notifysend_user notifysend@rbmq789912
+	check_rc "mq add user2"
+
+	$mqcli add_vhost notify
+	check_rc "mq add vhost1"
+
+	$mqcli add_vhost notifysend
+	check_rc "mq add vhost2"
+
+	$mqcli set_permissions -p "notify" notify_user ".*" ".*" ".*"
+	check_rc "mq set pri1"
+
+	$mqcli set_permissions -p "notifysend" notifysend_user ".*" ".*" ".*"
+	check_rc "mq set pri2"
+}
+
+stop_rabbitmq() {
+	/usr/bin/eyou_toolmail stop rabbitmq
+	check_rc "stop rabbitmq"
+}
+
 ### Main Body Begin
 
 if [ "$(id -u)" != "0" ]; then
@@ -92,3 +124,6 @@ check_rc "copy files to ${PATH_ESOP}"
 add_user
 chown_path
 create_link
+start_rabbitmq
+init_rabbitmq
+stop_rabbitmq
