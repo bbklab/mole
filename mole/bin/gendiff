@@ -68,6 +68,7 @@ if ($fh) {
 		last;
 	}
 }
+### $epinfo
 
 our $SaveFile = undef;
 open $fh, "$mole printdef TMP_PRESYSINFO 2>&- |";
@@ -77,9 +78,10 @@ if ($fh) {
 		last;
 	}
 }
-unless (defined $SaveFile) {
+unless (defined $SaveFile && length $SaveFile) {
 	$SaveFile = $basedir . '/tmp/.presysinfo.dat';
 }
+### $SaveFile
 
 #
 # global sub def start
@@ -709,14 +711,48 @@ sub genjson_diffinfo {
 
   return $diffjson;
 }
+
+sub show_help {
+print <<HELP;
+	$filename               print diff sysinfo and update record file, only called by mole_report_sysinfo
+	$filename -h            print what you are reading
+	$filename help          print what you are reading
+	$filename full          print full sysinfo and exit
+	$filename diff          print diff sysinfo and exit
+HELP
+;
+exit (0);
+}
 #
 # global sub def end
 #
 
+
+##
+## Main Body Begin ...
+##
+
+# process cli args
+our ($print_full, $print_diff) = (0, 0);
+if (scalar @ARGV) {
+	if ( $ARGV[0] eq 'help' || $ARGV[0] eq '-h' ) {
+		&show_help;
+	} elsif ( $ARGV[0] eq 'full' ) {
+		$print_full = 1;
+	} elsif ( $ARGV[0] eq 'diff' ) {
+		$print_diff = 1;
+	} else {
+		&show_help;
+	}
+}
+
+
+# set $OS_RUNLEVEL / $OS_BITMODE 
 our $OS_RUNLEVEL = &get_runlevel;
 our $OS_BITMODE  = &get_osbitmode;
 
 
+# set what information to collect
 our %data_config = (
 
   # original system_dyninfo
@@ -754,6 +790,7 @@ our %data_config = (
 ### %data_config
 
 
+# init set %result hash
 our %result = ();
 
 
@@ -2332,7 +2369,7 @@ if ($data_config{'raid_info'}) {
 
 ##
 ##  part_3. eyou product info 
-##		this is optional, do it or not according by result of [epinfo have]
+##		this is optional, do it or not according by result of [epinfo have] instead of %data_config
 ##
 
 if (defined $epinfo && -f $epinfo && -x $epinfo) {
@@ -2374,6 +2411,11 @@ if (defined $epinfo && -f $epinfo && -x $epinfo) {
 #  END to COLLECT SYSTEM INFORMATION 
 #
 
+if ($print_full) {
+	print JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result);
+	exit $state_succ;
+}
+
 our $DiffInfo = undef;
 if (my $OldInfo = &load_oldinfo($SaveFile)) {
 	### load_oldinfo_succeed
@@ -2401,6 +2443,9 @@ unless ($DiffInfo) {
 
 ### output and exit
 print $DiffInfo;
+if ($print_diff) {
+	exit $state_succ;
+}
 if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result)) {
 	if (&write_newinfo($SaveFile, $result)) {
 		#printf "+OK save new result into file succeed\n";
