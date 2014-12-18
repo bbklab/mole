@@ -114,6 +114,8 @@ cat << EOF
 	ifunc		{funcname}  {args}	$(gettext "calling to run inner functions")
 	setinit		view			$(gettext "print global instance information")
 	setinit		reset			$(gettext "reset global instance information (be careful!)")
+	post		sysinfo			$(gettext "post full sysinfo once")
+	print		sysinfo			$(gettext "print full sysinfo")
 	saveconf				$(gettext "save esop config files once")
 	config					$(gettext "help stuff about mole config-*")
 	config-help				$(gettext "help stuff about mole config-* (same as above)")
@@ -170,6 +172,8 @@ cat << EOF
 	mole  ifunc 	time2run_ornot disk_fs 
 	mole  setinit	view 
 	mole  setinit   reset
+	mole  post	sysinfo
+	mole  print	sysinfo
 	mole  saveconf
 	mole  config
 	mole  config-help
@@ -905,6 +909,23 @@ case "$#" in
 			. ${SETINIT_SH}
 		elif [ "$arg2" == "reset" ]; then
 			. ${SETINIT_SH} "reset"
+		fi
+			;;
+	"post")
+		if [ "$arg2" == "sysinfo" ]; then
+			/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} 2>&- 
+			process_inner_plugin "mole_report_sysinfo" "startrun"
+		else
+			show_help
+			show_example
+		fi
+			;;
+	"print")
+		if [ "$arg2" == "sysinfo" ]; then
+			${GENDIFF} "full"
+		else
+			show_help
+			show_example
 		fi
 			;;
 	*)
