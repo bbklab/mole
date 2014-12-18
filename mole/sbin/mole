@@ -385,12 +385,11 @@ else
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
 	/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} 2>&- 
-	write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [mole_report_sysinfo] ..."
-	process_inner_plugin "mole_report_sysinfo" "startrun"   # startrun: no need to un_lock
-
+	init_plugin mole_report_sysinfo
 	echo -e "[$(echo_green "$(gettext "succeed!")")]"
 	write_log -f "${MOLE_LOG}" "START000 MOLE inner plugins execution done. details in ${INNER_LOG##*/}."
 	
+	# === Start Mole Core LOOP
 	gettext "7. starting mole cron        ... "
 	write_log -f "${MOLE_LOG}" "START000 MOLE starting mole core cron... "
 
@@ -914,7 +913,7 @@ case "$#" in
 	"post")
 		if [ "$arg2" == "sysinfo" ]; then
 			/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} 2>&- 
-			process_inner_plugin "mole_report_sysinfo" "startrun"
+			init_plugin mole_report_sysinfo
 		else
 			show_help
 			show_example
