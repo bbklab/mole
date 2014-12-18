@@ -334,6 +334,12 @@ msgstr "打印实例的标识信息"
 msgid "reset global instance information (be careful!)"
 msgstr "重置实例的标识信息 (慎重操作!)"
 
+msgid "post full sysinfo once"
+msgstr "单独一次上报全量的sysinfo数据"
+
+msgid "print full sysinfo"
+msgstr "打印全量的sysinfo数据"
+
 msgid "save esop config files once"
 msgstr "保存当前ESOP的配置文件目录"
 
