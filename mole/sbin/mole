@@ -380,7 +380,7 @@ else
 		write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [${plugin_name}] ..."
 		process_inner_plugin "${plugin_name}" "startrun"   # startrun: no need to un_lock
 	done
-	rm -f /var/tmp/.mole.gendiff.tmp /var/tmp/.mole_report_sysinfo.tmp 2>&-
+	/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} 2>&- 
 	write_log -f "${MOLE_LOG}" "START000 MOLE executing inner plugins [mole_report_sysinfo] ..."
 	process_inner_plugin "mole_report_sysinfo" "startrun"   # startrun: no need to un_lock
 
@@ -527,6 +527,10 @@ stop_core_cron() {
   if [ "$?" == "0" ]; then   ### is running    status: fake? is dangerous ==> SKIP
   	write_log -f "${MOLE_LOG}" "STOP0000 MOLE stopping..."
 
+	# remove tmp files
+	/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} ${POSTHOST_STATUS} ${SMTPHOST_STATUS} 2>&-
+
+	# stop core cron
 	write_log -f "${MOLE_LOG}" "STOP0000 MOLE stop mole core cron"
 	stopps_by_pidfile ${PID_FILE} ${max_wait} "STOP0000" # max_wait to ensure mole could caught singla TERM
 	rc=$?

@@ -69,7 +69,17 @@ if ($fh) {
 	}
 }
 
-our $SaveFile = "/var/tmp/.mole.$filename.tmp";
+our $SaveFile = undef;
+open $fh, "$mole printdef TMP_PRESYSINFO 2>&- |";
+if ($fh) {
+	while (<$fh>) {
+		chomp; $SaveFile = $_;
+		last;
+	}
+}
+unless (defined $SaveFile) {
+	$SaveFile = $basedir . '/tmp/.presysinfo.dat';
+}
 
 #
 # global sub def start

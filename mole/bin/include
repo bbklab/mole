@@ -114,6 +114,8 @@ TMP_REPEAT="${TMP_DIR}/.repeat.dat"
 TMP_STATUS="${TMP_DIR}/.status.dat"
 TMP_HEAPUPRC="${TMP_DIR}/.heapuprc.dat"
 TMP_HEAPUPNOTIFY="${TMP_DIR}/.heapupnotify.dat"
+TMP_PRESYSINFO="${TMP_DIR}/.presysinfo.dat"
+TMP_CNTSYSINFO="${TMP_DIR}/.cntsysinfo.dat"
 SMTPHOST_STATUS="${TMP_DIR}/.smtphost.status"
 POSTHOST_STATUS="${TMP_DIR}/.posthost.status"
 

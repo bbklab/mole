@@ -46,8 +46,8 @@ fi
 # check function here
 check() {
 
-  local pre_sysinfo_fsave="/var/tmp/.mole.gendiff.tmp"
-  local pre_times_fsave="/var/tmp/.mole_report_sysinfo.tmp"
+  local pre_sysinfo_fsave="${TMP_PRESYSINFO}"
+  local pre_times_fsave="${TMP_CNTSYSINFO}"
 
   # read nower {diff-post} times
   local nower_times=0
@@ -92,6 +92,7 @@ check() {
 	CONTENT=" post [$sysinfo_type] sysinfo failed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} ### on this time, nower times is ${nower_times} "
   fi
 
+  # reset counter
   if [ "${sysinfo_type}" == "full" ]; then
   	echo 0            > "${pre_times_fsave}"
   elif [ "${sysinfo_type}" == "diff" ]; then
