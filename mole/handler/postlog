@@ -994,6 +994,7 @@ sub genjson_config() {
 	'iam_alive'		=> '',
 	'check_remote'		=> '',
 	'report_conf'		=> '',
+	'report_sysinfo'	=> '',
   );
 
   my %raw_global = (
@@ -1390,6 +1391,28 @@ sub genjson_config() {
   }
   my $json_report_conf = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_report_conf);
 
+  my %raw_report_sysinfo = (
+	'frequency'		=> '',
+	'exec_tmout'		=> '',
+	'full_times'		=> '',
+  );
+  open $fh, "$mole view mole_report_sysinfo 2>&- |";
+  if($fh) {
+        while(<$fh>){
+                chomp;
+		foreach my $key (keys %raw_report_sysinfo){
+                	if(/\A\s*$key\s+(.+)\Z/){
+                        	$raw_report_sysinfo{$key} = $1; 
+				goto POST_END;
+                	}
+		}
+		POST_END: {
+			next;
+		}
+	}
+  }
+  my $json_report_sysinfo = JSON->new->allow_nonref->utf8(1)->ascii(1)->encode(\%raw_report_sysinfo);
+
   close $fh if ($fh);
 
 
@@ -1406,6 +1429,7 @@ sub genjson_config() {
 	'iam_alive'		=> $json_iam_alive,
 	'check_remote'		=> $json_check_remote,
 	'report_conf'		=> $json_report_conf,
+	'report_sysinfo'	=> $json_report_sysinfo,
   );
 
   $result{'data'} = \%raw_data;
