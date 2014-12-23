@@ -1292,30 +1292,30 @@ if ($data_config{'disk_space'}) {
 # cpu_usage
 if ($data_config{'cpu_usage'}) {
   my %cpu_usage = (
-  	'time'		=> 5,
-  	'interval'	=> 1,
   	'user'		=> 0,
   	'sys'		=> 0,
-  	'wait'		=> 0,
   	'idle'		=> 0,
+  	'wait'		=> 0,
 	);
-  my $vmstat = '/usr/bin/vmstat';
-  if (-f $vmstat && -x $vmstat) {
-  	open my $fh, "$vmstat $cpu_usage{'interval'} $cpu_usage{'time'} 2>&- | ";
-  	if ($fh) {
-		while(<$fh>){
-			next unless m/\A\s*\d+/;
-			$cpu_usage{'user'} += (split/\s+/)[-5];
-			$cpu_usage{'sys'}  += (split/\s+/)[-4];
-			$cpu_usage{'wait'} += (split/\s+/)[-2];
-			$cpu_usage{'idle'} += (split/\s+/)[-3];
+  if (-f $f_cpuusage) {
+	my $_rnum = 0;
+	if (open my $fh, "<$f_cpuusage") {
+		while (<$fh>) {
+			$_rnum ++;
+			$cpu_usage{'user'} += (split/\s+/)[0];
+			$cpu_usage{'sys'}  += (split/\s+/)[1];
+			$cpu_usage{'idle'} += (split/\s+/)[2];
+			$cpu_usage{'wait'} += (split/\s+/)[3];
 		}
-  	}
+		close $fh if $fh;
+	}
+	if ($_rnum) {
+  		$cpu_usage{'user'} = $cpu_usage{'user'}/$_rnum;
+  		$cpu_usage{'sys'} = $cpu_usage{'sys'}/$_rnum;
+  		$cpu_usage{'idle'} = $cpu_usage{'idle'}/$_rnum;
+  		$cpu_usage{'wait'} = $cpu_usage{'wait'}/$_rnum;
+	}
   }
-  $cpu_usage{'user'} = $cpu_usage{'user'}/$cpu_usage{'time'};
-  $cpu_usage{'sys'} = $cpu_usage{'sys'}/$cpu_usage{'time'};
-  $cpu_usage{'wait'} = $cpu_usage{'wait'}/$cpu_usage{'time'};
-  $cpu_usage{'idle'} = $cpu_usage{'idle'}/$cpu_usage{'time'};
   ### %cpu_usage
   $result{'cpu_usage'} = \%cpu_usage;
 }
