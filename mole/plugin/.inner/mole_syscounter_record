@@ -9,7 +9,7 @@
 # Result: 
 # 	file list under directory: {SYSCOUNTER_DIR}
 #		- diskio
-#		- netfolow
+#		- netflow
 #		- cpuusage
 #
 
@@ -51,7 +51,7 @@ CONTENT=        ### { strings | /path/to/result.file }
 # check function here
 check() {
   local maxnum=10000
-  local iofile="${SYSCOUNTER_DIR}/diskio" netfile="${SYSCOUNTER_DIR}/netfolow" cpufile="${SYSCOUNTER_DIR}/cpuusage"
+  local iofile="${SYSCOUNTER_DIR}/diskio" netfile="${SYSCOUNTER_DIR}/netflow" cpufile="${SYSCOUNTER_DIR}/cpuusage"
   local result=  action=0
 
   if [ ! -d "${SYSCOUNTER_DIR}" ]; then
