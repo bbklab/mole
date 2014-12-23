@@ -70,6 +70,7 @@ if ($fh) {
 }
 ### $epinfo
 
+# get TMP_PRESYSINFO path
 our $SaveFile = undef;
 open $fh, "$mole printdef TMP_PRESYSINFO 2>&- |";
 if ($fh) {
@@ -82,6 +83,25 @@ unless (defined $SaveFile && length $SaveFile) {
 	$SaveFile = $basedir . '/tmp/.presysinfo.dat';
 }
 ### $SaveFile
+
+# get SYSCOUNTER_DIR path
+our $Counter_Savedir = undef;
+open $fh, "$mole printdef SYSCOUNTER_DIR 2>&- |";
+if ($fh) {
+	while (<$fh>) {
+		chomp; $Counter_Savedir = $_;
+		last;
+	}
+}
+unless (defined $Counter_Savedir && length $Counter_Savedir) {
+	$Counter_Savedir = $basedir . '/tmp/syscounter';
+}
+our ($f_diskio, $f_netflow, $f_cpuusage) = ($Counter_Savedir . '/diskio', $Counter_Savedir . '/netflow', $Counter_Savedir . '/cpuusage');
+### $Counter_Savedir
+### $f_diskio
+### $f_netflow
+### $f_cpuusage
+
 
 #
 # global sub def start
