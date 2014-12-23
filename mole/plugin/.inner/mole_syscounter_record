@@ -52,31 +52,41 @@ CONTENT=        ### { strings | /path/to/result.file }
 check() {
   local maxnum=10000
   local iofile="${SYSCOUNTER_DIR}/diskio" netfile="${SYSCOUNTER_DIR}/netfolow" cpufile="${SYSCOUNTER_DIR}/cpuusage"
+  local result=  action=0
 
   if [ ! -d "${SYSCOUNTER_DIR}" ]; then
 	if ! /bin/mkdir -p "${SYSCOUNTER_DIR}" 2>/dev/null; then
   		EXIT_STATUS="${STATE_CRITICAL}"
   		LEVEL="crit"
   		TYPE="str"
-  		CONTENT="create syscounter save directory failed!"
+  		CONTENT="create saving directory ${SYSCOUNTER_DIR##*/} failed!"
 		return
+	else
+		result="${result} create saving directory ${SYSCOUNTER_DIR##*/} succeed! " 
 	fi
+  else
+	result="${result} saving directory ${SYSCOUNTER_DIR##*/} prepared! ### "
   fi
+  ((action++))
 
   # truncate oversize file
   local linenum=0
   for f in "${iofile}" "${netfile}" "${cpufile}"
   do
-	if [ -f "${f}" ] && [ -s "${file}" ]; then
-		linenum=$( /bin/awk 'END{print NR}' "${file}" 2>&- )
+	if [ -f "${f}" ] && [ -s "${f}" ]; then
+		linenum=$( /bin/awk 'END{print NR}' "${f}" 2>&- )
 		if ! is_int "${linenum}"; then
 			linenum=0
 		fi
 		if [ ${linenum} -gt ${maxnum} ]; then
 			:> "${f}"
+			result="${result} truncate ${f##*/} with $linenum lines ### "
+		else
+			result="${result} skip truncating ${f##*/} with $linenum lines ### "
 		fi
 	fi
   done
+  ((action++))
 
   # record io data
   local file1="/proc/diskstats" file2="/proc/partitions"
@@ -94,9 +104,11 @@ check() {
 			fi
 			sleep 1;
 		done
-		} > "${iofile}"  2>/dev/null
+		}  > "${iofile}"  2>/dev/null
+		result="${result} saved io data into ${iofile##*/} ### "
 	fi
   fi
+  ((action++))
 
   # record net data
   local file="/proc/net/dev"
@@ -104,19 +116,44 @@ check() {
 	{
 	for ((i=1;i<=20;i++))
 	do
-		# awk 'BEGIN{FS=":"} (NF==2){split($2,a," "); printf("%s: ",$1); for(i in a){printf "%s ",a[i]}; printf "\n"; }' /proc/net/dev 	
+		/bin/awk 'BEGIN{FS=":";OFS=" "} \
+			{ if(NF==2){ \
+				printf("%s: ",$1); \
+				$1=""; \
+				n=split($0,a," "); \
+				if(n==16){ \
+					print $0; \
+				}else{ \
+					next; \
+				} \
+			  }else{ \
+				next; \
+			  } \
+			} ' "${file}" 2>/dev/null  |\
+		/bin/awk '{print $1,$2,$3,$10,$11}'
 		sleep 1;
 	done	
-	} > "${netfile}" 2>/dev/null
+	}  > "${netfile}" 2>/dev/null
+	result="${result} saved net data into ${netfile##*/} ### "
   fi
+  ((action++))
 
   # record cpu data
-
+  local vmstat="/usr/bin/vmstat"
+  if [ -f "${vmstat}" ] && [ -x "${vmstat}" ]; then
+	{
+	${vmstat} 1 20 |\
+	/bin/awk '($1!~/[0-9]+/ || NF!=17){next;} \
+			{print $13,$14,$15,$16}'
+	}  > "${cpufile}" 2>/dev/null
+	result="${result} saved cpu data into ${cpufile##*/} ### "
+  fi
+  ((action++))
 
   EXIT_STATUS="${STATE_SUCC}"
   LEVEL="succ"
   TYPE="str"
-  CONTENT="Finished"
+  CONTENT="${0##*/} finished|${action} action finished|${result}"
 }
 
 check
