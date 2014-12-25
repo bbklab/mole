@@ -38,7 +38,7 @@ use strict;
 use utf8;
 use JSON;
 use EsopLib;
-# use Smart::Comments;
+use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
 binmode(STDERR, ":encoding(utf8)");
@@ -85,6 +85,11 @@ unless (defined $SaveFile && length $SaveFile) {
 ### $SaveFile
 
 # get SYSCOUNTER_DIR path
+# sysinfo calculate dynamic data from directory {SYSCOUNTER_DIR} which saved by inner plugin: syscounter_record
+# relationship between {sysinfo_node}  =>  {data_file} :
+# 	disk_iostat	=>	diskio
+# 	cpu_usage	=>	cpuusage
+# 	netflow		=>	netflow		(this is no {netflow} sysinfo_node, it's no use for now)
 our $Counter_Savedir = undef;
 open $fh, "$mole printdef SYSCOUNTER_DIR 2>&- |";
 if ($fh) {
@@ -98,14 +103,71 @@ unless (defined $Counter_Savedir && length $Counter_Savedir) {
 }
 our ($f_diskio, $f_netflow, $f_cpuusage) = ($Counter_Savedir . '/diskio', $Counter_Savedir . '/netflow', $Counter_Savedir . '/cpuusage');
 ### $Counter_Savedir
-### $f_diskio
-### $f_netflow
-### $f_cpuusage
+
+
+# Set Global Config {data_config}
+# set what information to collect
+our %data_config = (
+
+  # original system_dyninfo
+  'sysload'		=> 1,
+  'online_user'		=> 1,
+  'systime'		=> 1,
+  'mem_usage'		=> 1,
+  'process'		=> 1,
+  'netstat'		=> 1,
+  'lastlogin'		=> 1,
+  'sys_mods'		=> 1,
+  'sys_locks'		=> 1,
+  'disk_space'		=> 1,
+  'cpu_usage'		=> 1,
+
+  # new added
+  'disk_iostat'		=> 1,
+  'process_stat'	=> 1,
+
+  # original system_fixinfo
+  'product_info'	=> 1,
+  'mem_info'		=> 1,		# infact, this config is unless, mem_info depend on (same as) product_info
+  'cpu_info'		=> 1,
+  'input_dev'		=> 1,
+  'os_info'		=> 1,
+  'sys_clock'		=> 1,
+  'sys_lang'		=> 1,
+  'selinux'		=> 1,
+  'sysuser'		=> 1,
+  'runlevel'		=> 1,
+  'startups'		=> 1,
+  'dns'			=> 1,
+  'route'		=> 1,
+  'arp'			=> 1,
+  'mount'		=> 1,
+  'inet_name'		=> 1,
+  'raid_info'		=> 1,
+);
+### %data_config
+
+
 
 
 #
-# global sub def start
+# === Global Sub Def START
 #
+
+# print help
+sub show_help {
+print <<HELP;
+	$filename               print diff sysinfo and update record file, only called by mole_report_sysinfo
+	$filename -h            print what you are reading
+	$filename help          print what you are reading
+	$filename full          print full sysinfo and exit
+	$filename diff          print diff sysinfo and exit
+HELP
+;
+exit (0);
+}
+
+# get os bitmode
 sub get_osbitmode {
   my $osbit = '32';
   my $getconf = "/usr/bin/getconf";
@@ -120,6 +182,7 @@ sub get_osbitmode {
   return $osbit;
 }
 
+# get os runlevel
 sub get_runlevel {
   my $level = 'X';
   my $inittab = '/etc/inittab';
@@ -138,6 +201,8 @@ sub get_runlevel {
   return $level;
 }
 
+# load previous sysinfo from {SaveFile} to check diff
+# note: return jsoned string
 sub load_oldinfo {
   my $savefile = shift;
   my $oldinfo  = undef;			# Note: return jsoned string
@@ -159,6 +224,8 @@ sub load_oldinfo {
   return $oldinfo;
 }
 
+# overwrite new sysinfo into {SaveFile}
+# note: receive jsoned string
 sub write_newinfo {
   my $savefile = shift;
   my $newinfo  = shift; 		# Note: receive jsoned string
@@ -166,7 +233,8 @@ sub write_newinfo {
 	return undef;
   }
   if (open my $fh, ">", $savefile ) {
-	unless (print $fh "0 $newinfo\n") {	# write new info start by 0+space, Note: use print not printf to avoid $newinfo contain '%'
+	unless (print $fh "0 $newinfo\n") {	# write new info start by 0+space
+						# Note: use print instead of printf to avoid $newinfo contain '%'
 		return undef;
 	}
 	close $fh if ($fh);
@@ -175,6 +243,8 @@ sub write_newinfo {
   }
 }
 
+# create different json between {oldinfo} and {newinfo}
+# note: only receive raw (unjsoned) hash struct
 sub genjson_diffinfo {
   my ($oldinfo,$newinfo) = @_;	# Note: only receive raw (unjsoned) %hash struct
   my %oldinfo = %{$oldinfo} if (defined $oldinfo);
@@ -218,6 +288,27 @@ sub genjson_diffinfo {
 		$diffinfo{'cpu_usage'} = \%{$newinfo{'cpu_usage'}};
 		last;
 	}
+  }
+
+  ### diff {disk_iostat}
+  if (scalar @{$newinfo{'disk_iostat'}} ne scalar @{$oldinfo{'disk_iostat'}}) {
+	$diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
+  } else {
+        my @newinfo_diskiostat = @{$newinfo{'disk_iostat'}};   # item in array sort order same
+        my @oldinfo_diskiostat = @{$oldinfo{'disk_iostat'}};   # item in array sort order same
+        for(my $i=0;$i<=$#newinfo_diskiostat;$i++){
+                my %newinfo_diskiostat = %{$newinfo_diskiostat[$i]};
+                my %oldinfo_diskiostat = %{$oldinfo_diskiostat[$i]};
+                foreach my $x (sort keys %{$newinfo_diskiostat[$i]}) {
+                        unless ( $newinfo_diskiostat{$x} eq $oldinfo_diskiostat{$x} ) {
+                                $diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
+                                goto IO_BREAK;
+                        }    
+                }    
+        }    
+        IO_BREAK: {
+		;
+        }
   }
 
   ### diff {disk_space}
@@ -732,19 +823,8 @@ sub genjson_diffinfo {
   return $diffjson;
 }
 
-sub show_help {
-print <<HELP;
-	$filename               print diff sysinfo and update record file, only called by mole_report_sysinfo
-	$filename -h            print what you are reading
-	$filename help          print what you are reading
-	$filename full          print full sysinfo and exit
-	$filename diff          print diff sysinfo and exit
-HELP
-;
-exit (0);
-}
 #
-# global sub def end
+# === Global Sub Def END 
 #
 
 
@@ -770,44 +850,6 @@ if (scalar @ARGV) {
 # set $OS_RUNLEVEL / $OS_BITMODE 
 our $OS_RUNLEVEL = &get_runlevel;
 our $OS_BITMODE  = &get_osbitmode;
-
-
-# set what information to collect
-our %data_config = (
-
-  # original system_dyninfo
-  'sysload'		=> 1,
-  'online_user'		=> 1,
-  'systime'		=> 1,
-  'mem_usage'		=> 1,
-  'process'		=> 1,
-  'netstat'		=> 1,
-  'lastlogin'		=> 1,
-  'sys_mods'		=> 1,
-  'sys_locks'		=> 1,
-  'disk_space'		=> 1,
-  'cpu_usage'		=> 1,
-
-  # original system_fixinfo
-  'product_info'	=> 1,
-  #'mem_info'		=> 1,		# depend on (same as) product_info
-  'cpu_info'		=> 1,
-  'input_dev'		=> 1,
-  'os_info'		=> 1,
-  'sys_clock'		=> 1,
-  'sys_lang'		=> 1,
-  'selinux'		=> 1,
-  'sysuser'		=> 1,
-  'runlevel'		=> 1,
-  'startups'		=> 1,
-  'dns'			=> 1,
-  'route'		=> 1,
-  'arp'			=> 1,
-  'mount'		=> 1,
-  'inet_name'		=> 1,
-  'raid_info'		=> 1,
-);
-### %data_config
 
 
 # init set %result hash
@@ -1287,8 +1329,6 @@ if ($data_config{'disk_space'}) {
   $result{'disk_space'} = \@disk_space;
 }
 
-
-
 # cpu_usage
 if ($data_config{'cpu_usage'}) {
   my %cpu_usage = (
@@ -1301,6 +1341,7 @@ if ($data_config{'cpu_usage'}) {
 	my $_rnum = 0;
 	if (open my $fh, "<$f_cpuusage") {
 		while (<$fh>) {
+			chomp; s/\A\s*//; s/\s*\Z//g;
 			$_rnum ++;
 			$cpu_usage{'user'} += (split/\s+/)[0];
 			$cpu_usage{'sys'}  += (split/\s+/)[1];
@@ -1319,6 +1360,55 @@ if ($data_config{'cpu_usage'}) {
   ### %cpu_usage
   $result{'cpu_usage'} = \%cpu_usage;
 }
+
+# disk_iostat
+if ($data_config{'disk_iostat'}) {
+  my %_tmp_disk_iostat = ();
+  my @disk_iostat = ();
+  if (-f $f_diskio) {
+	if (open my $fh, "<$f_diskio") {
+		while (<$fh>) {
+			chomp; s/\A\s*//; s/\s*\Z//g;
+			my @_ioarr = split /\s+/;
+			if (scalar @_ioarr) {
+				push @{$_tmp_disk_iostat{shift @_ioarr}}, \@_ioarr;
+			} else {
+				next;
+			}
+		}
+		close $fh if $fh;
+	}
+	foreach my $devname (keys %_tmp_disk_iostat) {
+		my $_rnum   = scalar @{$_tmp_disk_iostat{$devname}};
+		next unless $_rnum;
+		my $iostart = shift  @{$_tmp_disk_iostat{$devname}};
+		my $ioend   = pop    @{$_tmp_disk_iostat{$devname}};
+		my @iostart = @{$iostart};
+		my @ioend   = @{$ioend};
+		if (scalar @iostart eq 11 && scalar @ioend eq 11) {
+			my %single_disk_iostat = (
+				'devname'		=> $devname,
+				'read_sum'		=> ($ioend[0] - $iostart[0]) / $_rnum,
+				'read_merged'		=> ($ioend[1] - $iostart[1]) / $_rnum,
+				'read_sectors'		=> ($ioend[2] - $iostart[2]) / $_rnum,
+				'read_spent_ms'		=> ($ioend[3] - $iostart[3]) / $_rnum,
+				'write_sum'		=> ($ioend[4] - $iostart[4]) / $_rnum,
+				'write_merged'		=> ($ioend[5] - $iostart[5]) / $_rnum,
+				'write_sectors'		=> ($ioend[6] - $iostart[6]) / $_rnum,
+				'write_spent_ms'	=> ($ioend[7] - $iostart[7]) / $_rnum,
+				'io_spent_ms'		=> ($ioend[9] - $iostart[9]) / $_rnum,
+				'weighting_io_spent_ms'	=> ($ioend[10] - $iostart[10]) / $_rnum,
+			);
+			push @disk_iostat, \%single_disk_iostat;
+		} else {
+			next;
+		}
+	}
+  }
+  ### @disk_iostat
+  $result{'disk_iostat'} = \@disk_iostat;
+}
+
 
 
 
@@ -2468,13 +2558,14 @@ if ($print_diff) {
 }
 if ($result = JSON->new->allow_nonref->utf8(1)->ascii(1)->canonical(1)->encode(\%result)) {
 	if (&write_newinfo($SaveFile, $result)) {
-		#printf "+OK save new result into file succeed\n";
+		### overwrite_save_new_OK
 		exit $state_succ;
 	} else {
-		#printf "-ERR save new result into file failed\n";
+		### overwrite_save_new_FAIL
 		exit $state_warn;
 	}
 } else {
+	### json_encode_new_FAIL
 	#printf "-ERR encode new result as json failed\n";
 	exit $state_warn;
 }
