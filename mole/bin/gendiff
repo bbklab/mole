@@ -120,10 +120,10 @@ our %data_config = (
   'sys_mods'		=> 1,
   'sys_locks'		=> 1,
   'disk_space'		=> 1,
-  'cpu_usage'		=> 1,
+  'cpu_usage'		=> 1,		# read data from {SYSCOUNTER_DIR}/cpuusage
 
   # new added
-  'disk_iostat'		=> 1,
+  'disk_iostat'		=> 1,		# read data from {SYSCOUNTER_DIR}/diskio
   'process_stat'	=> 1,
 
   # original system_fixinfo
@@ -363,12 +363,18 @@ sub genjson_diffinfo {
   }
 
   ### diff {dns}
-  if (scalar @{$newinfo{'dns'}} ne scalar @{$oldinfo{'dns'}}) {
+  if (exists $newinfo{'dns'} && exists $oldinfo{'dns'}) {
+  	if (scalar @{$newinfo{'dns'}} ne scalar @{$oldinfo{'dns'}}) {
+		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
+  	} else {
+		if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$oldinfo{'dns'}})) {
+			$diffinfo{'dns'} = \@{$newinfo{'dns'}};
+		}
+  	}
+  } elsif (exists $newinfo{'dns'}) {
 	$diffinfo{'dns'} = \@{$newinfo{'dns'}};
   } else {
-	if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$oldinfo{'dns'}})) {
-		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
-	}
+	;
   }
   
   ### diff {inet_name}
