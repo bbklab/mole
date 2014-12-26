@@ -124,7 +124,7 @@ our %data_config = (
 
   # new added
   'disk_iostat'		=> 1,		# read data from {SYSCOUNTER_DIR}/diskio
-  'process_stat'	=> 1,
+  'process_top'		=> 1,
 
   # original system_fixinfo
   'product_info'	=> 1,
@@ -1578,6 +1578,72 @@ if ($data_config{'disk_iostat'}) {
   $result{'disk_iostat'} = \@disk_iostat;
 }
 
+# process_top
+if ($data_config{'process_top'}) {
+  my %process_top = ();
+  my $top = '/usr/bin/top';
+  if (-f $top && -x $top) {
+	my %ps_details = ();
+	open my $fh, "$top -n 1 -d 1 -b 2>&- |";
+	if ($fh) {
+		while (<$fh>) {
+			chomp; s/\A\s*//; s/\s*\Z//;
+			next unless m/\A\s*\d+/;
+			my @tmp_arr = split /\s+/;
+			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'cpu'} += $tmp_arr[8];
+			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'mem'} += &c2kb($tmp_arr[5]) ;
+			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'num'} ++;
+		}
+	}
+
+	# sort each ps_details by cpu/mem and saved in @cputop/@memtop
+	my $topnum = 10;
+	my (@cputop, @memtop) = ();
+
+	my @tmp_ps_details = ();
+	@tmp_ps_details = keys %ps_details;
+	for(my $j=0; $j<scalar @tmp_ps_details; $j++) {
+		for(my $i=0; $i<(scalar @tmp_ps_details - 1 - $j); $i++) {
+			if ( $ps_details{$tmp_ps_details[$i]}{'cpu'} < $ps_details{$tmp_ps_details[($i+1)]}{'cpu'} ) {	# use < not lt
+				my $_var_tmp = $tmp_ps_details[$i];
+				$tmp_ps_details[$i] = $tmp_ps_details[($i+1)];
+				$tmp_ps_details[($i+1)] = $_var_tmp;
+			}
+		}
+	}
+	for(my $i=1; $i<=$topnum; $i++) {
+		my $_tmp_ps =  shift @tmp_ps_details;
+		my %_tmp_item = (
+			$_tmp_ps	=> \%{$ps_details{$_tmp_ps}},
+		);
+		push @cputop, \%_tmp_item;
+	}
+	$process_top{'cpu'} = \@cputop;
+
+	@tmp_ps_details = ();
+	@tmp_ps_details = keys %ps_details;
+	for(my $j=0; $j<scalar @tmp_ps_details; $j++) {
+		for(my $i=0; $i<(scalar @tmp_ps_details - 1 - $j); $i++) {
+			if ( $ps_details{$tmp_ps_details[$i]}{'mem'} < $ps_details{$tmp_ps_details[($i+1)]}{'mem'} ) {	# use < not lt
+				my $_var_tmp = $tmp_ps_details[$i];
+				$tmp_ps_details[$i] = $tmp_ps_details[($i+1)];
+				$tmp_ps_details[($i+1)] = $_var_tmp;
+			}
+		}
+	}
+	for(my $i=1; $i<=$topnum; $i++) {
+		my $_tmp_ps =  shift @tmp_ps_details;
+		my %_tmp_item = (
+			$_tmp_ps        => \%{$ps_details{$_tmp_ps}},
+		);
+		push @memtop, \%_tmp_item;
+	}
+	$process_top{'mem'} = \@memtop;
+  }
+  ### %process_top
+  $result{'process_top'} = \%process_top;
+}
+exit (0);
 
 
 
