@@ -176,6 +176,7 @@ array_base_cmd=(
   /usr/bin/uuidgen
   /usr/bin/md5sum
   /usr/bin/iconv
+  /usr/bin/top
 )
 
 local num=0 lacklist=
