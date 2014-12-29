@@ -77,22 +77,22 @@ start_rabbitmq() {
 init_rabbitmq() {
 	local mqcli="/usr/local/eyou/toolmail/opt/bin/rabbitmqctl"
 
-	$mqcli add_user notify_user notify@rbmq354356
+	sudo $mqcli add_user notify_user notify@rbmq354356 | tee -a $LOGFILE
 	check_rc "mq add user1"
 
-	$mqcli add_user notifysend_user notifysend@rbmq789912
+	sudo $mqcli add_user notifysend_user notifysend@rbmq789912 | tee -a $LOGFILE
 	check_rc "mq add user2"
 
-	$mqcli add_vhost notify
+	sudo $mqcli add_vhost notify | tee -a $LOGFILE
 	check_rc "mq add vhost1"
 
-	$mqcli add_vhost notifysend
+	sudo $mqcli add_vhost notifysend | tee -a $LOGFILE
 	check_rc "mq add vhost2"
 
-	$mqcli set_permissions -p "notify" notify_user ".*" ".*" ".*"
+	sudo $mqcli set_permissions -p "notify" notify_user ".*" ".*" ".*" | tee -a $LOGFILE
 	check_rc "mq set pri1"
 
-	$mqcli set_permissions -p "notifysend" notifysend_user ".*" ".*" ".*"
+	sudo $mqcli set_permissions -p "notifysend" notifysend_user ".*" ".*" ".*" | tee -a $LOGFILE
 	check_rc "mq set pri2"
 }
 

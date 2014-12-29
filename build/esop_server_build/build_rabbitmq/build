@@ -94,7 +94,7 @@ build_rabbitmq() {
   /bin/ln -s $PATH_OPT/rabbitmq/sbin/{rabbitmqctl,rabbitmq-server,rabbitmq-defaults,rabbitmq-env,rabbitmq-plugins} $PATH_OPT/bin/
   check_rc "create five rabbitmq links"
 
-  /bin/sed -i -e '/^SYS_PREFIX=/cSYS_PREFIX=/usr/local/eyou/toolmail1' $PATH_OPT/rabbitmq/sbin/rabbitmq-defaults
+  /bin/sed -i -e '/^SYS_PREFIX=/cSYS_PREFIX=/usr/local/eyou/toolmail' $PATH_OPT/rabbitmq/sbin/rabbitmq-defaults
   check_rc "modify PREFIX in rabbitmq-defaults"
 
   /bin/mkdir -p $PATH_ESOP/etc/rabbitmq $PATH_ESOP/app/sbin $PATH_ESOP/data/rabbitmq $PATH_ESOP/log/rabbitmq $PATH_ESOP/run

@@ -64,7 +64,7 @@ build_mongodb() {
   
   for x in mongo mongod mongostat
   do
-	/bin/ln -s $PATH_OPT/mongodb/${x} $PATH_OPT/bin/${x}
+	/bin/ln -s $PATH_OPT/mongodb/bin/${x} $PATH_OPT/bin/${x}
 	check_rc "create link for ${x}"
   done
 
