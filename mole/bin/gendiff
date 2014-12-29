@@ -904,6 +904,7 @@ sub genjson_diffinfo {
 
 		my %newinfo_mail    = %{$newinfo{'epinfo'}{'mail'}};
 		my %oldinfo_mail    = %{$oldinfo{'epinfo'}{'mail'}};
+		# diff is_installed serial
 		foreach my $x ( qw(is_installed serial) ) {
 			if (defined $newinfo_mail{$x}) {
 				if (defined $oldinfo_mail{$x}) {
@@ -922,23 +923,33 @@ sub genjson_diffinfo {
 				}
 			}
 		}
-		if (defined $newinfo_mail{'license'}{'end_time'}) {
-			if (defined $oldinfo_mail{'license'}{'end_time'}) {
-				unless ( $newinfo_mail{'license'}{'end_time'} eq $oldinfo_mail{'license'}{'end_time'} ) {
+		# diff license
+		foreach my $x ( 
+				qw(version type start_time end_time user_num serial
+					allocated_acct_num allocated_alias_num
+					allocated_alias_num remain_alias_num
+					domain alias_num is_over 
+				)
+			      ) 
+		{
+			if (defined $newinfo_mail{'license'}{$x}) {
+				if (defined $oldinfo_mail{'license'}{$x}) {
+					unless ( $newinfo_mail{'license'}{$x} eq $oldinfo_mail{'license'}{$x} ) {
+						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+						goto EPINFO_BREAK;
+					}
+				} else {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
 			} else {
-				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
-				goto EPINFO_BREAK;
-				
-			}
-		} else {
-			if (defined $oldinfo_mail{'license'}{'end_time'}) {
-				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
-				goto EPINFO_BREAK;
+				if (defined $oldinfo_mail{'license'}{$x}) {
+					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
+					goto EPINFO_BREAK;
+				}
 			}
 		}
+		# diff configs
 		if (exists $newinfo_mail{'configs'}) {
 			if (exists $oldinfo_mail{'configs'}) {
 				my %newinfo_mailconfigs      = %{$newinfo_mail{'configs'}};
@@ -971,6 +982,7 @@ sub genjson_diffinfo {
 				goto EPINFO_BREAK;
 			}
 		}
+		# diff startups
 		if (exists $newinfo_mail{'startups'}) {
 			if (defined $oldinfo_mail{'startups'}) {
 				if (join("",sort @{$newinfo_mail{'startups'}}) ne join("",sort @{$oldinfo_mail{'startups'}})) {
