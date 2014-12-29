@@ -1715,10 +1715,10 @@ valid_notify_policy() {
 }
 
 # Get plugin mail notify policy		config-name:  mail_policy
-# Note: if returned config-value is invalid, return  0-24 3
+# Note: if returned config-value is invalid, return  0-24 1
 #
 get_mail_policy() {
-  local plugin_name=$1  result=  default="0-24 3"
+  local plugin_name=$1  result=  default="0-24 1"
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_mail_policy error: missing plugin name";
         return 1
@@ -1733,10 +1733,10 @@ get_mail_policy() {
 }
 
 # Get plugin SMS notify policy		config-name:  sms_policy
-# Note: if returned config-value is invalid, return  0-24 3
+# Note: if returned config-value is invalid, return  0-24 1
 #
 get_sms_policy() {
-  local plugin_name=$1  result=  default="0-24 3"
+  local plugin_name=$1  result=  default="0-24 1"
   [ -z "${plugin_name}" ] && {
         write_log -f "${MOLE_LOG}" "E0000000 get_sms_policy error: missing plugin name";
         return 1
