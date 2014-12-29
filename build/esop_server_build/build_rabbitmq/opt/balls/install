@@ -70,34 +70,34 @@ create_link() {
 }
 
 start_rabbitmq() {
-	/usr/bin/eyou_toolmail start rabbitmq
+	/usr/bin/eyou_toolmail start rabbitmq >> $LOGFILE 2>&1
 	check_rc "start rabbitmq"
 }
 
 init_rabbitmq() {
 	local mqcli="/usr/local/eyou/toolmail/opt/bin/rabbitmqctl"
 
-	sudo $mqcli add_user notify_user notify@rbmq354356 | tee -a $LOGFILE
+	sudo $mqcli add_user notify_user notify@rbmq354356 >> $LOGFILE 2>&1
 	check_rc "mq add user1"
 
-	sudo $mqcli add_user notifysend_user notifysend@rbmq789912 | tee -a $LOGFILE
+	sudo $mqcli add_user notifysend_user notifysend@rbmq789912 >> $LOGFILE 2>&1
 	check_rc "mq add user2"
 
-	sudo $mqcli add_vhost notify | tee -a $LOGFILE
+	sudo $mqcli add_vhost notify >> $LOGFILE 2>&1 
 	check_rc "mq add vhost1"
 
-	sudo $mqcli add_vhost notifysend | tee -a $LOGFILE
+	sudo $mqcli add_vhost notifysend >> $LOGFILE 2>&1 
 	check_rc "mq add vhost2"
 
-	sudo $mqcli set_permissions -p "notify" notify_user ".*" ".*" ".*" | tee -a $LOGFILE
+	sudo $mqcli set_permissions -p "notify" notify_user ".*" ".*" ".*" >> $LOGFILE 2>&1 
 	check_rc "mq set pri1"
 
-	sudo $mqcli set_permissions -p "notifysend" notifysend_user ".*" ".*" ".*" | tee -a $LOGFILE
+	sudo $mqcli set_permissions -p "notifysend" notifysend_user ".*" ".*" ".*" >> $LOGFILE 2>&1 
 	check_rc "mq set pri2"
 }
 
 stop_rabbitmq() {
-	/usr/bin/eyou_toolmail stop rabbitmq
+	/usr/bin/eyou_toolmail stop rabbitmq >> $LOGFILE 2>&1
 	check_rc "stop rabbitmq"
 }
 
