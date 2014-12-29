@@ -292,11 +292,12 @@ sub c2kb {
 		return undef;
 	}
 	
-	unless ($size =~ m/\A\s*(\d+)\s*(K|KB|M|MB|G|GB|T|TB|P|PB|E|EB|Z|ZB|Y|YB)\Z/i) {
+	# match 1.1 / 0.2 / .125 / 100 ...
+	unless ($size =~ m/\A\s*((\d*)(\.?)(\d+))\s*(K|KB|M|MB|G|GB|T|TB|P|PB|E|EB|Z|ZB|Y|YB)\Z/i) {
 		return $size;
 	}
 	
-	my ($number, $unit) = ($1, $2); 
+	my ($number, $unit) = ($1, $5); 
 	if ($unit =~ /\AK/i) {
 		return $number;
 	} elsif ($unit =~ /\AM/i) {
