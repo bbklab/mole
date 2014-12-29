@@ -38,7 +38,7 @@ use strict;
 use utf8;
 use JSON;
 use EsopLib;
-use Smart::Comments;
+# use Smart::Comments;
 binmode(STDIN, ":encoding(utf8)");
 binmode(STDOUT, ":encoding(utf8)");
 binmode(STDERR, ":encoding(utf8)");
@@ -145,7 +145,10 @@ our %data_config = (
   'inet_name'		=> 1,
   'raid_info'		=> 1,
 );
-### %data_config
+## %data_config
+
+# for debug
+# goto TESTRUN;
 
 
 
@@ -331,6 +334,16 @@ sub genjson_diffinfo {
 	  }
   } elsif (exists $newinfo{'disk_iostat'}) {
 	$diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
+  } else {
+	;
+  }
+
+  ### diff {process_top}
+  # always post new process_top
+  if (exists $newinfo{'process_top'} && exists $oldinfo{'process_top'}) {
+	$diffinfo{'process_top'} = \%{$newinfo{'process_top'}};
+  } elsif (exists $newinfo{'process_top'}) {
+	$diffinfo{'process_top'} = \%{$newinfo{'process_top'}};
   } else {
 	;
   }
@@ -1578,11 +1591,15 @@ if ($data_config{'disk_iostat'}) {
   $result{'disk_iostat'} = \@disk_iostat;
 }
 
+TESTRUN: {
+	;
+}
 # process_top
 if ($data_config{'process_top'}) {
   my %process_top = ();
   my $top = '/usr/bin/top';
   if (-f $top && -x $top) {
+	# save process number and memory/cpu usage into %ps_details
 	my %ps_details = ();
 	open my $fh, "$top -n 1 -d 1 -b 2>&- |";
 	if ($fh) {
@@ -1590,60 +1607,59 @@ if ($data_config{'process_top'}) {
 			chomp; s/\A\s*//; s/\s*\Z//;
 			next unless m/\A\s*\d+/;
 			my @tmp_arr = split /\s+/;
-			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'cpu'} += $tmp_arr[8];
-			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'mem'} += &c2kb($tmp_arr[5]) ;
-			$ps_details{sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1])}{'num'} ++;
+			if ($tmp_arr[11] && $tmp_arr[1]) {
+				my $psindex = sprintf("%s(%s)",$tmp_arr[11],$tmp_arr[1]);
+				$ps_details{$psindex}{'num'} ++;
+				$ps_details{$psindex}{'cpu'} += $tmp_arr[8];
+				$ps_details{$psindex}{'mem'} += &c2kb($tmp_arr[5]) ;
+			}
 		}
 	}
+	### %ps_details
 
-	# sort each ps_details by cpu/mem and saved in @cputop/@memtop
+	# sort each psindex by cpu/mem/num and saved in @cputop/@memtop/@numtop
+	my (@cputop, @memtop, @numtop) = ();
 	my $topnum = 10;
-	my (@cputop, @memtop) = ();
 
-	my @tmp_ps_details = ();
-	@tmp_ps_details = keys %ps_details;
-	for(my $j=0; $j<scalar @tmp_ps_details; $j++) {
-		for(my $i=0; $i<(scalar @tmp_ps_details - 1 - $j); $i++) {
-			if ( $ps_details{$tmp_ps_details[$i]}{'cpu'} < $ps_details{$tmp_ps_details[($i+1)]}{'cpu'} ) {	# use < not lt
-				my $_var_tmp = $tmp_ps_details[$i];
-				$tmp_ps_details[$i] = $tmp_ps_details[($i+1)];
-				$tmp_ps_details[($i+1)] = $_var_tmp;
-			}
-		}
-	}
-	for(my $i=1; $i<=$topnum; $i++) {
-		my $_tmp_ps =  shift @tmp_ps_details;
-		my %_tmp_item = (
-			$_tmp_ps	=> \%{$ps_details{$_tmp_ps}},
+	# sort by cpu
+	@cputop = ( sort {
+		$ps_details{$b}{'cpu'}  <=>  $ps_details{$a}{'cpu'}		# reverse order
+	} keys %ps_details ) [0..($topnum-1)];
+	while (@cputop) {
+		my $_tmp_psindex = shift @cputop;
+		my %_tmp_pscpu = (
+			$_tmp_psindex	=> $ps_details{$_tmp_psindex},
 		);
-		push @cputop, \%_tmp_item;
+		push @{$process_top{'cputop'}}, \%_tmp_pscpu;
 	}
-	$process_top{'cpu'} = \@cputop;
 
-	@tmp_ps_details = ();
-	@tmp_ps_details = keys %ps_details;
-	for(my $j=0; $j<scalar @tmp_ps_details; $j++) {
-		for(my $i=0; $i<(scalar @tmp_ps_details - 1 - $j); $i++) {
-			if ( $ps_details{$tmp_ps_details[$i]}{'mem'} < $ps_details{$tmp_ps_details[($i+1)]}{'mem'} ) {	# use < not lt
-				my $_var_tmp = $tmp_ps_details[$i];
-				$tmp_ps_details[$i] = $tmp_ps_details[($i+1)];
-				$tmp_ps_details[($i+1)] = $_var_tmp;
-			}
-		}
-	}
-	for(my $i=1; $i<=$topnum; $i++) {
-		my $_tmp_ps =  shift @tmp_ps_details;
-		my %_tmp_item = (
-			$_tmp_ps        => \%{$ps_details{$_tmp_ps}},
+	# sort by mem
+	@memtop = ( sort {
+		$ps_details{$b}{'mem'}  <=>  $ps_details{$a}{'mem'}		# reverse order
+	} keys %ps_details ) [0..($topnum-1)];
+	while (@memtop) {
+		my $_tmp_psindex = shift @memtop;
+		my %_tmp_psmem = (
+			$_tmp_psindex	=> $ps_details{$_tmp_psindex},
 		);
-		push @memtop, \%_tmp_item;
+		push @{$process_top{'memtop'}}, \%_tmp_psmem;
 	}
-	$process_top{'mem'} = \@memtop;
+	
+	# sort by num
+	@numtop = ( sort {
+		$ps_details{$b}{'num'}  <=>  $ps_details{$a}{'num'}		# reverse order
+	} keys %ps_details ) [0..($topnum-1)];
+	while (@numtop) {
+		my $_tmp_psindex = shift @numtop;
+		my %_tmp_psnum = (
+			$_tmp_psindex	=> $ps_details{$_tmp_psindex},
+		);
+		push @{$process_top{'numtop'}}, \%_tmp_psnum;
+	}
   }
   ### %process_top
   $result{'process_top'} = \%process_top;
 }
-exit (0);
 
 
 
