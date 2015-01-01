@@ -6,11 +6,13 @@
 # 	Disk_IO:   /proc/diskstats  /proc/partitions
 #	Net_Flow:  /proc/net/dev
 # 	CPU_Usage: /usr/bin/vmstat  (not /proc/stat)
+#	IO_Util:   ${UTIL_IOSTAT}
 # Result: 
 # 	file list under directory: {SYSCOUNTER_DIR}
 #		- diskio
 #		- netflow
 #		- cpuusage
+#		- ioutil
 #
 
 # BASE_DIR DEF
@@ -51,7 +53,10 @@ CONTENT=        ### { strings | /path/to/result.file }
 # check function here
 check() {
   local maxnum=10000
-  local iofile="${SYSCOUNTER_DIR}/diskio" netfile="${SYSCOUNTER_DIR}/netflow" cpufile="${SYSCOUNTER_DIR}/cpuusage"
+  local iofile="${SYSCOUNTER_DIR}/diskio"
+  local netfile="${SYSCOUNTER_DIR}/netflow"
+  local cpufile="${SYSCOUNTER_DIR}/cpuusage"
+  local ioutilfile="${SYSCOUNTER_DIR}/ioutil"
   local result=  action=0
 
   if [ ! -d "${SYSCOUNTER_DIR}" ]; then
@@ -71,7 +76,7 @@ check() {
 
   # truncate oversize file
   local linenum=0
-  for f in "${iofile}" "${netfile}" "${cpufile}"
+  for f in "${iofile}" "${netfile}" "${cpufile}" "${ioutilfile}"
   do
 	if [ -f "${f}" ] && [ -s "${f}" ]; then
 		linenum=$( /bin/awk 'END{print NR}' "${f}" 2>&- )
@@ -110,6 +115,21 @@ check() {
   fi
   ((action++))
 
+  # record device io %util
+  local file2="/proc/partitions"
+  if [ -e "${file2}" ]; then
+	devlst=$( /bin/awk '($1~/[0-9]+/ && NF==4){print $NF;}' "${file2}" 2>&- )
+	if [ -n "${devlst}" ]; then
+		{
+		${UTIL_IOSTAT} -d -x ${devlst} 1 20 2>&- |\
+		/bin/awk '(/^[ \t]*$/){next;} \
+			(/[0-9]+/){print $1, $NF}'
+		} > "${ioutilfile}"  2>/dev/null
+		result="${result} saved ioutil data into ${ioutilfile##*/} ### "
+	fi
+  fi
+  ((action++))
+
   # record net data
   local file="/proc/net/dev"
   if [ -e "${file}" ]; then
@@ -142,7 +162,7 @@ check() {
   local vmstat="/usr/bin/vmstat"
   if [ -f "${vmstat}" ] && [ -x "${vmstat}" ]; then
 	{
-	${vmstat} 1 20 |\
+	${vmstat} 1 20 2>&- |\
 	/bin/awk '($1!~/[0-9]+/ || NF!=17){next;} \
 			{print $13,$14,$15,$16}'
 	}  > "${cpufile}" 2>/dev/null
