@@ -72,7 +72,16 @@ check() {
   fi
 
   # generate sysinfo json content
-  local sysinfo=$( ${GENDIFF} 2>&- )
+  local sysinfo=
+  sysinfo=$( ${GENDIFF} 2>&1 )
+  rc=$?
+  if [ $rc -ne 0 ]; then
+	EXIT_STATUS="${STATE_WARNING}"
+	LEVEL="warn"
+	TYPE="str"
+	CONTENT=" post [$sysinfo_type](${nower_times}) sysinfo failed | return code ${rc} | generate sysinfo failed with error (${sysinfo})"
+	return
+  fi
 
   # set random/unique jid
   local jobid=$( ${PLUTIL} unique_digest )
@@ -84,12 +93,12 @@ check() {
 	EXIT_STATUS="${STATE_SUCC}"
 	LEVEL="succ"
 	TYPE="str"
-	CONTENT=" post [${sysinfo_type}] sysinfo succeed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} ### on this time, nower times is ${nower_times} "
+	CONTENT=" post [${sysinfo_type}](${nower_times}) sysinfo succeed | return code ${rc} | sysinfo jobid: ${jobid}"
   else
 	EXIT_STATUS="${STATE_WARNING}"
 	LEVEL="warn"
 	TYPE="str"
-	CONTENT=" post [$sysinfo_type] sysinfo failed | post mole sysinfo return ${rc} | sysinfo jobid: ${jobid} ### on this time, nower times is ${nower_times} "
+	CONTENT=" post [$sysinfo_type](${nower_times}) sysinfo failed | return code ${rc} | sysinfo jobid: ${jobid}"
   fi
 
   # reset counter
@@ -99,8 +108,6 @@ check() {
   	((nower_times++))
   	echo $nower_times > "${pre_times_fsave}"
   fi
-
-
 }
 
 check
