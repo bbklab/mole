@@ -1574,11 +1574,16 @@ if ($data_config{'disk_iostat'}) {
 	}
 	foreach my $devname (keys %_tmp_disk_iostat) {
 		my $_rnum   = scalar @{$_tmp_disk_iostat{$devname}};
-		next unless $_rnum;
+		next unless ($_rnum && $_rnum >1);
 		my $iostart = shift  @{$_tmp_disk_iostat{$devname}};
 		my $ioend   = pop    @{$_tmp_disk_iostat{$devname}};
-		my @iostart = @{$iostart};
-		my @ioend   = @{$ioend};
+		my (@iostart, @ioend) = ();
+		if (defined $iostart && $ioend) {
+			@iostart = @{$iostart};
+			@ioend   = @{$ioend};
+		} else {
+			next;
+		}
 		if (scalar @iostart eq 11 && scalar @ioend eq 11) {
 			my %single_disk_iostat = (
 				'devname'		=> $devname,
