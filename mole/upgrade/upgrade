@@ -41,8 +41,9 @@ if [ -z "${OLD_ESOP_VERSION}" ]; then
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version unknown, maybe already has been upgraded or new install!"
 	exit 1
 fi
-if [ "${OLD_ESOP_VERSION}" != "1.0.1" ]; then
+if [ "${OLD_ESOP_VERSION}" != "1.1.0" ]; then
 	write_log -f "${UPGRADE_LOG}" "[ERROR] previous esop version [${OLD_ESOP_VERSION}] not supported!"
+	write_log -f "${UPGRADE_LOG}" "[ERROR] only allowed to upgrade esop agent from version 1.1.0!"
 	exit 1
 fi
 
@@ -63,16 +64,20 @@ ARRAY_OLDMOLE_BASECONF=(
   auto_handler
   locale
   debug
+  mail_policy
+  sms_policy
 )
 
-# Set Restore Mole Configs (1.0.1 configs)
-# List all 1.0.1 configs here.
+# Set Restore Mole Configs (1.1.0 configs)
+# List all 1.1.0 configs here.
 ARRAY_MOLECONF_RESTORE=(
 	"global"		"scan_interval attach_ini_mail sysload_uplimit 
-				max_kidsnum plugin_maxlen handler_maxlen notify_onmisform locale "
+				max_kidsnum plugin_maxlen handler_maxlen notify_onmisform locale 
+				notify_by logo_link logo_url"
         "default"       	"enable comment frequency exec_tmout maxerr_times take_snapshot mail_notify
 				sms_notify post_notify mail_receviers sms_receviers attsnap_mail auto_handle
-				auto_handler locale debug "
+				auto_handler locale debug
+				mail_policy sms_policy"
         "mole_clear_overdue"    "frequency exec_tmout tmpfile_reserve_time logfile_reserve_time 
 				snapfile_reserve_time snapdir_maxsize"
         "mole_log_rotate"       "frequency exec_tmout force_size_uplimit take_over_proxylog"
@@ -82,6 +87,8 @@ ARRAY_MOLECONF_RESTORE=(
         "mole_report_conf"      "frequency exec_tmout"
         "sendmail"      	"smtp_server smtp_server_port auth_user auth_pass timeout charset"
         "postlog"       	"post_server post_server_port post_port_type post_timeout post_max_length post_debug"
+	#"takesnap"		""
+	"sms"			"sms_handler cnpc_smspath sms_maxlen character_set timeout"
 	# plugins' config
 	"cpu_usage"		"${ARRAY_OLDMOLE_BASECONF[*]} uplimit wa_uplimit sy_uplimit us_uplimit"
 	"disk_fs"		"${ARRAY_OLDMOLE_BASECONF[*]} fstype exclude"
@@ -93,8 +100,8 @@ ARRAY_MOLECONF_RESTORE=(
 	"port"			"${ARRAY_OLDMOLE_BASECONF[*]} port_list"
 	"process"		"${ARRAY_OLDMOLE_BASECONF[*]} pslist_file"
 	"sysload"		"${ARRAY_OLDMOLE_BASECONF[*]} load_uplimit"
-	"system_dyninfo"	"${ARRAY_OLDMOLE_BASECONF[*]}"		# exclude:  data_source, as hard to update
-	"system_fixinfo"	"${ARRAY_OLDMOLE_BASECONF[*]}"
+	#"system_dyninfo"	"${ARRAY_OLDMOLE_BASECONF[*]}"		# exclude:  data_source, as hard to update
+	#"system_fixinfo"	"${ARRAY_OLDMOLE_BASECONF[*]}"
 	"tcp_conn"		"${ARRAY_OLDMOLE_BASECONF[*]} port_list"
 	"traffic"		"${ARRAY_OLDMOLE_BASECONF[*]} ifdev_lst"
 )
@@ -107,23 +114,13 @@ ARRAY_MOLEFORCECONF_RESTORE=(
 # Note: {old-value} empty means skip forcely, without old-value checking.
 ARRAY_SKIP_RESTORE_CONF=(
 	#section		#key		#old-value
-	"cpu_usage"		"uplimit"	"75"
-	"cpu_usage"		"wa_uplimit"	"20"
-	"cpu_usage"		"sy_uplimit"	"30"
-	"cpu_usage"		"us_uplimit"	"50"
-	"disk_fs"		"maxerr_times"	"3"
-	"disk_iostat"		"util_uplimit"	"70"
-	"disk_space"		"space_pct"	"90"
-	"disk_space"		"inode_pct"	"90"
-	"memory"		"exec_tmout"	"1min"
-	"notify_syslogin"	"mail_notify"	"all"
-	"notify_syslogin"	"post_notify"	"all"
-	"port"			"exec_tmout"	"1min"
-	"port"			"maxerr_times"	"1"
-	"traffic"		"ifdev_lst"	"eth0:30M/s:50M/s:0:0"
+	"default"		"mail_policy"	"0-24  3"
+	"default"		"sms_policy"	"0-24  3"
+	"process"		"exec_tmout"	"1min"
+	"sysload"		"exec_tmout"	"1min"
 )
 
-# Set Restore Proxy Configs (1.0.1 configs)
+# Set Restore Proxy Configs (1.1.0 configs)
 ARRAY_OLD_PROXY_CONF=(
 	"etc/etm_agent.ini"
 	"etc/etm_phptd.ini"
@@ -371,7 +368,7 @@ restore_proxy_all_config() {
 
 write_log -f "${UPGRADE_LOG}" ''
 write_log -f "${UPGRADE_LOG}" ''
-write_log -f "${UPGRADE_LOG}" '[INFO] esop upgrade from 1.0.1 to 1.1.0 start.'
+write_log -f "${UPGRADE_LOG}" '[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0 start.'
 
 restore_mole_all_config
 restore_mole_opt_files
@@ -387,5 +384,5 @@ else
 	((upgrade_fail++))
 fi
 
-write_log -f "${UPGRADE_LOG}"  "[INFO] esop upgrade from 1.0.1 to 1.1.0 finished. "\
-					"[skip=${upgrade_skip}, succ=${upgrade_succ}, fail=${upgrade_fail}, note=${upgrade_note}]"
+write_log -f "${UPGRADE_LOG}" "[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0 finished. "\
+write_log -f "${UPGRADE_LOG}" "[INFO] [skip=${upgrade_skip}, succ=${upgrade_succ}, fail=${upgrade_fail}, note=${upgrade_note}]"
