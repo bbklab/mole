@@ -90,6 +90,7 @@ unless (defined $SaveFile && length $SaveFile) {
 # 	disk_iostat	=>	diskio
 # 	cpu_usage	=>	cpuusage
 # 	netflow		=>	netflow		(this is no {netflow} sysinfo_node, it's no use for now)
+#	disk_ioutil	=>	ioutil
 our $Counter_Savedir = undef;
 open $fh, "$mole printdef SYSCOUNTER_DIR 2>&- |";
 if ($fh) {
@@ -101,7 +102,12 @@ if ($fh) {
 unless (defined $Counter_Savedir && length $Counter_Savedir) {
 	$Counter_Savedir = $basedir . '/tmp/syscounter';
 }
-our ($f_diskio, $f_netflow, $f_cpuusage) = ($Counter_Savedir . '/diskio', $Counter_Savedir . '/netflow', $Counter_Savedir . '/cpuusage');
+our ($f_diskio, $f_netflow, $f_cpuusage, $f_ioutil) = (
+	$Counter_Savedir . '/diskio',
+	$Counter_Savedir . '/netflow',
+	$Counter_Savedir . '/cpuusage',
+	$Counter_Savedir . '/ioutil'
+);
 ### $Counter_Savedir
 
 
@@ -1555,16 +1561,40 @@ if ($data_config{'cpu_usage'}) {
   $result{'cpu_usage'} = \%cpu_usage;
 }
 
+TESTRUN: {
+	;
+}
 # disk_iostat
 if ($data_config{'disk_iostat'}) {
-  my %_tmp_disk_iostat = ();
   my @disk_iostat = ();
+
+  # first set %io_util (devname -> util%)
+  my %io_util = ();
+  if (-f $f_ioutil) {
+	if (open my $fh, "<$f_ioutil") {
+		while (<$fh>) {
+			chomp; s/\A\s*//; s/\s*\Z//;
+			my ($dev_name, $ioutil) = split /\s+/;
+			if ($ioutil =~ m/\A\s*(\d*)(\.?)(\d+)\Z/) {
+				$io_util{$dev_name}{'val'} += $ioutil;
+				$io_util{$dev_name}{'num'} ++;
+			} else {
+				next;
+			}
+		}
+		close $fh if $fh;
+	}
+  }
+  ### %io_util
+
+  my %_tmp_disk_iostat = ();
   if (-f $f_diskio) {
 	if (open my $fh, "<$f_diskio") {
 		while (<$fh>) {
 			chomp; s/\A\s*//; s/\s*\Z//g;
 			my @_ioarr = split /\s+/;
 			if (scalar @_ioarr) {
+				# array first as key, the rest as content
 				push @{$_tmp_disk_iostat{shift @_ioarr}}, \@_ioarr;
 			} else {
 				next;
@@ -1597,7 +1627,11 @@ if ($data_config{'disk_iostat'}) {
 				'write_spent_ms'	=> ($ioend[7] - $iostart[7]) / $_rnum,
 				'io_spent_ms'		=> ($ioend[9] - $iostart[9]) / $_rnum,
 				'weighting_io_spent_ms'	=> ($ioend[10] - $iostart[10]) / $_rnum,
+				'util'			=> 0,		# set by %io_util 
 			);
+			if (exists $io_util{$devname}) {
+				$single_disk_iostat{'util'} = $io_util{$devname}{'val'} / $io_util{$devname}{'num'};
+			}
 			push @disk_iostat, \%single_disk_iostat;
 		} else {
 			next;
@@ -1608,9 +1642,6 @@ if ($data_config{'disk_iostat'}) {
   $result{'disk_iostat'} = \@disk_iostat;
 }
 
-TESTRUN: {
-	;
-}
 # process_top
 if ($data_config{'process_top'}) {
   my %process_top = ();
