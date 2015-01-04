@@ -269,10 +269,6 @@ unless (defined $post_server{'post_max_length'} && $post_server{'post_max_length
 } elsif ($post_server{'post_max_length'} =~ /\D/) {
   	$post_server{'post_max_length'} = 50000;
 }
-unless ($post_length <= $post_server{'post_max_length'}) {
-  	&log("CRIT: $logfrom json length exceed, $post_length > $post_server{'post_max_length'}, exit");
-  	exit 1;
-}
 
 # check post_server_port
 unless (defined $post_server{'post_server_port'} && $post_server{'post_server_port'} ne '') {
@@ -316,7 +312,12 @@ unless ($encode_data) {
 	&log ("CRIT: $logfrom encode data error: [$encode_error]");
 	exit 2;
 }
-&log ("INFO: $logfrom encode data succeed, length " . length $encode_data);
+$post_length = length $encode_data;
+unless ($post_length <= $post_server{'post_max_length'}) {
+  	&log("CRIT: $logfrom encode data length exceed, $post_length > $post_server{'post_max_length'}, exit");
+  	exit 2;
+}
+&log ("INFO: $logfrom encode data succeed, length $post_length");
 
 # connect post host
 my $post_timeout = $post_server{'post_timeout'};
