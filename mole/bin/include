@@ -845,14 +845,15 @@ read_mole_section() {
 #
 read_mole_config(){
   local Mode=0		# 0: auto  |   1: specified config file
+  local config_file=  value=
 
   if [ "$1" == "-f" ]; then
 	Mode=1
 	local specified_file="$2"; shift 2
-	local section=$1  key=$2  value=
+	local section=$1  key=$2
   else
 	Mode=0
-  	local section=$1  key=$2  value=  config_file=
+  	local section=$1  key=$2
   fi
 
   if [ -z "${section}" ] || [ -z "${key}" ]; then
@@ -896,8 +897,10 @@ read_mole_config(){
 }
 
 # According to exist plugin-name/key and input value, update matched value in config file.
-# Usage:	update_mole_config [force] {plugin-name} {config-name} {value}
-# Example:	update_mole_config 	       check_sysload enable no
+# Usage:	update_mole_config [force] [ -f {config_file_path} ] {plugin-name} {config-name} {value}
+# Example:	update_mole_config sysload enable no
+# Example:	update_mole_config force   global id  0123456789
+# Example:	update_mole_config -f /tmp/mole.ini sysload enable yes
 # Return:	
 # 0 : Update OK
 # 1 : Update ERROR
@@ -909,9 +912,13 @@ read_mole_config(){
 # LogFlag:      CHNG0000
 # 
 update_mole_config() {
-  local mode=$1 
+  local mode=$1 		# force	: update protected configs forcely
+				# -f	: use ini file with specified file path
+				# other : update common configs
   if [ "${mode}" == "force" ]; then   ### only called by bin/setinit
  	local section=$2 key=$3 ; shift 3 ; local value=$*
+  elif [ "${mode}" == "-f" ]; then
+	local specified_file="$2" section=$3 key=$4 ; shift 4; local value=$*
   else
   	local section=$1 key=$2 ; shift 2 ; local value=$*
   fi
@@ -921,7 +928,7 @@ update_mole_config() {
 		"missing arguments, section=[${section}] key=[${key}] value=[${value}]";
         return 3
   else
-	# return 9(warn) if global.id global.name
+	# return 9(warn) if global.id global.name global.parter_id
 	if [ "${section}" == "global" ] && [ "${key}" == "id" ] && [ "${mode}" != "force" ]; then
 		return 9
 	elif [ "${section}" == "global" ] && [ "${key}" == "name" ] && [ "${mode}" != "force" ]; then
@@ -930,13 +937,17 @@ update_mole_config() {
                 return 9
 	fi
 	# set config_file
-	if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
-        	config_file="${CONFIG_FILE}"
-  	elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
-        	config_file="${CONFIG_FILE}"
-  	else 
-        	config_file="${CONF_DIR}/${section}.ini"
-  	fi
+	if [ "${mode}" == "-f" ]; then 		# set {config_file} according by specified file
+		config_file="${specified_file}"
+	else					# automatic set {config_file}
+		if is_sub "${section}" "${ARRAY_GLOBAL_SECTION[*]}"; then
+        		config_file="${CONFIG_FILE}"
+  		elif [[ "${section}" =~ ${INNER_BEGIN} ]]; then
+        		config_file="${CONFIG_FILE}"
+  		else 
+        		config_file="${CONF_DIR}/${section}.ini"
+  		fi
+	fi
 
 	if [ -f "${config_file}" ] && [ -s "${config_file}" ]; then
   		local linenum=$( cat ${config_file} | tr '\t' ' ' |\
@@ -949,7 +960,12 @@ update_mole_config() {
 				"section=[${section}] key=[${key}] not found in config file."
 			return 5
   		else
-			local nowvalue=$(read_mole_config "${section}" "${key}")
+			local nowvalue=
+			if [ "${mode}" == "-f" ]; then
+				nowvalue=$(read_mole_config -f "${config_file}" "${section}" "${key}")	 # let read_mole_config use specified file
+			else
+				nowvalue=$(read_mole_config "${section}" "${key}")		# let read_mole_config use automatic detected file
+			fi
 			if [ "${value}" != "${nowvalue}" ]; then
 				write_log -f "${MOLE_LOG}" "CHNG0000 update_mole_config notice:"\
 					"section=[${section}] key=[${key}] found in config file,"\
