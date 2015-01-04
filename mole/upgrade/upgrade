@@ -384,9 +384,9 @@ migrate_listen() {
 	local phpvalue="$*"
 	local array_listen_conf=( $( (echo -e "${phpvalue}" | tr -d "[\"']" | awk -F: '{print $1,$2}') 2>&- ) )
 	if [ ${#array_listen_conf[*]} -eq 2 ]; then
-		echo "set accept listen_addr = ${array_listen_conf[0]}"
+		upgrade_proxy_single_config "accept" "listen_addr" ${array_listen_conf[0]}
 		if is_int ${array_listen_conf[1]}; then
-			echo "set accept listen_port = ${array_listen_conf[1]}"
+			upgrade_proxy_single_config "accept" "listen_port" "${array_listen_conf[1]}"
 		fi
 	fi
 }
@@ -395,7 +395,7 @@ migrate_src_allow() {
 	local phpvalue="$*"
 	local perlvalue=( $( (echo -e "${phpvalue}" | tr -d "[\"' \t]") 2>&- ) )
 	if [ -n "${perlvalue}" ]; then
-		echo "set accept src_allow = ${perlvalue}"
+		upgrade_proxy_single_config "accept" "src_allow" "${perlvalue}"
 	fi
 }
 
@@ -403,9 +403,9 @@ migrate_dest_host() {
 	local phpvalue="$*"
 	local array_desthost_conf=( $( (echo -e "${phpvalue}" | tr -d "[\"']" | awk -F: '{print $1,$2}') 2>&- ) )
 	if [ ${#array_desthost_conf[*]} -eq 2 ]; then
-		echo "set sender dest_addr = ${array_desthost_conf[0]}"
+		upgrade_proxy_single_config "sender" "dest_addr" "${array_desthost_conf[0]}"
 		if is_int ${array_desthost_conf[1]}; then
-			echo "set sender dest_port = ${array_desthost_conf[1]}"
+			upgrade_proxy_single_config "sender" "dest_port" "${array_desthost_conf[1]}"
 		fi
 	fi
 }
