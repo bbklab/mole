@@ -430,7 +430,17 @@ upgrade_proxy_all_config() {
 
 # remove old php proxy log directory
 remove_old_proxy_log() {
-	:
+	local old_proxy_logdir="/usr/local/esop/agent/log/"
+	if [ -d "${old_proxy_logdir}" ]; then
+		local errinfo=  rc=
+		errinfo=$( /bin/rm -rf "${old_proxy_logdir}" 2>&1 )
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			write_log -f "${UPGRADE_LOG}" "[INFO] remove old proxy log dir (${old_proxy_logdir}) succeed."
+		else
+			write_log -f "${UPGRADE_LOG}" "[ERROR]remove old proxy log dir (${old_proxy_logdir}) failed (${errinfo})"
+		fi
+	fi
 }
 
 # Set Old Mole Config File Path
