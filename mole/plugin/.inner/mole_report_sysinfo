@@ -86,19 +86,29 @@ check() {
   # set random/unique jid
   local jobid=$( ${PLUTIL} unique_digest )
 
+  # get data length
+  local data_len=${#sysinfo}
+  # if length exceed than bash-{ARG_MAX}
+  # should pass {sysinfo} to {POSTLOG_SH} through file insted of bash args
+
   # post sysinfo data
-  ${POSTLOG_SH} -t sysinfo -j "${jobid}" -i "${sysinfo}" >/dev/null 2>&1
+  local errinfo=
+  errinfo=$( ${POSTLOG_SH} -t sysinfo -j "${jobid}" -i "${sysinfo}" 2>&1 1>/dev/null )
   rc=$?
   if [ "$rc" == "0" ]; then
 	EXIT_STATUS="${STATE_SUCC}"
 	LEVEL="succ"
 	TYPE="str"
 	CONTENT=" post [${sysinfo_type}](${nower_times}) sysinfo succeed | return code ${rc} | sysinfo jobid: ${jobid}"
+	CONTENT="${CONTENT} ### generated sysinfo data length ${data_len}"
+	CONTENT="${CONTENT} ### post sysinfo succeed"
   else
 	EXIT_STATUS="${STATE_WARNING}"
 	LEVEL="warn"
 	TYPE="str"
 	CONTENT=" post [$sysinfo_type](${nower_times}) sysinfo failed | return code ${rc} | sysinfo jobid: ${jobid}"
+	CONTENT="${CONTENT} ### generated sysinfo data length ${data_len}"
+	CONTENT="${CONTENT} ### post sysinfo failed with error (${errinfo})"
   fi
 
   # reset counter
