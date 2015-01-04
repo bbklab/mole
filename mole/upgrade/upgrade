@@ -32,7 +32,10 @@ if [ "${ESOP_UPGRADE_MODE}" != "1" ] || [ "${ESOP_RPM_UPGRADE}" != "1" ];  then
 fi
 
 # RPM (%pre) Previous Action Result
+# 1. previous esop config save directory
 OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
+# 2. previous esop version tag file, only be read once.
+# after this script finished, this tag file will be empty
 OLD_ESOP_VERFILE="${OLD_ESOP_SAVEDIR}/.version_upgrade"
 
 # Check Previous Version
@@ -116,15 +119,25 @@ ARRAY_SKIP_RESTORE_CONF=(
 	#section		#key		#old-value
 	"default"		"mail_policy"	"0-24  3"
 	"default"		"sms_policy"	"0-24  3"
+	"disk_iostat"		"exec_tmout"	"2min"
 	"process"		"exec_tmout"	"1min"
+	"process"		"maxerr_times"	"1"
 	"sysload"		"exec_tmout"	"1min"
+	"traffic"		"exec_tmout"	"3min"
+	#"default"		"mail_notify"	"crit warn unkn notify recovery"
 )
 
 # Set Restore Proxy Configs (1.1.0 configs)
-ARRAY_OLD_PROXY_CONF=(
-	"etc/etm_agent.ini"
-	"etc/etm_phptd.ini"
-	"etc/php/php.ini"
+# only upgrade php-proxy config etm_phptd.ini
+# [agent_client]
+# listen
+# src_allow
+# dest_host
+ARRAY_MIGRATE_110_PHPPROXY_CONF=(
+	#[section]		[key]			[migrate_function](receive {old-value} as argument)
+	"agent_client"		"listen"		"migrate_listen"
+	"agent_client"		"src_allow"		"migrate_src_allow"
+	"agent_client"		"dest_host"		"migrate_dest_host"
 )
 
 # Initialize Counter
@@ -194,7 +207,7 @@ restore_mole_single_config() {
 		return $rc
 	else
 		((upgrade_skip++))	
-		write_log -f "${UPGRADE_LOG}"  "[SKIP] restore config [${section}-${key}] unchanged!"
+		write_log -f "${UPGRADE_LOG}"  "[SKIP] restore config [${section}-${key}] => [${old}] unchanged!"
 	fi
 }
 
@@ -261,6 +274,7 @@ restore_mole_all_config() {
 }
 
 restore_mole_opt_files() {
+	OLD_MOLE_CONF="${OLD_ESOP_SAVEDIR}/conf/.mole.ini"
 	if [ -f "${OLD_MOLE_CONF}" ] && [ -s "${OLD_MOLE_CONF}" ]; then
 		local default_mailrec=$(read_mole_config -f "${OLD_MOLE_CONF}" "default" "mail_receviers")
 		if [ "${default_mailrec}" == "file:opt/receviers.lst" ]; then
@@ -332,28 +346,84 @@ restore_mole_opt_files() {
 	fi
 }
 
-restore_proxy_all_config() {
-	OLDSAVE_DIR="${OLD_ESOP_SAVEDIR}"
-	NEWINST_DIR="/usr/local/esop/agent"
-	local rc= errstr=
-	local i=
-	for ((i=0;i<${#ARRAY_OLD_PROXY_CONF[*]};i++))
-	do
-		src="${OLDSAVE_DIR}/${ARRAY_OLD_PROXY_CONF[$i]}"
-		dst="${NEWINST_DIR}/${ARRAY_OLD_PROXY_CONF[$i]}"
-		if [ -f "${src}" ]; then
-			errstr=$( /bin/cp -f "${src}" "${dst}" 2>&1 1>/dev/null )
-			rc=$?
-			if [ $rc -eq 0 ]; then
-				((upgrade_succ++))
-				write_log -f "${UPGRADE_LOG}"  "[SUCC] restore proxy config [${ARRAY_OLD_PROXY_CONF[$i]}] (${rc})"
+upgrade_proxy_single_config() {
+	local proxy_instdir="/usr/local/esop/agent/proxy"
+	local proxy_confdir="${proxy_instdir}/conf"
+	local proxy_inifile="${proxy_confdir}/proxy.ini"
+
+	local section=$1  key=$2  value=$3
+	local rc=
+	if [ -f "${proxy_inifile}" ] && [ -s "${proxy_inifile}" ]; then
+		local now_value=$( read_mole_config -f "${proxy_inifile}" "${section}" "${key}" )
+		if [ "${now_value}" != "${value}" ]; then
+			if [ -z "${value}" ]; then
+				clear_mole_config -f "${proxy_inifile}" "${section}" "${key}"
 			else
+				update_mole_config -f "${proxy_inifile}" "${section}" "${key}" "${value}"
+			fi	
+			rc=$?
+			if [ $rc -ne 0 ]; then
 				((upgrade_fail++))
-				write_log -f "${UPGRADE_LOG}"  "[FAIL] restore proxy config [${ARRAY_OLD_PROXY_CONF[$i]}] (${rc}) (${errstr})"
+				write_log -f "${UPGRADE_LOG}"  "[FAIL] upgrade proxy config [${section}-${key}] => [${value}] (${rc})"
+			else
+				((upgrade_succ++))
+				write_log -f "${UPGRADE_LOG}"  "[SUCC] upgrade proxy config [${section}-${key}] => [${value}] (${rc})"
 			fi
+			return $rc
 		else
 			((upgrade_skip++))
-			write_log -f "${UPGRADE_LOG}"  "[SKIP] restore proxy config [${src}] not exists!"
+			write_log -f "${UPGRADE_LOG}"  "[SKIP] upgrade proxy config [${section}-${key}] => [${value}] unchanged!"
+		fi
+	else
+		((upgrade_fail++))
+		write_log -f "${UPGRADE_LOG}"  "[FAIL] upgrade proxy config [${section}-${key}] => [${value}] (${proxy_inifile} not prepared)"
+	fi
+}
+
+migrate_listen() {
+	local phpvalue="$*"
+	local array_listen_conf=( $( (echo -e "${phpvalue}" | tr -d "[\"']" | awk -F: '{print $1,$2}') 2>&- ) )
+	if [ ${#array_listen_conf[*]} -eq 2 ]; then
+		echo "set accept listen_addr = ${array_listen_conf[0]}"
+		if is_int ${array_listen_conf[1]}; then
+			echo "set accept listen_port = ${array_listen_conf[1]}"
+		fi
+	fi
+}
+
+migrate_src_allow() {
+	local phpvalue="$*"
+	local perlvalue=( $( (echo -e "${phpvalue}" | tr -d "[\"' \t]") 2>&- ) )
+	if [ -n "${perlvalue}" ]; then
+		echo "set accept src_allow = ${perlvalue}"
+	fi
+}
+
+migrate_dest_host() {
+	local phpvalue="$*"
+	local array_desthost_conf=( $( (echo -e "${phpvalue}" | tr -d "[\"']" | awk -F: '{print $1,$2}') 2>&- ) )
+	if [ ${#array_desthost_conf[*]} -eq 2 ]; then
+		echo "set sender dest_addr = ${array_desthost_conf[0]}"
+		if is_int ${array_desthost_conf[1]}; then
+			echo "set sender dest_port = ${array_desthost_conf[1]}"
+		fi
+	fi
+}
+
+upgrade_proxy_all_config() {
+	OLD_PROXY_CONF="${OLD_ESOP_SAVEDIR}/etc/etm_phptd.ini" 
+	local rc= errstr=
+	local i=
+	for ((i=0;i<${#ARRAY_MIGRATE_110_PHPPROXY_CONF[*]};i++))
+	do
+		if (( $i%3 == 0 )); then
+			phpsection=${ARRAY_MIGRATE_110_PHPPROXY_CONF[$i]}
+		elif (( $i%3 == 1 )); then
+			phpkey=${ARRAY_MIGRATE_110_PHPPROXY_CONF[$i]}
+		else
+			phpvalue=$(read_mole_config -f "${OLD_PROXY_CONF}" "${phpsection}" "${phpkey}")
+			funcname=${ARRAY_MIGRATE_110_PHPPROXY_CONF[$i]}
+			eval "${funcname} ${phpvalue}"
 		fi
 	done
 }
@@ -372,7 +442,7 @@ write_log -f "${UPGRADE_LOG}" '[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0
 
 restore_mole_all_config
 restore_mole_opt_files
-restore_proxy_all_config
+upgrade_proxy_all_config
 
 
 errstr=$(/bin/cp /dev/null "${OLD_ESOP_VERFILE}" 2>&1 1>/dev/null)
