@@ -428,6 +428,10 @@ upgrade_proxy_all_config() {
 	done
 }
 
+# remove old php proxy log directory
+remove_old_proxy_log() {
+	:
+}
 
 # Set Old Mole Config File Path
 
@@ -443,6 +447,7 @@ write_log -f "${UPGRADE_LOG}" '[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0
 restore_mole_all_config
 restore_mole_opt_files
 upgrade_proxy_all_config
+remove_old_proxy_log
 
 
 errstr=$(/bin/cp /dev/null "${OLD_ESOP_VERFILE}" 2>&1 1>/dev/null)
