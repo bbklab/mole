@@ -318,26 +318,9 @@ sub genjson_diffinfo {
   }
 
   ### diff {disk_iostat}
+  # always post new disk_iostat
   if (exists $newinfo{'disk_iostat'} && exists $oldinfo{'disk_iostat'}) {
-	  if (scalar @{$newinfo{'disk_iostat'}} ne scalar @{$oldinfo{'disk_iostat'}}) {
-		$diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
-	  } else {
-	        my @newinfo_diskiostat = @{$newinfo{'disk_iostat'}};   # item in array sort order same
-	        my @oldinfo_diskiostat = @{$oldinfo{'disk_iostat'}};   # item in array sort order same
-	        for(my $i=0;$i<=$#newinfo_diskiostat;$i++){
-	                my %newinfo_diskiostat = %{$newinfo_diskiostat[$i]};
-	                my %oldinfo_diskiostat = %{$oldinfo_diskiostat[$i]};
-	                foreach my $x (sort keys %{$newinfo_diskiostat[$i]}) {
-	                        unless ( $newinfo_diskiostat{$x} eq $oldinfo_diskiostat{$x} ) {
-	                                $diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
-	                                goto IO_BREAK;
-	                        }    
-	                }    
-	        }    
-	        IO_BREAK: {
-			;
-	        }
-	  }
+	$diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
   } elsif (exists $newinfo{'disk_iostat'}) {
 	$diffinfo{'disk_iostat'} = \@{$newinfo{'disk_iostat'}};
   } else {
@@ -1617,16 +1600,16 @@ if ($data_config{'disk_iostat'}) {
 		if (scalar @iostart eq 11 && scalar @ioend eq 11) {
 			my %single_disk_iostat = (
 				'devname'		=> $devname,
-				'read_sum'		=> ($ioend[0] - $iostart[0]) / $_rnum,
-				'read_merged'		=> ($ioend[1] - $iostart[1]) / $_rnum,
-				'read_sectors'		=> ($ioend[2] - $iostart[2]) / $_rnum,
-				'read_spent_ms'		=> ($ioend[3] - $iostart[3]) / $_rnum,
-				'write_sum'		=> ($ioend[4] - $iostart[4]) / $_rnum,
-				'write_merged'		=> ($ioend[5] - $iostart[5]) / $_rnum,
-				'write_sectors'		=> ($ioend[6] - $iostart[6]) / $_rnum,
-				'write_spent_ms'	=> ($ioend[7] - $iostart[7]) / $_rnum,
-				'io_spent_ms'		=> ($ioend[9] - $iostart[9]) / $_rnum,
-				'weighting_io_spent_ms'	=> ($ioend[10] - $iostart[10]) / $_rnum,
+				'read_sum'		=> sprintf("%.2f", ($ioend[0] - $iostart[0]) / $_rnum),
+				'read_merged'		=> sprintf("%.2f", ($ioend[1] - $iostart[1]) / $_rnum),
+				'read_sectors'		=> sprintf("%.2f", ($ioend[2] - $iostart[2]) / $_rnum),
+				'read_spent_ms'		=> sprintf("%.2f", ($ioend[3] - $iostart[3]) / $_rnum),
+				'write_sum'		=> sprintf("%.2f", ($ioend[4] - $iostart[4]) / $_rnum),
+				'write_merged'		=> sprintf("%.2f", ($ioend[5] - $iostart[5]) / $_rnum),
+				'write_sectors'		=> sprintf("%.2f", ($ioend[6] - $iostart[6]) / $_rnum),
+				'write_spent_ms'	=> sprintf("%.2f", ($ioend[7] - $iostart[7]) / $_rnum),
+				'io_spent_ms'		=> sprintf("%.2f", ($ioend[9] - $iostart[9]) / $_rnum),
+				'weighting_io_spent_ms'	=> sprintf("%.2f", ($ioend[10] - $iostart[10]) / $_rnum),
 				'util'			=> 0,		# set by %io_util 
 			);
 			if (exists $io_util{$devname}) {
