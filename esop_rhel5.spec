@@ -169,7 +169,7 @@ fi
 :
 
 %changelog
-* Sun Jan  4 2014 ESOP WORKGROUP <esop_workgroup@eyou.net>
+* Sun Jan  4 2015 ESOP WORKGROUP <esop_workgroup@eyou.net>
 - 发布: 正式版 1.2.0
 - 新增: 新增可增量上报变化的协议数据sysinfo, 合并了fixinfo/dyninfo的插件数据
 - 新增: 新增亿邮系列产品相关信息的搜集, 新增磁盘IO/进程排名/TCP-UDP统计数据的搜集
