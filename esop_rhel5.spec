@@ -99,10 +99,10 @@ if /bin/rpm -qi "esop" >/dev/null 2>&1; then
 	# OLD_ESOP_VERSION=$( /bin/rpm -q --queryformat "%{version}" "esop" 2>&- )
 	OLD_ESOP_VERSION=$( ${MOLE_INIT} version 2>&- )
 	if [ -n "${OLD_ESOP_VERSION}" ]; then
-		if [ "${OLD_ESOP_VERSION}" == "1.0.1" ]; then
+		if [ "${OLD_ESOP_VERSION}" == "1.1.0" ]; then
 			:
 		else
-			echo -e "\033[1;31monly allowed to upgrade from esop 1.0.1\033[0m\n"
+			echo -e "\033[1;31monly allowed to upgrade from esop 1.1.0\033[0m\n"
 			exit 1  # exit with non-zero so rpm installation progress won't continue.
 		fi
 		OLD_ESOP_SAVEDIR="/var/tmp/oldesop-rpmsavedir"
