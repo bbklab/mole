@@ -469,5 +469,5 @@ else
 	((upgrade_fail++))
 fi
 
-write_log -f "${UPGRADE_LOG}" "[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0 finished. "\
+write_log -f "${UPGRADE_LOG}" "[INFO] esop agent rpm upgrade from 1.1.0 to 1.2.0 finished. "
 write_log -f "${UPGRADE_LOG}" "[INFO] [skip=${upgrade_skip}, succ=${upgrade_succ}, fail=${upgrade_fail}, note=${upgrade_note}]"
