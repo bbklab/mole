@@ -3754,9 +3754,12 @@ process_plugin() {
 			"got event recovery, reset plugin return code from [${rc}] to [${new_level}]. CONTINUE"
 		rc="${new_level}"			       # reset plugin {rc}
 	else
+		# treat the event as normal succ event.
 		local _now_errcount=${maxerr_detail%%:*}    _errcount_uplimit=${maxerr_detail##*:}
 		write_log ${jid} ${plugin_name}\
 			"not event recovery (${_now_errcount} < ${_errcount_uplimit}), return status: [SUCC]. CONTINUE"
+		_now_errcount=0		# **IMPORTANT** do NOT forget to reset _now_errcount as 0
+					# as {_now_errcount} will be passed to {POSTLOG_SH}
 	fi
 	write_log ${jid} ${plugin_name}\
 		"will reset repeat errcount. CONTINUE";
