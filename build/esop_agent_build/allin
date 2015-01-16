@@ -53,10 +53,10 @@ if [ -f $sh1 -a -x $sh1 -a -f $sh2 -a -x $sh2 -a -f $sh3 -a -x $sh3 ]; then
 	if [ -f "${rpm}" ] && [ -s "${rpm}" ]; then
 		testcodes_dir="/var/www/html/esop.repo/esop-testcodes/esop/"
 		version_dir="${testcodes_dir}/$1"
-		remote_date="$(ssh -p 2237 root@ota.eyou.net "/bin/date +%F")"
+		remote_date="$(ssh -p 22237 root@ota.eyou.net "/bin/date +%F")"
 		dest_pubdir="${version_dir}/${remote_date}"
-		ssh -p 2237 root@ota.eyou.net "/bin/mkdir -p ${dest_pubdir}"
-		scp -P 2237 "${rpm}" root@ota.eyou.net:"${dest_pubdir}"
+		ssh -p 22237 root@ota.eyou.net "/bin/mkdir -p ${dest_pubdir}"
+		scp -P 22237 "${rpm}" root@ota.eyou.net:"${dest_pubdir}"
 	fi
 else
 	echo $sh1,$sh2,$sh3 not prepared.
