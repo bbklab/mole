@@ -378,7 +378,9 @@ sub genjson_diffinfo {
 
   ### diff {dns}
   if (exists $newinfo{'dns'} && exists $oldinfo{'dns'}) {
-  	if (scalar @{$newinfo{'dns'}} ne scalar @{$oldinfo{'dns'}}) {
+	if (scalar @{$newinfo{'dns'}} eq 0 || scalar @{$oldinfo{'dns'}} eq 0) {
+		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
+  	} elsif (scalar @{$newinfo{'dns'}} ne scalar @{$oldinfo{'dns'}}) {
 		$diffinfo{'dns'} = \@{$newinfo{'dns'}};
   	} else {
 		if (join("",sort @{$newinfo{'dns'}}) ne join("",sort @{$oldinfo{'dns'}})) {
@@ -424,7 +426,9 @@ sub genjson_diffinfo {
 
   ### diff {input_dev}
   if (exists $newinfo{'input_dev'} && exists $oldinfo{'input_dev'}) {
-  	if (scalar @{$newinfo{'input_dev'}} ne scalar @{$oldinfo{'input_dev'}}) {
+	if (scalar @{$newinfo{'input_dev'}} eq 0 || scalar @{$oldinfo{'input_dev'}} eq 0) {
+		$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
+  	} elsif (scalar @{$newinfo{'input_dev'}} ne scalar @{$oldinfo{'input_dev'}}) {
 		$diffinfo{'input_dev'} = \@{$newinfo{'input_dev'}};
   	} else {
 		if (join("",sort @{$newinfo{'input_dev'}}) ne join("",sort @{$oldinfo{'input_dev'}})) {
@@ -439,15 +443,17 @@ sub genjson_diffinfo {
 
   ### diff {lastlogin}
   if (exists $newinfo{'lastlogin'} && exists $oldinfo{'lastlogin'}) {
-  	if ($newinfo{'lastlogin'}{'number'} ne $oldinfo{'lastlogin'}{'number'}) {
-		$diffinfo{'lastlogin'} = \%{$newinfo{'lastlogin'}};
+	if (scalar @{$newinfo{'lastlogin'}} eq 0 || scalar @{$oldinfo{'lastlogin'}} eq 0) {
+		$diffinfo{'lastlogin'} = \@{$newinfo{'lastlogin'}};
+	} elsif (scalar @{$newinfo{'lastlogin'}} ne scalar @{$oldinfo{'lastlogin'}}) {
+		$diffinfo{'lastlogin'} = \@{$newinfo{'lastlogin'}};
   	} else {
-		if (join("",sort @{$newinfo{'lastlogin'}{'result'}}) ne join("",sort @{$oldinfo{'lastlogin'}{'result'}})) {
-			$diffinfo{'lastlogin'} = \%{$newinfo{'lastlogin'}};
+		if (join("",sort @{$newinfo{'lastlogin'}}) ne join("",sort @{$oldinfo{'lastlogin'}})) {
+			$diffinfo{'lastlogin'} = \@{$newinfo{'lastlogin'}};
 		}
   	}
   } elsif (exists $newinfo{'lastlogin'}) {
-	$diffinfo{'lastlogin'} = \%{$newinfo{'lastlogin'}};
+	$diffinfo{'lastlogin'} = \@{$newinfo{'lastlogin'}};
   } else {
 	;
   }
@@ -675,7 +681,9 @@ sub genjson_diffinfo {
 
   ### diff {startups}
   if (exists $newinfo{'startups'} && exists $oldinfo{'startups'}) {
-	  if (scalar @{$newinfo{'startups'}} ne scalar @{$oldinfo{'startups'}}) {
+	  if (scalar @{$newinfo{'startups'}} eq 0 || scalar @{$oldinfo{'startups'}} eq 0) {
+		$diffinfo{'startups'} = \@{$newinfo{'startups'}};
+	  } elsif (scalar @{$newinfo{'startups'}} ne scalar @{$oldinfo{'startups'}}) {
 		$diffinfo{'startups'} = \@{$newinfo{'startups'}};
 	  } else {
 		if (join("",sort @{$newinfo{'startups'}}) ne join("",sort @{$oldinfo{'startups'}})) {
@@ -737,7 +745,9 @@ sub genjson_diffinfo {
 
   ### diff {sys_mods}
   if (exists $newinfo{'sys_mods'} && exists $oldinfo{'sys_mods'}) {
-	  if ( $oldinfo{'sys_mods'}{'number'} ne $newinfo{'sys_mods'}{'number'} ) {
+	  if ( $oldinfo{'sys_mods'}{'number'} eq 0 || $newinfo{'sys_mods'}{'number'} eq 0 ) {
+		$diffinfo{'sys_mods'} = \%{$newinfo{'sys_mods'}};
+	  } elsif ( $oldinfo{'sys_mods'}{'number'} ne $newinfo{'sys_mods'}{'number'} ) {
 		$diffinfo{'sys_mods'} = \%{$newinfo{'sys_mods'}};
 	  } else {
 		if (join("",sort @{$newinfo{'sys_mods'}{'list'}}) ne join("",sort @{$oldinfo{'sys_mods'}{'list'}})) {
@@ -1460,10 +1470,7 @@ if ($data_config{'netstat'}) {
 
 # lastlogin
 if ($data_config{'lastlogin'}) {
-  my %lastlogin = (
-  	'number'	=> 10,
-  	'result'	=> '',
-  );
+  my @lastlogin = ();
   my $last = '/usr/bin/last';
   my %months = (
   	'JAN' => 1, 'FEB' => 2, 'MAR' => 3, 
@@ -1472,24 +1479,30 @@ if ($data_config{'lastlogin'}) {
   	'OCT' => 10, 'NOV' => 11, 'DEC' => 12,
   );
   if (-f $last && -x $last) {
-  	open my $fh, "$last -n $lastlogin{'number'} -x 2>&- | ";
+	my ($maxread, $lastn, $n) = (30, 10, 0);	# only read no more than 30 records and post no more than 10 records
+  	open my $fh, "$last -n $maxread -x 2>&- | ";
   	if ($fh) {
-		my @login_result;
 		while(<$fh>){
 			chomp;
 			next if m/\A(runlevel|reboot|shutdown)/i;
 			last if m/\A\s*\Z/;
-			my ($login_year, $login_month, $login_day,$login_ms) = (1900+(localtime(time()))[5],(split/\s+/)[4,5,6]);
-			next unless (exists $months{uc($login_month)});  # in case of IP field nil
-			my $login_time = sprintf("%d-%d-%d_%s",$login_year,$months{uc($login_month)},$login_day,$login_ms);
-			my $single_login = $login_time . ' ' . join(" ",(split/\s+/)[0,1,2]);
-			push @login_result, $single_login;
+			my ($login_year, $login_month, $login_day, $login_ms) = (1900+(localtime(time()))[5],(split/\s+/)[4,5,6]);
+			unless (defined $login_year && defined $login_month && defined $login_day && defined $login_ms) {
+				next;
+			}
+			unless (exists $months{uc($login_month)}) {	# if {login_month} not valid, for example: IP nil
+				next;    				# skip the record
+			}
+			my $single_login = sprintf("%d-%d-%d_%s",$login_year,$months{uc($login_month)},$login_day,$login_ms) .
+					 ' ' . join(" ",(split/\s+/)[0,1,2]);
+			push @lastlogin, $single_login;
+			$n++;
+			last if ($n > $lastn);
 		}
-		$lastlogin{'result'} = \@login_result if (@login_result);
   	}
   }
-  ### %lastlogin
-  $result{'lastlogin'} = \%lastlogin;
+  ### @lastlogin
+  $result{'lastlogin'} = \@lastlogin;
 }
 
 
