@@ -275,6 +275,10 @@ sub genjson_diffinfo {
 	                my %newinfo_arp = %{$newinfo_arp[$i]};
 	                my %oldinfo_arp = %{$oldinfo_arp[$i]};
 	                foreach my $x (sort keys %{$newinfo_arp[$i]}) {
+				unless (exists $oldinfo_arp{$x}) {
+	                                $diffinfo{'arp'} = \@{$newinfo{'arp'}};
+	                                goto ARP_BREAK;
+				}
 	                        unless ( $newinfo_arp{$x} eq $oldinfo_arp{$x} ) {
 	                                $diffinfo{'arp'} = \@{$newinfo{'arp'}};
 	                                goto ARP_BREAK;
@@ -306,6 +310,10 @@ sub genjson_diffinfo {
   ### diff {cpu_usage}
   if (exists $newinfo{'cpu_usage'} && exists $oldinfo{'cpu_usage'}) {
   	foreach my $i (sort keys %{$newinfo{'cpu_usage'}}) {
+		unless (exists $oldinfo{'cpu_usage'}{$i}) {
+			$diffinfo{'cpu_usage'} = \%{$newinfo{'cpu_usage'}};
+			last;
+		}
 		unless ($newinfo{'cpu_usage'}{$i} eq $oldinfo{'cpu_usage'}{$i}) {
 			$diffinfo{'cpu_usage'} = \%{$newinfo{'cpu_usage'}};
 			last;
@@ -348,6 +356,10 @@ sub genjson_diffinfo {
 	                my %newinfo_diskspace = %{$newinfo_diskspace[$i]};
 	                my %oldinfo_diskspace = %{$oldinfo_diskspace[$i]};
 	                foreach my $x (sort keys %{$newinfo_diskspace[$i]}) {
+				unless (exists $oldinfo_diskspace{$x}) {
+	                                $diffinfo{'disk_space'} = \@{$newinfo{'disk_space'}};
+	                                goto DISK_BREAK;
+				}
 	                        unless ( $newinfo_diskspace{$x} eq $oldinfo_diskspace{$x} ) {
 	                                $diffinfo{'disk_space'} = \@{$newinfo{'disk_space'}};
 	                                goto DISK_BREAK;
@@ -390,6 +402,10 @@ sub genjson_diffinfo {
 	                my %newinfo_inetname = %{$newinfo_inetname[$i]};
 	                my %oldinfo_inetname = %{$oldinfo_inetname[$i]};
 	                foreach my $x (sort keys %{$newinfo_inetname[$i]}) {
+				unless (exists $oldinfo_inetname{$x}) {
+	                                $diffinfo{'inet_name'} = \@{$newinfo{'inet_name'}};
+	                                goto INET_BREAK;
+				}
 	                        unless ( $newinfo_inetname{$x} eq $oldinfo_inetname{$x} ) {
 	                                $diffinfo{'inet_name'} = \@{$newinfo{'inet_name'}};
 	                                goto INET_BREAK;
@@ -455,6 +471,10 @@ sub genjson_diffinfo {
   ### diff {mem_usage}
   if (exists $newinfo{'mem_usage'} && exists $oldinfo{'mem_usage'}) {
   	foreach my $i (sort keys %{$newinfo{'mem_usage'}}) {
+		unless (exists $oldinfo{'mem_usage'}{$i}) {
+			$diffinfo{'mem_usage'} = \%{$newinfo{'mem_usage'}};
+			last;
+		}
 		unless ($newinfo{'mem_usage'}{$i} eq $oldinfo{'mem_usage'}{$i}) {
 			$diffinfo{'mem_usage'} = \%{$newinfo{'mem_usage'}};
 			last;
@@ -477,6 +497,10 @@ sub genjson_diffinfo {
 	                my %newinfo_mount = %{$newinfo_mount[$i]};
 	                my %oldinfo_mount = %{$oldinfo_mount[$i]};
 	                foreach my $x (sort keys %{$newinfo_mount[$i]}) {
+				unless (exists $oldinfo_mount{$x}) {
+	                                $diffinfo{'mount'} = \@{$newinfo{'mount'}};
+	                                goto MOUNT_BREAK;
+				}
 	                        unless ( $newinfo_mount{$x} eq $oldinfo_mount{$x} ) {
 	                                $diffinfo{'mount'} = \@{$newinfo{'mount'}};
 	                                goto MOUNT_BREAK;
@@ -514,6 +538,10 @@ sub genjson_diffinfo {
 	                my %newinfo_onlineuser = %{$newinfo_onlineuser[$i]};
 	                my %oldinfo_onlineuser = %{$oldinfo_onlineuser[$i]};
 	                foreach my $x (sort keys %{$newinfo_onlineuser[$i]}) {
+				unless (exists $oldinfo_onlineuser{$x}) {
+	                                $diffinfo{'online_user'} = \@{$newinfo{'online_user'}};
+	                                goto ONLINE_BREAK;
+				}
 	                        unless ( $newinfo_onlineuser{$x} eq $oldinfo_onlineuser{$x} ) {
 	                                $diffinfo{'online_user'} = \@{$newinfo{'online_user'}};
 	                                goto ONLINE_BREAK;
@@ -533,6 +561,10 @@ sub genjson_diffinfo {
   ### diff {os_info}
   if (exists $newinfo{'os_info'} && exists $oldinfo{'os_info'}) {
   	foreach my $i (sort keys %{$newinfo{'os_info'}}) {
+		unless (exists $oldinfo{'os_info'}{$i}) {
+			$diffinfo{'os_info'} = \%{$newinfo{'os_info'}};
+			last;
+		}
 		unless ($newinfo{'os_info'}{$i} eq $oldinfo{'os_info'}{$i}) {
 			$diffinfo{'os_info'} = \%{$newinfo{'os_info'}};
 			last;
@@ -561,6 +593,10 @@ sub genjson_diffinfo {
   ### diff {product_info}
   if (exists $newinfo{'product_info'} && exists $oldinfo{'product_info'}) {
   	foreach my $i (sort keys %{$newinfo{'product_info'}}) {
+		unless (exists $oldinfo{'product_info'}{$i}) {
+			$diffinfo{'product_info'} = \%{$newinfo{'product_info'}};
+			last;
+		}
 		unless ($newinfo{'product_info'}{$i} eq $oldinfo{'product_info'}{$i}) {
 			$diffinfo{'product_info'} = \%{$newinfo{'product_info'}};
 			last;
@@ -588,6 +624,10 @@ sub genjson_diffinfo {
 	                my %newinfo_route = %{$newinfo_route[$i]};
 	                my %oldinfo_route = %{$oldinfo_route[$i]};
 	                foreach my $x (sort keys %{$newinfo_route[$i]}) {
+				unless (exists $oldinfo_route{$x}) {
+	                                $diffinfo{'route'} = \@{$newinfo{'route'}};
+	                                goto ROUTE_BREAK;
+				}
 	                        unless ( $newinfo_route{$x} eq $oldinfo_route{$x} ) {
 	                                $diffinfo{'route'} = \@{$newinfo{'route'}};
 	                                goto ROUTE_BREAK;
@@ -618,6 +658,10 @@ sub genjson_diffinfo {
   ### diff {selinux}
   if (exists $newinfo{'selinux'} && exists $oldinfo{'selinux'}) {
   	foreach my $i (sort keys %{$newinfo{'selinux'}}) {
+		unless (exists $oldinfo{'selinux'}{$i}) {
+			$diffinfo{'selinux'} = \%{$newinfo{'selinux'}};
+			last;
+		}
 		unless ($newinfo{'selinux'}{$i} eq $oldinfo{'selinux'}{$i}) {
 			$diffinfo{'selinux'} = \%{$newinfo{'selinux'}};
 			last;
@@ -647,6 +691,10 @@ sub genjson_diffinfo {
   ### diff {sys_clock}
   if (exists $newinfo{'sys_clock'} && exists $oldinfo{'sys_clock'}) {
   	foreach my $i (sort keys %{$newinfo{'sys_clock'}}) {
+		unless (exists $oldinfo{'sys_clock'}{$i}) {
+			$diffinfo{'sys_clock'} = \%{$newinfo{'sys_clock'}};
+			last;
+		}
 		unless ($newinfo{'sys_clock'}{$i} eq $oldinfo{'sys_clock'}{$i}) {
 			$diffinfo{'sys_clock'} = \%{$newinfo{'sys_clock'}};
 			last;
@@ -661,6 +709,10 @@ sub genjson_diffinfo {
   ### diff {sys_lang}
   if (exists $newinfo{'sys_lang'} && exists $oldinfo{'sys_lang'}) {
   	foreach my $i (sort keys %{$newinfo{'sys_lang'}}) {
+		unless (exists $oldinfo{'sys_lang'}{$i}) {
+			$diffinfo{'sys_lang'} = \%{$newinfo{'sys_lang'}};
+			last;
+		}
 		unless ($newinfo{'sys_lang'}{$i} eq $oldinfo{'sys_lang'}{$i}) {
 			$diffinfo{'sys_lang'} = \%{$newinfo{'sys_lang'}};
 			last;
@@ -701,6 +753,10 @@ sub genjson_diffinfo {
   ### diff {sysload}
   if (exists $newinfo{'sysload'} && exists $oldinfo{'sysload'}) {
   	foreach my $i (sort keys %{$newinfo{'sysload'}}) {
+		unless (exists $oldinfo{'sysload'}{$i}) {
+			$diffinfo{'sysload'} = \%{$newinfo{'sysload'}};
+			last;
+		}
 		unless ($newinfo{'sysload'}{$i} eq $oldinfo{'sysload'}{$i}) {
 			$diffinfo{'sysload'} = \%{$newinfo{'sysload'}};
 			last;
@@ -715,6 +771,10 @@ sub genjson_diffinfo {
   ### diff {systime}
   if (exists $newinfo{'systime'} && exists $oldinfo{'systime'}) {
   	foreach my $i (sort keys %{$newinfo{'systime'}}) {
+		unless (exists $oldinfo{'systime'}{$i}) {
+			$diffinfo{'systime'} = \%{$newinfo{'systime'}};
+			last;
+		}
 		unless ($newinfo{'systime'}{$i} eq $oldinfo{'systime'}{$i}) {
 			$diffinfo{'systime'} = \%{$newinfo{'systime'}};
 			last;
@@ -737,6 +797,10 @@ sub genjson_diffinfo {
 			my %newinfo_sysuser = %{$newinfo_sysuser[$i]};
 			my %oldinfo_sysuser = %{$oldinfo_sysuser[$i]};
 			foreach my $x (sort keys %{$newinfo_sysuser[$i]}) {
+				unless (exists $oldinfo_sysuser{$x}) {
+					$diffinfo{'sysuser'} = \@{$newinfo{'sysuser'}};
+					goto SYSUSER_BREAK;
+				}
 				unless ( $newinfo_sysuser{$x} eq $oldinfo_sysuser{$x} ) {
 					$diffinfo{'sysuser'} = \@{$newinfo{'sysuser'}};
 					goto SYSUSER_BREAK;
@@ -761,8 +825,8 @@ sub genjson_diffinfo {
 		my %newinfo_archive = %{$newinfo{'epinfo'}{'archive'}};
 		my %oldinfo_archive = %{$oldinfo{'epinfo'}{'archive'}};
 		foreach my $x (sort keys %newinfo_archive) {
-			if (defined $newinfo_archive{$x}) {
-				if (defined $oldinfo_archive{$x}) {
+			if (exists $newinfo_archive{$x} && defined $newinfo_archive{$x}) {
+				if (exists $oldinfo_archive{$x} && defined $oldinfo_archive{$x}) {
 					unless ( $newinfo_archive{$x} eq $oldinfo_archive{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -772,7 +836,7 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_archive{$x}) {
+				if (exists $oldinfo_archive{$x} && defined $oldinfo_archive{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
@@ -783,7 +847,7 @@ sub genjson_diffinfo {
 		my %oldinfo_epush   = %{$oldinfo{'epinfo'}{'epush'}};
 		foreach my $x (sort keys %newinfo_epush) {
 			if (defined $newinfo_epush{$x}) {
-				if (defined $oldinfo_epush{$x}) {
+				if (exists $oldinfo_epush{$x} && defined $oldinfo_epush{$x}) {
 					unless ( $newinfo_epush{$x} eq $oldinfo_epush{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -793,7 +857,7 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_epush{$x}) {
+				if (exists $oldinfo_epush{$x} && defined $oldinfo_epush{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
@@ -803,8 +867,8 @@ sub genjson_diffinfo {
 		my %newinfo_mail4   = %{$newinfo{'epinfo'}{'mail4'}};
 		my %oldinfo_mail4   = %{$oldinfo{'epinfo'}{'mail4'}};
 		foreach my $x (sort keys %newinfo_mail4) {
-			if (defined $newinfo_mail4{$x}) {
-				if (defined $oldinfo_mail4{$x}) {
+			if (exists $newinfo_mail4{$x} && defined $newinfo_mail4{$x}) {
+				if (exists $oldinfo_mail4{$x} && defined $oldinfo_mail4{$x}) {
 					unless ( $newinfo_mail4{$x} eq $oldinfo_mail4{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -814,7 +878,7 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_mail4{$x}) {
+				if (exists $oldinfo_mail4{$x} && defined $oldinfo_mail4{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
@@ -824,8 +888,8 @@ sub genjson_diffinfo {
 		my %newinfo_gw      = %{$newinfo{'epinfo'}{'gw'}};
 		my %oldinfo_gw      = %{$oldinfo{'epinfo'}{'gw'}};
 		foreach my $x ( qw(domains is_installed serial version) ) {
-			if (defined $newinfo_gw{$x}) {
-				if (defined $oldinfo_gw{$x}) {
+			if (exists $newinfo_gw{$x} && defined $newinfo_gw{$x}) {
+				if (exists $oldinfo_gw{$x} && defined $oldinfo_gw{$x}) {
 					unless ( $newinfo_gw{$x} eq $oldinfo_gw{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -835,14 +899,14 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_gw{$x}) {
+				if (exists $oldinfo_gw{$x} && defined $oldinfo_gw{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
 			}
 		}
-		if (defined $newinfo_gw{'license'}{'expire_date'}) {
-			if (defined $oldinfo_gw{'license'}{'expire_date'}) {
+		if (exists $newinfo_gw{'license'}{'expire_date'} && defined $newinfo_gw{'license'}{'expire_date'}) {
+			if (exists $oldinfo_gw{'license'}{'expire_date'} && defined $oldinfo_gw{'license'}{'expire_date'}) {
 				unless ( $newinfo_gw{'license'}{'expire_date'} eq $oldinfo_gw{'license'}{'expire_date'} ) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
@@ -853,7 +917,7 @@ sub genjson_diffinfo {
 				
 			}
 		} else {
-			if (defined $oldinfo_gw{'license'}{'expire_date'}) {
+			if (exists $oldinfo_gw{'license'}{'expire_date'} && defined $oldinfo_gw{'license'}{'expire_date'}) {
 				$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 				goto EPINFO_BREAK;
 			}
@@ -864,7 +928,7 @@ sub genjson_diffinfo {
 				my %oldinfo_gwconfigs      = %{$oldinfo_gw{'configs'}};
 				foreach my $x (sort keys %newinfo_gwconfigs) {
 					if (defined $newinfo_gwconfigs{$x}) {
-						if (defined $oldinfo_gwconfigs{$x}) {
+						if (exists $oldinfo_gwconfigs{$x} && defined $oldinfo_gwconfigs{$x}) {
 							unless ( $newinfo_gwconfigs{$x} eq $oldinfo_gwconfigs{$x} ) {
 								$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 								goto EPINFO_BREAK;
@@ -874,7 +938,7 @@ sub genjson_diffinfo {
 							goto EPINFO_BREAK;
 						}
 					} else {
-						if (defined $oldinfo_gwconfigs{$x}) {
+						if (exists $oldinfo_gwconfigs{$x} && defined $oldinfo_gwconfigs{$x}) {
 							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 							goto EPINFO_BREAK;
 						}
@@ -895,8 +959,8 @@ sub genjson_diffinfo {
 		my %oldinfo_mail    = %{$oldinfo{'epinfo'}{'mail'}};
 		# diff is_installed serial
 		foreach my $x ( qw(is_installed serial) ) {
-			if (defined $newinfo_mail{$x}) {
-				if (defined $oldinfo_mail{$x}) {
+			if (exists $newinfo_mail{$x} && defined $newinfo_mail{$x}) {
+				if (exists $oldinfo_mail{$x} && defined $oldinfo_mail{$x}) {
 					unless ( $newinfo_mail{$x} eq $oldinfo_mail{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -906,7 +970,7 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_mail{$x}) {
+				if (exists $oldinfo_mail{$x} && defined $oldinfo_mail{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
@@ -921,8 +985,8 @@ sub genjson_diffinfo {
 				)
 			      ) 
 		{
-			if (defined $newinfo_mail{'license'}{$x}) {
-				if (defined $oldinfo_mail{'license'}{$x}) {
+			if (exists $newinfo_mail{'license'}{$x} && defined $newinfo_mail{'license'}{$x}) {
+				if (exists $oldinfo_mail{'license'}{$x} && defined $oldinfo_mail{'license'}{$x}) {
 					unless ( $newinfo_mail{'license'}{$x} eq $oldinfo_mail{'license'}{$x} ) {
 						$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 						goto EPINFO_BREAK;
@@ -932,7 +996,7 @@ sub genjson_diffinfo {
 					goto EPINFO_BREAK;
 				}
 			} else {
-				if (defined $oldinfo_mail{'license'}{$x}) {
+				if (exists $oldinfo_mail{'license'}{$x} && defined $oldinfo_mail{'license'}{$x}) {
 					$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 					goto EPINFO_BREAK;
 				}
@@ -944,8 +1008,8 @@ sub genjson_diffinfo {
 				my %newinfo_mailconfigs      = %{$newinfo_mail{'configs'}};
 				my %oldinfo_mailconfigs      = %{$oldinfo_mail{'configs'}};
 				foreach my $x (sort keys %newinfo_mailconfigs) {
-					if (defined $newinfo_mailconfigs{$x}) {
-						if (defined $oldinfo_mailconfigs{$x}) {
+					if (exists $newinfo_mailconfigs{$x} && defined $newinfo_mailconfigs{$x}) {
+						if (exists $oldinfo_mailconfigs{$x} && defined $oldinfo_mailconfigs{$x}) {
 							unless ( $newinfo_mailconfigs{$x} eq $oldinfo_mailconfigs{$x} ) {
 								$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 								goto EPINFO_BREAK;
@@ -955,7 +1019,7 @@ sub genjson_diffinfo {
 							goto EPINFO_BREAK;
 						}
 					} else {
-						if (defined $oldinfo_mailconfigs{$x}) {
+						if (exists $oldinfo_mailconfigs{$x} && defined $oldinfo_mailconfigs{$x}) {
 							$diffinfo{'epinfo'} = \%{$newinfo{'epinfo'}};
 							goto EPINFO_BREAK;
 						}
