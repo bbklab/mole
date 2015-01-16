@@ -1158,10 +1158,12 @@ if ($data_config{'systime'}) {
 if ($data_config{'mem_usage'}) {
   my %mem_usage = (
   	'mem_total'	=> '',
-  	'swp_total'	=> '',
   	'mem_free'	=> '',
-  	'swp_free'	=> '',
   	'mem_usage'	=> '',
+	'mem_buffer'	=> '',
+	'mem_cache'	=> '',
+  	'swp_total'	=> '',
+  	'swp_free'	=> '',
   	'swp_usage'	=> '',
   );
   my $mem_file = '/proc/meminfo';
@@ -1182,6 +1184,14 @@ if ($data_config{'mem_usage'}) {
 			}
 			if (m/\A\s*SwapFree:\s+(\d+)\s*KB/i) {
 				$mem_usage{'swp_free'} = $1;
+				next;
+			}
+			if (m/\A\s*Buffers:\s+(\d+)\s*KB/i) {
+				$mem_usage{'mem_buffer'} = $1;
+				next;
+			}
+			if (m/\A\s*Cached:\s+(\d+)\s*KB/i) {
+				$mem_usage{'mem_cache'} = $1;
 				next;
 			}
 		}
