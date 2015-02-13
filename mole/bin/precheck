@@ -194,7 +194,7 @@ if [ "${num}" != "0" ]; then
 	((crit_num++))
 	return 1
 else
-	echo -e "${OK} : $((${#array_base_cmd[@]}-1))/$((${#array_base_cmd[@]}-1)) ${array_base_cmd[0]}$(gettext "prepared")"
+	echo -e "${OK} : $((${#array_base_cmd[@]}-1))/$((${#array_base_cmd[@]}-1)) ${array_base_cmd[0]} $(gettext "prepared")"
 	((ok_num++))
 	return 0
 fi
