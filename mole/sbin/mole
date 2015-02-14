@@ -80,168 +80,412 @@ else
 fi
 
 
-### Help
+### Main Help
 ##
-show_help() {
+show_helpmain() {
 cat << EOF
+$(echo_green "$(gettext "Usage:")") ${0##*/} COMMAND [ARGS]
 
-  $(echo_green "$(gettext "Options:")")
-	help					$(gettext "stuff you are reading")
-  	version					$(gettext "print version")
-	basedir					$(gettext "print basedir")
-	status					$(gettext "print mole status")
-	start   				$(gettext "start mole daemon")
-	stop    				$(gettext "stop mole daemon")
-	restart					$(gettext "restart mole daemon")
-	precheck				$(gettext "check system environment on start")
-	checkconf    	[-v]			$(gettext "check config file validity on start")
-	reload					$(gettext "reload include file (not config file) on fly")
-	makedir		[-c]			$(gettext "create basic directories")
-	takesnap				$(gettext "create system snapshot once")
-	list         	[plugin]		$(gettext "list plugin's schedule stat, (default list all)")
-	init	     	plugin			$(gettext "reset plugin's schedul stat, [all] for every plugin")
-	report       	plugin			$(gettext "report plugin's last result, [all] for every plugin")
-	enable       	plugin			$(gettext "enable plugin (change plugin config enable=yes)")
-	disable      	plugin			$(gettext "disable plugin (change plugin config enable=no)")
-	run		plugin			$(gettext "run plugin once and format output on terminal")
-	view		plugin [key]		$(gettext "print config->value, [all] for every plugin")
-	udef		plugin			$(gettext "print config->value for plugin user-defined config")
-	autoconf	plugin			$(gettext "automatic set config for plugin")
-	printdef	{VAR}			$(gettext "print the value of variable name")
-	iget		{gkey}			$(gettext "print global config-value through inner function")
-	iget		plugin {pkey}		$(gettext "print plugin config-value through inner function")
-	ifunc		list			$(gettext "list inner functions which allow to be called from cli")
-	ifunc		{funcname}  {args}	$(gettext "calling to run inner functions")
-	setinit		view			$(gettext "print global instance information")
-	setinit		reset			$(gettext "reset global instance information (be careful!)")
-	post		sysinfo			$(gettext "post full sysinfo once")
-	print		sysinfo			$(gettext "print full sysinfo")
-	saveconf				$(gettext "save esop config files once")
-	config					$(gettext "help stuff about mole config-*")
-	config-help				$(gettext "help stuff about mole config-* (same as above)")
-	?					$(gettext "help stuff about short args")
+$(echo_green "$(gettext "All of mole COMMAND are:")")
+   help			$(gettext "print help stuff you are reading")
+   version		$(gettext "print mole version")
+   basedir		$(gettext "print mole basedir")
+   status		$(gettext "print mole status")
+   start   		$(gettext "start mole daemon")
+   stop    		$(gettext "stop mole daemon")
+   restart		$(gettext "restart mole daemon")
+   reload     		$(gettext "reload include file on fly")
+   precheck   		$(gettext "check system environment")
+   takesnap		$(gettext "create system snapshot once")
+   saveconf		$(gettext "save esop config files once")
+   checkconf  [ARGS]	$(gettext "check config file validity")
+   makedir    [ARGS]	$(gettext "create necessary directories")
+   enable     [ARGS]	$(gettext "enable plugin")
+   disable    [ARGS]	$(gettext "disable plugin")
+   list       [ARGS]	$(gettext "list plugin schedule stat")
+   init	      [ARGS]	$(gettext "reset plugin schedul stat")
+   report     [ARGS]	$(gettext "report plugin last result")
+   run        [ARGS]	$(gettext "run plugin and display result once")
+   view       [ARGS]	$(gettext "print plugin configs")
+   udef       [ARGS]	$(gettext "print plugin user-defined configs")
+   autoconf   [ARGS]	$(gettext "automatic set plugin configs")
+   post       [ARGS]	$(gettext "post full sysinfo once")
+   print      [ARGS]	$(gettext "print full sysinfo")
+   setinit    [ARGS]	$(gettext "print or reset(be careful!) mole instance configs")
+   config     		$(gettext "print help stuff about mole config-*")
+   dev			$(gettext "print help stuff about development related COMMAND")
+   ?			$(gettext "print help stuff about short args")
 
-	iget gkey:		g_{global_config_name}
-	iget plugin pkey:	p_{plugin_base_config_name}
+$(echo_green "$(gettext "See 'mole help COMMAND' for more information on a specific command.")")
 EOF
 }
 
-show_confhelp() {
-cat << EOF
-
-  $(echo_green "$(gettext "Options:")")
-	config-help				$(gettext "help stuff about config you are reading")
-	config-view  	plugin 			$(gettext "print all of config value on single plugin, [all] for every plugin")
-	config-view  	plugin key		$(gettext "print single config value on single plugin")
-  	config-add   	plugin key value  	$(gettext "add config and set value for plugin")
-	config-del   	plugin key		$(gettext "delete config for plugin")
-	config-clear	plugin key		$(gettext "clear config for plugin")
-	config-update 	plugin key value	$(gettext "update config value for plugin")
-EOF
-}
-
-### Example
+### Help Topic
 ##
-show_example() {
-cat << EOF
+show_helptopic() {
+local topic="${1}"
 
-  $(echo_green "$(gettext "Example:")")
+case "${topic}" in
+
+# topic help
+"help")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
 	mole  help
+
+$(echo_green "$(gettext "Example:")")
+	mole  help
+EOF
+	;;
+
+# topic version
+"version")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
 	mole  version
+$(echo_green "$(gettext "Example:")")
+	mole  version
+EOF
+	;;
+
+# topic basedir
+"basedir")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
 	mole  basedir
-	mole  precheck
-	mole  checkconf [-v]
-	mole  makedir  [-c]
-	mole  takesnap
+
+$(echo_green "$(gettext "Example:")")
+	mole  basedir 
+EOF
+	;;
+
+# topic status
+"status")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  status
+
+$(echo_green "$(gettext "Example:")")
+	mole  status 
+EOF
+	;;
+
+# topic start
+"start")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  start
+
+$(echo_green "$(gettext "Example:")")
+	mole  start 
+EOF
+	;;
+
+# topic stop
+"stop")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  stop
+
+$(echo_green "$(gettext "Example:")")
+	mole  stop
+EOF
+	;;
+
+# topic restart
+"restart")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  restart
+
+$(echo_green "$(gettext "Example:")")
+	mole  restart
+EOF
+	;;
+
+# topic reload
+"reload")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
 	mole  reload
-	mole  start | stop | status | restart | list
-        mole  list     	pop_svr
-	mole  init     	sysload
-	mole  report   	sysload
-	mole  enable   	sysload
-	mole  disable  	sysload
-	mole  run	sysload
-	mole  view	sysload
-	mole  view	sysload   enable
-	mole  udef	sysload
-	mole  autoconf  sysload
-	mole  printdef	CONF_DIR
-	mole  iget	g_parter_id
-	mole  iget	sysload   p_debug
-	mole  ifunc	list
-	mole  ifunc 	time2run_ornot disk_fs 
-	mole  setinit	view 
-	mole  setinit   reset
-	mole  post	sysinfo
-	mole  print	sysinfo
+
+$(echo_green "$(gettext "Example:")")
+	mole  reload
+EOF
+	;;
+
+# topic precheck
+"precheck")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  precheck
+
+$(echo_green "$(gettext "Example:")")
+	mole  precheck
+EOF
+	;;
+
+# topic takesnap
+"takesnap")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  takesnap
+
+$(echo_green "$(gettext "Example:")")
+	mole  takesnap
+EOF
+	;;
+
+# topic saveconf
+"saveconf")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
 	mole  saveconf
-	mole  config
-	mole  config-help
 
+$(echo_green "$(gettext "Example:")")
+	mole  saveconf
 EOF
-}
+	;;
 
-show_confexample() {
+
+# topic checkconf
+"checkconf")
 cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  checkconf [-v]
 
-  $(echo_green "$(gettext "Example:")")
-	mole  config
-	mole  config-help
-	mole  config-view     pop_svr
-	mole  config-view     pop_svr comment
-	mole  config-add	pop_svr time_out 5
-	mole  config-update	pop_svr time_out 10
-	mole  config-del	pop_svr time_out 
-	mole  config-clear	pop_svr time_out
-
+$(echo_green "$(gettext "Example:")")
+	mole  checkconf
+	mole  checkconf -v
 EOF
-}
+	;;
 
-### Tips
-##
-show_shorttips() {
+# topic makedir
+"makedir")
 cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  makedir [-c]
 
-  $(echo_green "$(gettext "ShortTips:")")
-	help		=> h
-	version		=> v
-	basedir		=> b
-	precheck        => p 
-	checkconf	=> c
-	makedir		=> m
-	takesnap	=> t
-	status          => s 
-	list            => l	( ln le lr li )
-	init            => i 
-	report		=> R	( Re Rr Ri )
-	run		=> r
-	enable		=> e
-	disable		=> d
-	config-view 	=> v 
-	config-add	=> a
-	config-update	=> u
-
-  $(echo_green "$(gettext "ShortTips Example:")")
-        mole  h
-        mole  v
-	mole  b
-        mole  p 
-        mole  c 
-	mole  m
-	mole  t
-        mole  s 
-        mole  l  [ln|le|lr|li]
-        mole  i  pop_svr | all | a
-        mole  R  pop_svr | all | a  [Re|Rr|Ri]
-        mole  r  pop_svr
-        mole  e  pop_svr
-        mole  d  pop_svr
-        mole  v  pop_svr | all | a
-	mole  v  pop_svr enable
-	mole  a  pop_svr enable yes
-	mole  u  pop_svr enable no
-
+$(echo_green "$(gettext "Example:")")
+	mole  makedir
+	mole  makedir -c
 EOF
+	;;
+
+# topic post
+"post")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  post  sysinfo
+
+$(echo_green "$(gettext "Example:")")
+	mole  post  sysinfo
+EOF
+	;;
+
+# topic print
+"print")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  print  sysinfo
+
+$(echo_green "$(gettext "Example:")")
+	mole  print  sysinfo
+EOF
+	;;
+
+# topic report
+"report")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  report  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  report  sysload
+	mole  report  all
+EOF
+	;;
+
+# topic list
+"list")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  list  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  list
+        mole  list  pop_svr
+EOF
+	;;
+
+# topic init
+"init")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  init  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  init  sysload
+	mole  init  all
+EOF
+	;;
+
+# topic enable
+"enable")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  enable  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  enable  sysload
+EOF
+	;;
+
+# topic disable
+"disable")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  disable  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  disable  sysload
+EOF
+	;;
+
+# topic run
+"run")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  run  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  run  sysload
+EOF
+	;;
+
+# topic view
+"view")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  view  [plugin]  [config-name]
+
+$(echo_green "$(gettext "Example:")")
+	mole  view  sysload
+	mole  view  sysload  comment
+EOF
+	;;
+
+# topic udef
+"udef")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  udef  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  udef  sysload
+EOF
+	;;
+
+# topic autoconf
+"autoconf")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  autoconf  [plugin]
+
+$(echo_green "$(gettext "Example:")")
+	mole  autoconf  sysload
+EOF
+	;;
+
+# topic setinit
+"setinit")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  setinit  [view|reset]
+
+$(echo_green "$(gettext "Example:")")
+	mole  setinit  view 
+	mole  setinit  reset
+EOF
+	;;
+
+# topic config
+"config"|"config-help")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+  	mole  config-help					$(gettext "help stuff about config you are reading")
+  	mole  config-view   [plugin] 				$(gettext "print all of config value on single plugin")
+  	mole  config-view   [plugin]  [config-name] 		$(gettext "print single config value on single plugin")
+  	mole  config-del    [plugin]  [config-name] 		$(gettext "delete config for plugin")
+  	mole  config-clear  [plugin]  [config-name] 		$(gettext "clear config for plugin")
+  	mole  config-add    [plugin]  [config-name]  [value] 	$(gettext "add config and set value for plugin")
+  	mole  config-update [plugin]  [config-name]  [value]	$(gettext "update config value for plugin")
+
+$(echo_green "$(gettext "Example:")")
+  	mole  config-help
+  	mole  config-view   pop_svr
+  	mole  config-view   pop_svr  comment
+  	mole  config-del    pop_svr  time_out 
+  	mole  config-clear  pop_svr  time_out
+  	mole  config-add    pop_svr  time_out  5
+  	mole  config-update pop_svr  comment   "POP Service Check"
+EOF
+	;;
+
+# topic dev
+"dev")
+cat << EOF
+$(echo_green "$(gettext "Usage:")")
+	mole  printdef  [VARNAME] 		$(gettext "print the value of variable name")
+  	mole  iget	[gkey]			$(gettext "print global config-value through inner function")
+  	mole  iget	[plugin]  [pkey]	$(gettext "print global config-value through inner function")
+  	mole  ifunc	list			$(gettext "list inner functions which allow to be called from cli")
+  	mole  ifunc	[funcname]  [args]	$(gettext "calling to run inner functions")
+
+  	[gkey] format:	g_{global_config_name}
+  	[pkey] format:	p_{plugin_base_config_name}
+
+$(echo_green "$(gettext "Example:")")
+  	mole  printdef	CONF_DIR
+  	mole  iget	g_parter_id
+  	mole  iget	sysload  	p_debug
+  	mole  ifunc 	list
+  	mole  ifunc 	time2run_ornot	disk_fs 
+EOF
+	;;
+
+# topic alias
+"?"|"alias")
+cat << EOF
+$(echo_green "$(gettext "ShortAlias:")")
+	help		-> 	h
+	version		-> 	v
+	basedir		-> 	b
+	precheck        -> 	p 
+	checkconf	-> 	c
+	makedir		-> 	m
+	takesnap	-> 	t
+	status          -> 	s 
+	list            -> 	l	( ln le lr li )
+	init            -> 	i 
+	report		-> 	R	( Re Rr Ri )
+	run		-> 	r
+	enable		-> 	e
+	disable		-> 	d
+	config-view 	-> 	v 
+	config-add	-> 	a
+	config-update	-> 	u
+EOF
+	;;
+
+# topic others
+*)
+cat << EOF
+$(echo_green "$(eval_gettext "COMMAND [\${topic}] unknown")")
+EOF
+	;;
+
+esac
 }
 
 ### Show mole status
@@ -601,8 +845,7 @@ case "$#" in
 	arg1=$1;
 	case "$arg1" in
 	"help"|"h")
-		show_help		
-		show_example			;;
+		show_helpmain			;;		
 	"version"|"v")
 		echo "${MOLE_VERSION}"	;;
 	"basedir"|"b")
@@ -663,15 +906,15 @@ case "$#" in
 	"reload")
 		reload_core_cron		;;
 	"config"|"config-help")
-		show_confhelp
-		show_confexample		;;
+		show_helptopic	"config"	;;
 	"?"|"/?")
-		show_shorttips			;;
+		show_helptopic  "?"		;;
+	"dev")
+		show_helptopic  "dev"		;;
 	"init")
 		. ${SETINIT_SH} 		;;
 	*)
-		show_help
-		show_example			;;
+		show_helpmain			;;
 	esac
 	;;
 
@@ -684,8 +927,10 @@ case "$#" in
 	}
 
 	case "$arg1" in
+	"help")
+		show_helptopic  "${arg2}"	;;
 	"?")
-		show_shorttips		;;
+		show_helptopic  "?"		;;
 	"list"|"l")
 		if [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then	### must be plugin
 			list_plugin_status  "$arg2"
@@ -915,21 +1160,18 @@ case "$#" in
 			/bin/rm -f ${TMP_PRESYSINFO} ${TMP_CNTSYSINFO} 2>&- 
 			init_plugin mole_report_sysinfo
 		else
-			show_help
-			show_example
+			show_helpmain
 		fi
 			;;
 	"print")
 		if [ "$arg2" == "sysinfo" ]; then
 			${GENDIFF} "full"
 		else
-			show_help
-			show_example
+			show_helpmain
 		fi
 			;;
 	*)
-		show_help
-		show_example		;;
+		show_helpmain		;;
 	esac
 	;;
 "3")
@@ -940,6 +1182,9 @@ case "$#" in
         fi
 
 	case "$arg1" in 
+        "help")
+                show_helptopic  "${arg2}"
+		;;
         "view"|"config-view"|"v")
                 if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			read_mole_config "$arg2" "$arg3"
@@ -1025,8 +1270,7 @@ case "$#" in
 		fi
 		;;
 	*)
-		show_help
-		show_example
+		show_helpmain
 		;;
 	esac
 	;;
@@ -1038,6 +1282,9 @@ case "$#" in
 	fi
 
 	case "$arg1" in
+        "help")
+                show_helptopic  "${arg2}"
+		;;
 	"config-add"|"a")
 		if [ "$(read_mole_section "$arg2")" == "$arg2" ] || [ "$(read_plugin_section "$arg2")" == "$arg2" ]; then
 			add_mole_config "$arg2" "$arg3" "$arg4"
@@ -1076,13 +1323,11 @@ case "$#" in
 		fi
 		;;
 	*)
-		show_help
-		show_example
+		show_helpmain
 		;;
 	esac
 	;;
 *)
-	show_help
-	show_example
+	show_helpmain
 	;;
 esac
