@@ -22,17 +22,17 @@ msgstr "\t%+#D"
 msgid "\n"
 msgstr "\n"
 
-msgid "Options:"
-msgstr "参数:"
+msgid "Usage:"
+msgstr "用法:"
+
+msgid "All of mole COMMAND are:"
+msgstr "所有COMMAND命令包括:"
 
 msgid "Example:"
 msgstr "示例:"
 
-msgid "ShortTips:"
-msgstr "短参数:"
-
-msgid "ShortTips Example:"
-msgstr "短参数示例:"
+msgid "ShortAlias:"
+msgstr "短命令别名:"
 
 msgid "mole (pid: ${pid}) running ..."
 msgstr "实例 (进程号:${pid}) 正在运行 ..."
@@ -232,116 +232,116 @@ msgstr "一个占用了PID的伪装实例在运行?"
 msgid "succeed!"
 msgstr "正常"
 
-msgid "stuff you are reading"
-msgstr "当前你正在阅读的文档"
+msgid "print help stuff you are reading"
+msgstr "打印当前你正在阅读的文档"
 
-msgid "print version"
-msgstr "版本号"
+msgid "print mole version"
+msgstr "打印mole版本号"
 
-msgid "print basedir"
-msgstr "安装目录"
+msgid "print mole basedir"
+msgstr "打印mole安装目录"
 
 msgid "print mole status"
-msgstr "查看实例状态"
+msgstr "查看mole实例状态"
 
 msgid "start mole daemon"
-msgstr "启动实例"
+msgstr "启动mole实例"
 
 msgid "stop mole daemon"
-msgstr "停止实例"
+msgstr "停止mole实例"
 
 msgid "restart mole daemon"
-msgstr "重启实例"
+msgstr "重启mole实例"
 
-msgid "check system environment on start"
-msgstr "预检查系统环境"
-
-msgid "check config file validity on start"
-msgstr "预检查配置文件有效性"
-
-msgid "reload include file (not config file) on fly"
+msgid "reload include file on fly"
 msgstr "在实例运行期间重新载入函数文件"
 
-msgid "create basic directories"
-msgstr "创建运行所必须的目录"
+msgid "check system environment"
+msgstr "检查系统环境"
 
 msgid "create system snapshot once"
 msgstr "创建系统快照 (单次)"
 
-msgid "list plugin's schedule stat, (default list all)"
-msgstr "列出插件的调度状态 (默认列出所有插件)"
+msgid "save esop config files once"
+msgstr "保存当前ESOP的配置文件目录"
 
-msgid "reset plugin's schedul stat, [all] for every plugin"
-msgstr "重置插件调度状态 (被重置插件会被立即调度执行)"
+msgid "check config file validity"
+msgstr "检查配置文件有效性"
 
-msgid "report plugin's last result, [all] for every plugin"
-msgstr "查看插件的上一次执行结果 (参数 all 输出所有插件)"
+msgid "create necessary directories"
+msgstr "创建所必须的目录"
 
-msgid "enable plugin (change plugin config enable=yes)"
+msgid "enable plugin"
 msgstr "激活插件"
 
-msgid "disable plugin (change plugin config enable=no)"
+msgid "disable plugin"
 msgstr "关闭插件"
 
-msgid "run plugin once and format output on terminal"
-msgstr "单独一次执行插件并插件结果 (单次执行不算作插件调度)"
+msgid "list plugin schedule stat"
+msgstr "列出插件调度状态"
 
-msgid "print config->value, [all] for every plugin"
-msgstr "查看插件的配置信息 (参数 all 输出所有插件)"
+msgid "reset plugin schedul stat"
+msgstr "重置插件调度状态"
 
-msgid "help stuff about mole config-*"
-msgstr "查看配置参数帮助信息"
+msgid "report plugin last result"
+msgstr "打印插件最近一次结果"
 
-msgid "help stuff about mole config-* (same as above)"
-msgstr "看配置参数帮助信息"
+msgid "run plugin and display result once"
+msgstr "单次运行插件并打印结果"
 
-msgid "help stuff about short args"
-msgstr "查看短参数的帮助信息"
+msgid "print plugin configs"
+msgstr "查看插件配置信息"
+
+msgid "print plugin user-defined configs"
+msgstr "查看插件自定义配置信息"
+
+msgid "automatic set plugin configs"
+msgstr "自动设定插件的自定义配置 (仅支持部分插件)"
+
+msgid "post full sysinfo once"
+msgstr "单次上报全量sysinfo数据"
+
+msgid "print full sysinfo"
+msgstr "打印sysinfo数据"
+
+msgid "print or reset(be careful!) mole instance configs"
+msgstr "打印或重置(慎重操作!)实例的标识信息"
+
+msgid "print help stuff about mole config-*"
+msgstr "打印配置命令帮助"
+
+msgid "print help stuff about development related COMMAND"
+msgstr "打印开发命令帮助"
+
+msgid "print help stuff about short args"
+msgstr "打印短命令帮助"
+
+msgid "See 'mole help COMMAND' for more information on a specific command."
+msgstr "运行 'mole help COMMAND' 获取指定COMMAND的详细帮助信息."
 
 msgid "help stuff about config you are reading"
-msgstr "当前你正在阅读的文档"
+msgstr "打印你当年正在阅读的帮助"
 
-msgid "print all of config value on single plugin, [all] for every plugin"
-msgstr "查看某个插件的所有配置参数和所设定的值 (参数 all 输出所有插件)"
+msgid "print all of config value on single plugin"
+msgstr "打印指定插件的所有配置"
 
 msgid "print single config value on single plugin"
-msgstr "查看某个插件的某一个配置参数所设定的值"
-
-msgid "print config->value for plugin user-defined config"
-msgstr "查看某个插件的所有自定义配置项所设定的值"
-
-msgid "automatic set config for plugin"
-msgstr "自动设定某个插件的自定义配置值 (仅支持部分插件)"
+msgstr "打印指定插件的指定配置"
 
 msgid "print the value of variable name"
 msgstr "打印出某个全局变量的值 (供其他程序调用)"
 
 msgid "print global config-value through inner function"
-msgstr "打印全局配置的值(通过内部函数)"
+msgstr "打印全局配置的值 (内部函数处理后实际生效的值)"
 
 msgid "print plugin config-value through inner function"
-msgstr "打印插件配置的值(通过内部函数)"
+msgstr "打印插件配置的值 (内部函数处理后实际生效的值)"
 
 msgid "list inner functions which allow to be called from cli"
-msgstr "列出允许通过CLI调用的内部功能函数"
+msgstr "列出允许通过CLI调用的内部函数"
 
 msgid "calling to run inner functions"
-msgstr "直接运行内部功能函数"
-
-msgid "print global instance information"
-msgstr "打印实例的标识信息"
-
-msgid "reset global instance information (be careful!)"
-msgstr "重置实例的标识信息 (慎重操作!)"
-
-msgid "post full sysinfo once"
-msgstr "单独一次上报全量的sysinfo数据"
-
-msgid "print full sysinfo"
-msgstr "打印全量的sysinfo数据"
-
-msgid "save esop config files once"
-msgstr "保存当前ESOP的配置文件目录"
+msgstr "直接运行内部函数"
 
 msgid "add config and set value for plugin"
 msgstr "添加插件的一个配置参数并赋值"
@@ -354,6 +354,9 @@ msgstr "置空插件的一个配置参数"
 
 msgid "update config value for plugin"
 msgstr "更新插件的一个配置参数所设定的值"
+
+msgid "COMMAND [${topic}] unknown"
+msgstr "未知命令 [${topic}]"
 
 ### bin/include
 
